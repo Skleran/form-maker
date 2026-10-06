@@ -1,0 +1,83 @@
+// Prisma Schema for In-House Form Management Platform
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+enum QuestionType {
+  SHORT_TEXT
+  LONG_TEXT
+  SINGLE_CHOICE
+  MULTIPLE_CHOICE
+  DROPDOWN
+  FILE_UPLOAD
+}
+
+model Form {
+  id          String       @id @default(cuid())
+  title       String
+  description String?      @db.Text
+  slug        String       @unique
+  isPublished Boolean      @default(false)
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+
+  questions   Question[]
+  submissions Submission[]
+
+  @@index([slug])
+  @@index([createdAt])
+}
+
+model Question {
+  id         String       @id @default(cuid())
+  formId     String
+  orderIndex Int          @default(0)
+  type       QuestionType
+  label      String       @db.Text
+  required   Boolean      @default(false)
+  options    Json?        // List of choices: [{"id": "opt_1", "label": "Option 1"}]
+  config     Json?        // Granular field configs: placeholder, minLength, maxLength, maxFileSizeMb, allowedMimeTypes
+
+  createdAt  DateTime     @default(now())
+  updatedAt  DateTime     @updatedAt
+
+  form       Form         @relation(fields: [formId], references: [id], onDelete: Cascade)
+  answers    Answer[]
+
+  @@index([formId, orderIndex])
+}
+
+model Submission {
+  id                 String    @id @default(cuid())
+  formId             String
+  submittedAt        DateTime  @default(now())
+  respondentMetadata Json?     // { ip?: string, userAgent?: string, completionTimeSec?: number }
+
+  form               Form      @relation(fields: [formId], references: [id], onDelete: Cascade)
+  answers            Answer[]
+
+  @@index([formId])
+  @@index([submittedAt])
+}
+
+model Answer {
+  id           String     @id @default(cuid())
+  submissionId String
+  questionId   String
+  valueText    String?    @db.Text
+  valueJson    Json?      // For multi-select checkbox arrays or complex payloads
+  fileUrl      String?    @db.Text
+
+  submission   Submission @relation(fields: [submissionId], references: [id], onDelete: Cascade)
+  question     Question   @relation(fields: [questionId], references: [id], onDelete: Cascade)
+
+  @@index([submissionId])
+  @@index([questionId])
+}
