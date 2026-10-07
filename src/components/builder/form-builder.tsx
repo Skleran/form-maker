@@ -15,6 +15,7 @@ import { BuilderCanvas } from "./builder-canvas"
 import { BuilderInspector } from "./builder-inspector"
 import { BuilderLivePreview } from "./builder-live-preview"
 import { BuilderSettings } from "./builder-settings"
+import { ResponsesView } from "@/components/responses/responses-view"
 
 interface InitialFormData {
   id: string
@@ -206,22 +207,7 @@ export function FormBuilder({ initialForm }: FormBuilderProps) {
           )}
 
           {activeTab === "responses" && (
-            <div className="flex-1 p-8 text-center bg-muted/15 flex flex-col items-center justify-center">
-              <div className="max-w-md space-y-3">
-                <h3 className="text-lg font-semibold text-foreground">
-                  Responses & Aggregation Dashboard
-                </h3>
-                <p className="text-sm text-muted-foreground">
-                  Total submissions recorded:{" "}
-                  <span className="font-semibold text-foreground">
-                    {initialForm._count?.submissions || 0}
-                  </span>
-                </p>
-                <p className="text-xs text-muted-foreground">
-                  Full responses table, submission detail inspect sheet, and CSV export are implemented in Phase 4.
-                </p>
-              </div>
-            </div>
+            <ResponsesView formId={initialForm.id} />
           )}
 
           {activeTab === "settings" && <BuilderSettings formId={initialForm.id} />}
