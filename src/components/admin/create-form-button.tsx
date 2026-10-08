@@ -6,19 +6,21 @@ import { Plus, Loader2 } from "lucide-react"
 import { toast } from "sonner"
 import { Button } from "@/components/ui/button"
 import { createForm } from "@/actions/form-actions"
+import { useLanguage } from "@/lib/i18n/language-context"
 
 export function CreateFormButton() {
   const router = useRouter()
+  const { dict } = useLanguage()
   const [isPending, startTransition] = React.useTransition()
 
   const handleCreate = () => {
     startTransition(async () => {
       const res = await createForm()
       if (res.success && res.data) {
-        toast.success("New form created!")
+        toast.success(dict.dashboard.formCreated)
         router.push(`/admin/forms/${res.data.id}/edit`)
       } else {
-        toast.error(res.error || "Failed to create form")
+        toast.error(res.error || dict.dashboard.formCreateFailed)
       }
     })
   }
@@ -30,7 +32,7 @@ export function CreateFormButton() {
       className="cursor-pointer gap-2 shadow-sm font-medium"
     >
       {isPending ? <Loader2 className="size-4 animate-spin" /> : <Plus className="size-4" />}
-      <span>Create Blank Form</span>
+      <span>{dict.dashboard.createForm}</span>
     </Button>
   )
 }

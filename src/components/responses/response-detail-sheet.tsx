@@ -21,6 +21,7 @@ import {
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { deleteSubmission, type FormSubmissionRow } from "@/actions/response-actions"
+import { useLanguage } from "@/lib/i18n/language-context"
 
 interface ResponseDetailSheetProps {
   formId: string
@@ -37,25 +38,26 @@ export function ResponseDetailSheet({
   onClose,
   onDeleted,
 }: ResponseDetailSheetProps) {
+  const { dict, language } = useLanguage()
   const [isDeleting, setIsDeleting] = React.useState(false)
 
   if (!submission) return null
 
   const handleDelete = async () => {
-    if (!confirm("Delete this submission? This action cannot be undone.")) return
+    if (!confirm(dict.responses.deleteConfirm)) return
 
     setIsDeleting(true)
     try {
       const res = await deleteSubmission(submission.id, formId)
       if (res.success) {
-        toast.success("Submission deleted")
+        toast.success(dict.responses.deleteSuccess)
         onDeleted()
         onClose()
       } else {
-        toast.error(res.error || "Failed to delete submission")
+        toast.error(res.error || dict.responses.deleteFailed)
       }
     } catch {
-      toast.error("An error occurred")
+      toast.error(dict.responses.deleteFailed)
     } finally {
       setIsDeleting(false)
     }
@@ -116,6 +118,8 @@ export function ResponseDetailSheet({
     document.body.removeChild(link)
   }
 
+  const locale = language === "tr" ? "tr-TR" : "en-US"
+
   return (
     <Sheet open={isOpen} onOpenChange={(open) => !open && onClose()}>
       <SheetContent className="w-full sm:max-w-lg overflow-y-auto p-0 flex flex-col">
@@ -136,13 +140,13 @@ export function ResponseDetailSheet({
           </div>
 
           <SheetTitle className="text-lg font-bold text-foreground">
-            Submission Details
+            {dict.responses.detailTitle}
           </SheetTitle>
 
           <div className="flex flex-col gap-1 text-xs text-muted-foreground pt-1">
             <span className="flex items-center gap-1.5">
               <Calendar className="size-3.5 text-primary" />
-              {new Date(submission.submittedAt).toLocaleString(undefined, {
+              {new Date(submission.submittedAt).toLocaleString(locale, {
                 dateStyle: "medium",
                 timeStyle: "short",
               })}
@@ -155,7 +159,7 @@ export function ResponseDetailSheet({
               <span className="flex items-center gap-1.5 truncate">
                 <Laptop className="size-3.5 text-muted-foreground shrink-0" />
                 <span className="truncate">
-                  {String(submission.respondentMetadata?.userAgent || "Unknown client")}
+                  {String(submission.respondentMetadata?.userAgent || dict.responses.unknownClient)}
                 </span>
               </span>
             )}
@@ -166,12 +170,12 @@ export function ResponseDetailSheet({
         <div className="flex-1 p-6 space-y-6">
           <div className="space-y-4">
             <h4 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-              Recorded Answers ({submission.answers.length})
+              {dict.responses.recordedAnswers.replace("{count}", String(submission.answers.length))}
             </h4>
 
             {submission.answers.length === 0 ? (
               <p className="text-xs text-muted-foreground italic">
-                No answers recorded for this submission.
+                {dict.responses.noAnswersRecorded}
               </p>
             ) : (
               submission.answers.map((answer, index) => {
@@ -207,7 +211,7 @@ export function ResponseDetailSheet({
                             <div className="flex items-center gap-2 truncate">
                               <FileText className="size-4 text-primary shrink-0" />
                               <span className="text-xs font-medium text-foreground truncate">
-                                {answer.valueText || "Attached File"}
+                                {answer.valueText || dict.responses.attachedFile}
                               </span>
                             </div>
 
@@ -219,10 +223,10 @@ export function ResponseDetailSheet({
                                   size="xs"
                                   onClick={() => handleViewFile(answer.fileUrl!)}
                                   className="cursor-pointer gap-1 text-[11px]"
-                                  title="Open in new tab"
+                                  title={dict.responses.openNewTab}
                                 >
                                   <ExternalLink className="size-3" />
-                                  <span>Open</span>
+                                  <span>{dict.responses.openNewTab}</span>
                                 </Button>
                                 <Button
                                   type="button"
@@ -235,10 +239,10 @@ export function ResponseDetailSheet({
                                     )
                                   }
                                   className="cursor-pointer gap-1 text-[11px]"
-                                  title="Download file"
+                                  title={dict.responses.downloadFile}
                                 >
                                   <Download className="size-3" />
-                                  <span>Download</span>
+                                  <span>{dict.responses.downloadFile}</span>
                                 </Button>
                               </div>
                             )}
@@ -270,7 +274,7 @@ export function ResponseDetailSheet({
                         <p className="text-xs text-foreground whitespace-pre-wrap leading-relaxed">
                           {answer.valueText || (
                             <span className="text-muted-foreground italic">
-                              No response provided
+                              {dict.responses.noResponseGiven}
                             </span>
                           )}
                         </p>
@@ -293,7 +297,11 @@ export function ResponseDetailSheet({
             className="cursor-pointer gap-2 text-xs"
           >
             <Trash2 className="size-3.5" />
-            <span>{isDeleting ? "Deleting..." : "Delete Submission"}</span>
+            <span>
+              {isDeleting
+                ? dict.common.deleting
+                : dict.responses.deleteSubmission}
+            </span>
           </Button>
 
           <Button
@@ -302,7 +310,7 @@ export function ResponseDetailSheet({
             onClick={onClose}
             className="cursor-pointer text-xs"
           >
-            Close
+            {dict.responses.close}
           </Button>
         </div>
       </SheetContent>

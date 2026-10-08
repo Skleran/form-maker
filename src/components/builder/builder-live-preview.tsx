@@ -190,7 +190,7 @@ export function BuilderLivePreview() {
                         </SelectTrigger>
                         <SelectContent>
                           {(q.options || []).map((opt) => (
-                            <SelectItem key={opt.id} value={opt.id}>
+                            <SelectItem key={opt.id} value={opt.label || opt.id}>
                               {opt.label}
                             </SelectItem>
                           ))}

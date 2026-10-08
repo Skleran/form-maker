@@ -22,6 +22,7 @@ import {
 } from "@/components/ui/dialog"
 import { deleteForm } from "@/actions/form-actions"
 import type { FormBuilderValues } from "@/lib/validations/form"
+import { useLanguage } from "@/lib/i18n/language-context"
 
 interface BuilderSettingsProps {
   formId: string
@@ -29,6 +30,7 @@ interface BuilderSettingsProps {
 
 export function BuilderSettings({ formId }: BuilderSettingsProps) {
   const router = useRouter()
+  const { dict } = useLanguage()
   const { register, watch, setValue, formState: { errors } } = useFormContext<FormBuilderValues>()
   const isPublished = watch("isPublished")
 
@@ -40,13 +42,13 @@ export function BuilderSettings({ formId }: BuilderSettingsProps) {
     try {
       const res = await deleteForm(formId)
       if (res.success) {
-        toast.success("Form deleted successfully")
+        toast.success(dict.builder.settings.deleteSuccess)
         router.push("/admin/forms")
       } else {
-        toast.error(res.error || "Failed to delete form")
+        toast.error(res.error || dict.builder.settings.deleteFailed)
       }
     } catch {
-      toast.error("Failed to delete form")
+      toast.error(dict.builder.settings.deleteFailed)
     } finally {
       setIsDeleting(false)
       setDeleteDialogOpen(false)
@@ -59,16 +61,18 @@ export function BuilderSettings({ formId }: BuilderSettingsProps) {
         {/* General Form Settings */}
         <Card className="p-6 bg-card border shadow-sm space-y-5">
           <div>
-            <h3 className="text-base font-semibold text-foreground">General Settings</h3>
+            <h3 className="text-base font-semibold text-foreground">
+              {dict.builder.settings.generalTitle}
+            </h3>
             <p className="text-xs text-muted-foreground mt-0.5">
-              Configure form metadata and title representation.
+              {dict.builder.settings.generalDesc}
             </p>
           </div>
 
           <div className="space-y-4">
             <div className="space-y-1.5">
               <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                Form Title
+                {dict.builder.settings.formTitle}
               </label>
               <Input {...register("title")} className="text-sm" />
               {errors.title && (
@@ -78,7 +82,7 @@ export function BuilderSettings({ formId }: BuilderSettingsProps) {
 
             <div className="space-y-1.5">
               <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                Description
+                {dict.builder.settings.description}
               </label>
               <Textarea rows={3} {...register("description")} className="text-sm resize-none" />
             </div>
@@ -89,14 +93,16 @@ export function BuilderSettings({ formId }: BuilderSettingsProps) {
         <Card className="p-6 bg-card border shadow-sm space-y-5">
           <div className="flex items-center gap-2">
             <Globe className="size-4 text-primary" />
-            <h3 className="text-base font-semibold text-foreground">Distribution & URL</h3>
+            <h3 className="text-base font-semibold text-foreground">
+              {dict.builder.settings.distributionTitle}
+            </h3>
           </div>
 
           <div className="space-y-4">
             <div className="space-y-1.5">
               <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground flex items-center gap-1">
                 <Link2 className="size-3.5" />
-                Custom URL Slug
+                {dict.builder.settings.customSlug}
               </label>
               <div className="flex items-center gap-2">
                 <span className="text-xs text-muted-foreground font-mono bg-muted px-2.5 py-1.5 rounded-md border">
@@ -109,7 +115,7 @@ export function BuilderSettings({ formId }: BuilderSettingsProps) {
                 />
               </div>
               <p className="text-[11px] text-muted-foreground">
-                Lowercase letters, numbers, and hyphens only.
+                {dict.builder.settings.slugHint}
               </p>
               {errors.slug && (
                 <p className="text-xs text-destructive">{errors.slug.message}</p>
@@ -118,9 +124,11 @@ export function BuilderSettings({ formId }: BuilderSettingsProps) {
 
             <div className="flex items-center justify-between rounded-lg border p-3.5 bg-muted/20">
               <div className="space-y-0.5">
-                <span className="text-sm font-medium text-foreground">Published Status</span>
+                <span className="text-sm font-medium text-foreground">
+                  {dict.builder.settings.publishedStatus}
+                </span>
                 <p className="text-xs text-muted-foreground">
-                  When enabled, anyone with the link can view and submit this form.
+                  {dict.builder.settings.publishedDesc}
                 </p>
               </div>
               <Switch
@@ -135,11 +143,10 @@ export function BuilderSettings({ formId }: BuilderSettingsProps) {
         <Card className="p-6 bg-card border-destructive/30 border shadow-sm space-y-4">
           <div className="flex items-center gap-2 text-destructive">
             <AlertTriangle className="size-4" />
-            <h3 className="text-base font-semibold">Danger Zone</h3>
+            <h3 className="text-base font-semibold">{dict.builder.settings.dangerZone}</h3>
           </div>
           <p className="text-xs text-muted-foreground">
-            Deleting this form will permanently remove all questions, respondent submissions, and uploaded attachments.
-            This action cannot be undone.
+            {dict.builder.settings.dangerDesc}
           </p>
 
           <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
@@ -147,7 +154,7 @@ export function BuilderSettings({ formId }: BuilderSettingsProps) {
               render={
                 <Button variant="destructive" size="sm" className="cursor-pointer gap-2">
                   <Trash2 className="size-3.5" />
-                  Delete This Form
+                  {dict.builder.settings.deleteFormBtn}
                 </Button>
               }
             />
@@ -155,11 +162,10 @@ export function BuilderSettings({ formId }: BuilderSettingsProps) {
               <DialogHeader>
                 <div className="flex items-center gap-2 text-destructive">
                   <ShieldAlert className="size-5" />
-                  <DialogTitle>Confirm Form Deletion</DialogTitle>
+                  <DialogTitle>{dict.builder.settings.deleteModalTitle}</DialogTitle>
                 </div>
                 <DialogDescription>
-                  Are you absolutely sure you want to permanently delete this form?
-                  All responses and collected answers will be permanently lost.
+                  {dict.builder.settings.deleteModalDesc}
                 </DialogDescription>
               </DialogHeader>
               <DialogFooter className="gap-2 sm:gap-0">
@@ -169,7 +175,7 @@ export function BuilderSettings({ formId }: BuilderSettingsProps) {
                   disabled={isDeleting}
                   className="cursor-pointer"
                 >
-                  Cancel
+                  {dict.builder.settings.cancel}
                 </Button>
                 <Button
                   variant="destructive"
@@ -177,7 +183,7 @@ export function BuilderSettings({ formId }: BuilderSettingsProps) {
                   disabled={isDeleting}
                   className="cursor-pointer"
                 >
-                  {isDeleting ? "Deleting..." : "Permanently Delete"}
+                  {isDeleting ? dict.builder.settings.deleting : dict.builder.settings.permanentlyDelete}
                 </Button>
               </DialogFooter>
             </DialogContent>

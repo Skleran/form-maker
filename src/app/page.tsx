@@ -1,7 +1,10 @@
-import Link from "next/link"
-import { ThemeToggle } from "@/components/theme-toggle"
-import { buttonVariants } from "@/components/ui/button"
-import { Card } from "@/components/ui/card"
+"use client";
+
+import Link from "next/link";
+import { ThemeToggle } from "@/components/theme-toggle";
+import { LanguageToggle } from "@/components/language-toggle";
+import { buttonVariants } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
 import {
   FileText,
   SlidersHorizontal,
@@ -11,9 +14,12 @@ import {
   ShieldCheck,
   Smartphone,
   Eye,
-} from "lucide-react"
+} from "lucide-react";
+import { useLanguage } from "@/lib/i18n/language-context";
 
 export default function Home() {
+  const { dict } = useLanguage();
+
   return (
     <div className="flex min-h-screen flex-col bg-background selection:bg-primary selection:text-primary-foreground">
       {/* Top Header */}
@@ -26,18 +32,22 @@ export default function Home() {
             <span className="font-semibold tracking-tight text-foreground">
               FormMaker
             </span>
-            <span className="rounded-full bg-muted px-2 py-0.5 text-xs font-medium text-muted-foreground border">
-              In-House v1.0
-            </span>
+            {/* <span className="rounded-full bg-muted px-2 py-0.5 text-xs font-medium text-muted-foreground border">
+              {dict.nav.brandSubtitle}
+            </span> */}
           </div>
 
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2 sm:gap-3">
+            <LanguageToggle />
             <ThemeToggle />
             <Link
               href="/admin/forms"
-              className={buttonVariants({ size: "sm", className: "font-medium" })}
+              className={buttonVariants({
+                size: "sm",
+                className: "font-medium",
+              })}
             >
-              Go to Admin
+              {dict.nav.goToAdmin}
               <ArrowRight className="ml-1 size-3.5" />
             </Link>
           </div>
@@ -47,28 +57,30 @@ export default function Home() {
       {/* Hero Section */}
       <main className="flex-1">
         <section className="container mx-auto max-w-6xl px-4 py-16 sm:px-6 sm:py-24 text-center">
-          <div className="mx-auto inline-flex items-center gap-2 rounded-full border bg-muted/50 px-3 py-1 text-xs font-medium text-muted-foreground mb-6">
+          {/* <div className="mx-auto inline-flex items-center gap-2 rounded-full border bg-muted/50 px-3 py-1 text-xs font-medium text-muted-foreground mb-6">
             <span className="flex size-1.5 rounded-full bg-emerald-500 animate-pulse" />
-            Phase 1 Foundation & Architecture Live
-          </div>
+            {dict.home.statusBadge}
+          </div> */}
 
           <h1 className="text-4xl font-extrabold tracking-tight sm:text-5xl lg:text-6xl text-foreground max-w-3xl mx-auto">
-            In-House Form Management Platform
+            {dict.home.title}
           </h1>
           <p className="mt-4 text-lg text-muted-foreground max-w-2xl mx-auto leading-relaxed">
-            A self-hostable, high-performance Google Forms alternative. Built with Next.js App Router,
-            strict state separation with React Hook Form + Zustand, PostgreSQL ORM, and shadcn/ui.
+            {dict.home.description}
           </p>
 
           <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
             <Link
               href="/admin/forms"
-              className={buttonVariants({ size: "lg", className: "h-10 px-6 font-medium" })}
+              className={buttonVariants({
+                size: "lg",
+                className: "h-10 px-6 font-medium",
+              })}
             >
-              Open Admin Dashboard
+              {dict.home.openDashboard}
               <ArrowRight className="ml-2 size-4" />
             </Link>
-            <a
+            {/* <a
               href="https://github.com/prisma/prisma"
               target="_blank"
               rel="noreferrer"
@@ -78,8 +90,8 @@ export default function Home() {
                 className: "h-10 px-6 font-medium",
               })}
             >
-              Prisma Schema Ready
-            </a>
+              {dict.home.prismaReady}
+            </a> */}
           </div>
         </section>
 
@@ -91,11 +103,10 @@ export default function Home() {
                 <Layers className="size-5" />
               </div>
               <h3 className="text-base font-semibold text-foreground mb-1">
-                Strict State Separation
+                {dict.home.features.stateSeparationTitle}
               </h3>
               <p className="text-sm text-muted-foreground leading-relaxed">
-                Form content and field hierarchies are strictly managed by React Hook Form (`useFieldArray`),
-                while canvas interactions and active inspectors are isolated in Zustand.
+                {dict.home.features.stateSeparationDesc}
               </p>
             </Card>
 
@@ -104,11 +115,10 @@ export default function Home() {
                 <Database className="size-5" />
               </div>
               <h3 className="text-base font-semibold text-foreground mb-1">
-                PostgreSQL & Prisma Engine
+                {dict.home.features.postgresTitle}
               </h3>
               <p className="text-sm text-muted-foreground leading-relaxed">
-                Relational schema supporting `Form`, `Question`, `Submission`, and `Answer` with zero-rewrite
-                portability between Supabase and standard Docker PostgreSQL.
+                {dict.home.features.postgresDesc}
               </p>
             </Card>
 
@@ -117,11 +127,10 @@ export default function Home() {
                 <SlidersHorizontal className="size-5" />
               </div>
               <h3 className="text-base font-semibold text-foreground mb-1">
-                Dynamic Schema Engine
+                {dict.home.features.dynamicSchemaTitle}
               </h3>
               <p className="text-sm text-muted-foreground leading-relaxed">
-                Supports Short Text, Long Text, Single Choice (Radio), Multiple Choice (Checkbox), Dropdown,
-                and File Upload with granular field configurations.
+                {dict.home.features.dynamicSchemaDesc}
               </p>
             </Card>
 
@@ -130,11 +139,10 @@ export default function Home() {
                 <Smartphone className="size-5" />
               </div>
               <h3 className="text-base font-semibold text-foreground mb-1">
-                Multi-Device Canvas View
+                {dict.home.features.multiDeviceTitle}
               </h3>
               <p className="text-sm text-muted-foreground leading-relaxed">
-                Zustand-orchestrated workspace with instant desktop, tablet, and mobile viewport simulation
-                and detached field inspector sidebar.
+                {dict.home.features.multiDeviceDesc}
               </p>
             </Card>
 
@@ -143,11 +151,10 @@ export default function Home() {
                 <ShieldCheck className="size-5" />
               </div>
               <h3 className="text-base font-semibold text-foreground mb-1">
-                Runtime Zod Validation
+                {dict.home.features.validationTitle}
               </h3>
               <p className="text-sm text-muted-foreground leading-relaxed">
-                Dynamically builds Zod schemas on the fly for end-user public submission forms, ensuring
-                rigorous type safety and field constraint enforcement.
+                {dict.home.features.validationDesc}
               </p>
             </Card>
 
@@ -156,11 +163,10 @@ export default function Home() {
                 <Eye className="size-5" />
               </div>
               <h3 className="text-base font-semibold text-foreground mb-1">
-                Light & Dark Mode Native
+                {dict.home.features.themesTitle}
               </h3>
               <p className="text-sm text-muted-foreground leading-relaxed">
-                Pre-configured with `next-themes` and Tailwind CSS design tokens for seamless dark/light mode
-                support with accessible contrast out of the box.
+                {dict.home.features.themesDesc}
               </p>
             </Card>
           </div>
@@ -169,8 +175,8 @@ export default function Home() {
 
       {/* Footer */}
       <footer className="border-t py-6 text-center text-xs text-muted-foreground">
-        <p>In-House Form Management Platform &bull; Built with Next.js App Router & Tailwind CSS</p>
+        <p>{dict.home.footer}</p>
       </footer>
     </div>
-  )
+  );
 }

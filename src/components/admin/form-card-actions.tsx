@@ -5,6 +5,7 @@ import { Copy, Trash2, ExternalLink } from "lucide-react"
 import { toast } from "sonner"
 import { Button } from "@/components/ui/button"
 import { deleteForm } from "@/actions/form-actions"
+import { useLanguage } from "@/lib/i18n/language-context"
 
 interface FormCardActionsProps {
   formId: string
@@ -13,6 +14,7 @@ interface FormCardActionsProps {
 }
 
 export function FormCardActions({ formId, slug, isPublished }: FormCardActionsProps) {
+  const { dict } = useLanguage()
   const [isDeleting, setIsDeleting] = React.useState(false)
 
   const handleCopy = (e: React.MouseEvent) => {
@@ -21,24 +23,24 @@ export function FormCardActions({ formId, slug, isPublished }: FormCardActionsPr
     const origin = typeof window !== "undefined" ? window.location.origin : ""
     const url = `${origin}/forms/${slug}`
     navigator.clipboard.writeText(url)
-    toast.success("Public link copied to clipboard!")
+    toast.success(dict.dashboard.linkCopied)
   }
 
   const handleDelete = async (e: React.MouseEvent) => {
     e.preventDefault()
     e.stopPropagation()
-    if (!confirm("Are you sure you want to delete this form?")) return
+    if (!confirm(dict.dashboard.deleteFormConfirm)) return
 
     setIsDeleting(true)
     try {
       const res = await deleteForm(formId)
       if (res.success) {
-        toast.success("Form deleted")
+        toast.success(dict.dashboard.formDeleted)
       } else {
-        toast.error(res.error || "Failed to delete form")
+        toast.error(res.error || dict.dashboard.formDeleteFailed)
       }
     } catch {
-      toast.error("Failed to delete form")
+      toast.error(dict.dashboard.formDeleteFailed)
     } finally {
       setIsDeleting(false)
     }
@@ -52,7 +54,7 @@ export function FormCardActions({ formId, slug, isPublished }: FormCardActionsPr
           target="_blank"
           rel="noopener noreferrer"
           className="inline-flex size-7 items-center justify-center rounded-md hover:bg-muted text-muted-foreground hover:text-foreground transition-colors"
-          title="Open live form"
+          title={dict.dashboard.openLiveForm}
         >
           <ExternalLink className="size-3.5" />
         </a>
@@ -63,7 +65,7 @@ export function FormCardActions({ formId, slug, isPublished }: FormCardActionsPr
         size="icon-xs"
         onClick={handleCopy}
         className="cursor-pointer text-muted-foreground hover:text-foreground"
-        title="Copy public link"
+        title={dict.dashboard.copyPublicLink}
       >
         <Copy className="size-3.5" />
       </Button>
@@ -74,7 +76,7 @@ export function FormCardActions({ formId, slug, isPublished }: FormCardActionsPr
         onClick={handleDelete}
         disabled={isDeleting}
         className="cursor-pointer text-muted-foreground hover:text-destructive"
-        title="Delete form"
+        title={dict.dashboard.deleteFormTitle}
       >
         <Trash2 className="size-3.5" />
       </Button>

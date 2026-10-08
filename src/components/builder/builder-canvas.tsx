@@ -31,23 +31,11 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { Separator } from "@/components/ui/separator"
-import { useBuilderStore, type PreviewDevice } from "@/stores/use-builder-store"
+import { useBuilderStore } from "@/stores/use-builder-store"
 import type { FormBuilderValues } from "@/lib/validations/form"
 import type { QuestionType } from "@/types/form"
 import { cn } from "@/lib/utils"
-
-const QUESTION_TYPES: Array<{
-  value: QuestionType
-  label: string
-  icon: React.ComponentType<{ className?: string }>
-}> = [
-  { value: "SHORT_TEXT", label: "Short Answer", icon: Type },
-  { value: "LONG_TEXT", label: "Paragraph", icon: AlignLeft },
-  { value: "SINGLE_CHOICE", label: "Multiple Choice", icon: Radio },
-  { value: "MULTIPLE_CHOICE", label: "Checkboxes", icon: CheckSquare },
-  { value: "DROPDOWN", label: "Dropdown", icon: ChevronDown },
-  { value: "FILE_UPLOAD", label: "File Upload", icon: FileUp },
-]
+import { useLanguage } from "@/lib/i18n/language-context"
 
 interface BuilderCanvasProps {
   onDuplicateQuestion: (index: number) => void
@@ -60,42 +48,46 @@ export function BuilderCanvas({
   onDeleteQuestion,
   onAddQuestion,
 }: BuilderCanvasProps) {
-  const { register, control, watch, setValue } = useFormContext<FormBuilderValues>()
+  const { dict, language } = useLanguage()
+  const { register, control, watch, setValue, getValues } = useFormContext<FormBuilderValues>()
   const { fields, move } = useFieldArray({
     control,
     name: "questions",
   })
 
-  const { activeQuestionId, setActiveQuestionId, previewDevice } = useBuilderStore()
+  const {
+    activeQuestionId,
+    setActiveQuestionId,
+    isInspectorOpen,
+    setIsInspectorOpen,
+    pushHistory,
+  } = useBuilderStore()
 
-  const getDeviceWidthClass = (device: PreviewDevice) => {
-    switch (device) {
-      case "mobile":
-        return "max-w-sm"
-      case "tablet":
-        return "max-w-xl"
-      case "desktop":
-      default:
-        return "max-w-3xl"
-    }
-  }
+  const questionTypesList = React.useMemo(() => [
+    { value: "SHORT_TEXT" as QuestionType, label: dict.builder.canvas.questionTypes.SHORT_TEXT, icon: Type },
+    { value: "LONG_TEXT" as QuestionType, label: dict.builder.canvas.questionTypes.LONG_TEXT, icon: AlignLeft },
+    { value: "SINGLE_CHOICE" as QuestionType, label: dict.builder.canvas.questionTypes.SINGLE_CHOICE, icon: Radio },
+    { value: "MULTIPLE_CHOICE" as QuestionType, label: dict.builder.canvas.questionTypes.MULTIPLE_CHOICE, icon: CheckSquare },
+    { value: "DROPDOWN" as QuestionType, label: dict.builder.canvas.questionTypes.DROPDOWN, icon: ChevronDown },
+    { value: "FILE_UPLOAD" as QuestionType, label: dict.builder.canvas.questionTypes.FILE_UPLOAD, icon: FileUp },
+  ], [dict])
 
   return (
-    <div className="flex-1 overflow-y-auto px-4 py-8 sm:px-8 bg-muted/15 min-h-[calc(100vh-3.5rem)]">
-      <div className={cn("mx-auto space-y-4 transition-all duration-300", getDeviceWidthClass(previewDevice))}>
+    <div className="flex-1 h-full overflow-y-auto px-4 py-8 sm:px-8 bg-muted/15">
+      <div className="mx-auto max-w-3xl space-y-4">
         {/* Form Metadata Card */}
         <Card className="border-t-4 border-t-primary p-6 shadow-sm bg-card transition-all">
           <div className="space-y-4">
             <div>
               <Input
-                placeholder="Form Title"
+                placeholder={dict.builder.canvas.titlePlaceholder}
                 {...register("title")}
                 className="border-none px-0 text-2xl font-bold tracking-tight shadow-none focus-visible:ring-0 placeholder:text-muted-foreground/60 h-auto py-1"
               />
             </div>
             <div>
               <Textarea
-                placeholder="Form description or respondent instructions..."
+                placeholder={dict.builder.canvas.descPlaceholder}
                 rows={2}
                 {...register("description")}
                 className="border-none px-0 text-sm shadow-none focus-visible:ring-0 placeholder:text-muted-foreground/60 resize-none min-h-[44px]"
@@ -106,8 +98,9 @@ export function BuilderCanvas({
 
         {/* Dynamic Questions List via useFieldArray */}
         {fields.map((field, index) => {
-          const isActive = activeQuestionId === field.id
           const currentQuestion = watch(`questions.${index}`)
+          const questionId = currentQuestion?.id || field.id
+          const isActive = activeQuestionId === questionId || activeQuestionId === field.id
           const isChoiceType =
             currentQuestion?.type === "SINGLE_CHOICE" ||
             currentQuestion?.type === "MULTIPLE_CHOICE" ||
@@ -116,7 +109,15 @@ export function BuilderCanvas({
           return (
             <Card
               key={field.id}
-              onClick={() => setActiveQuestionId(field.id)}
+              onClick={() => {
+                setActiveQuestionId(questionId)
+                if (!isInspectorOpen) {
+                  setIsInspectorOpen(true)
+                }
+              }}
+              onFocusCapture={() => {
+                setActiveQuestionId(questionId)
+              }}
               className={cn(
                 "p-6 shadow-sm transition-all duration-150 cursor-pointer border bg-card",
                 isActive
@@ -131,7 +132,7 @@ export function BuilderCanvas({
                     {index + 1}
                   </span>
                   <Input
-                    placeholder="Enter question title..."
+                    placeholder={dict.builder.canvas.questionTitlePlaceholder}
                     {...register(`questions.${index}.label`)}
                     className="font-medium text-base h-9 shadow-none border-transparent hover:border-input focus:border-ring bg-transparent"
                   />
@@ -149,16 +150,31 @@ export function BuilderCanvas({
                         (!currentQuestion?.options || currentQuestion.options.length === 0)
                       ) {
                         setValue(`questions.${index}.options`, [
-                          { id: `opt_${Date.now()}_1`, label: "Option 1" },
+                          {
+                            id: `opt_${Date.now()}_1`,
+                            label: language === "tr" ? "Seçenek 1" : "Option 1",
+                          },
                         ])
                       }
                     }}
                   >
                     <SelectTrigger className="w-44 h-8 text-xs">
-                      <SelectValue />
+                      <SelectValue>
+                        {(val: string | null) => {
+                          const selected = questionTypesList.find((t) => t.value === val)
+                          if (!selected) return language === "tr" ? "Tür seçin" : "Select type"
+                          const Icon = selected.icon
+                          return (
+                            <span className="flex items-center gap-1.5 truncate">
+                              <Icon className="size-3.5 text-muted-foreground shrink-0" />
+                              <span className="truncate">{selected.label}</span>
+                            </span>
+                          )
+                        }}
+                      </SelectValue>
                     </SelectTrigger>
                     <SelectContent>
-                      {QUESTION_TYPES.map((t) => {
+                      {questionTypesList.map((t) => {
                         const Icon = t.icon
                         return (
                           <SelectItem key={t.value} value={t.value}>
@@ -186,7 +202,7 @@ export function BuilderCanvas({
                 {currentQuestion?.type === "SHORT_TEXT" && (
                   <Input
                     disabled
-                    placeholder={currentQuestion.config?.placeholder || "Short answer text"}
+                    placeholder={currentQuestion.config?.placeholder || dict.builder.canvas.shortTextPlaceholder}
                     className="border-dashed bg-muted/20 text-xs text-muted-foreground"
                   />
                 )}
@@ -195,7 +211,7 @@ export function BuilderCanvas({
                   <Textarea
                     disabled
                     rows={3}
-                    placeholder={currentQuestion.config?.placeholder || "Long answer paragraph text"}
+                    placeholder={currentQuestion.config?.placeholder || dict.builder.canvas.longTextPlaceholder}
                     className="border-dashed bg-muted/20 text-xs text-muted-foreground resize-none"
                   />
                 )}
@@ -217,7 +233,7 @@ export function BuilderCanvas({
                         )}
 
                         <Input
-                          placeholder={`Option ${optIndex + 1}`}
+                          placeholder={dict.builder.canvas.optionPlaceholder.replace("{index}", String(optIndex + 1))}
                           {...register(`questions.${index}.options.${optIndex}.label`)}
                           className="h-8 text-xs border-transparent hover:border-input focus:border-ring"
                         />
@@ -235,6 +251,7 @@ export function BuilderCanvas({
                               })
                             }}
                             className="text-muted-foreground hover:text-destructive cursor-pointer"
+                            title={dict.builder.canvas.removeOption}
                           >
                             <X className="size-3.5" />
                           </Button>
@@ -250,7 +267,10 @@ export function BuilderCanvas({
                         const current = currentQuestion?.options || []
                         const newOption = {
                           id: `opt_${Date.now()}_${current.length + 1}`,
-                          label: `Option ${current.length + 1}`,
+                          label: dict.builder.canvas.optionPlaceholder.replace(
+                            "{index}",
+                            String(current.length + 1)
+                          ),
                         }
                         setValue(`questions.${index}.options`, [...current, newOption], {
                           shouldDirty: true,
@@ -259,7 +279,7 @@ export function BuilderCanvas({
                       className="cursor-pointer text-xs text-primary hover:text-primary/80 gap-1.5 h-7 px-2 font-medium"
                     >
                       <Plus className="size-3" />
-                      Add Option
+                      {dict.builder.canvas.addOption}
                     </Button>
                   </div>
                 )}
@@ -268,13 +288,20 @@ export function BuilderCanvas({
                   <div className="flex flex-col items-center justify-center rounded-lg border-2 border-dashed border-muted-foreground/30 p-6 text-center bg-muted/10">
                     <Upload className="size-8 text-muted-foreground mb-2" />
                     <p className="text-xs font-medium text-foreground">
-                      Respondent file upload zone
+                      {dict.builder.canvas.fileZoneTitle}
                     </p>
                     <p className="text-[11px] text-muted-foreground mt-0.5">
-                      Max size: {currentQuestion.config?.maxFileSizeMb || 10} MB &bull;{" "}
-                      {currentQuestion.config?.allowedMimeTypes?.length
-                        ? `${currentQuestion.config.allowedMimeTypes.length} file types allowed`
-                        : "All standard formats accepted"}
+                      {dict.builder.canvas.fileZoneDesc
+                        .replace("{max}", String(currentQuestion.config?.maxFileSizeMb || 10))
+                        .replace(
+                          "{types}",
+                          currentQuestion.config?.allowedMimeTypes?.length
+                            ? dict.builder.canvas.customTypesAccepted.replace(
+                                "{count}",
+                                String(currentQuestion.config.allowedMimeTypes.length)
+                              )
+                            : dict.builder.canvas.allTypesAccepted
+                        )}
                     </p>
                   </div>
                 )}
@@ -292,9 +319,12 @@ export function BuilderCanvas({
                     variant="ghost"
                     size="icon-xs"
                     disabled={index === 0}
-                    onClick={() => move(index, index - 1)}
+                    onClick={() => {
+                      pushHistory(getValues())
+                      move(index, index - 1)
+                    }}
                     className="cursor-pointer text-muted-foreground hover:text-foreground"
-                    title="Move question up"
+                    title={dict.builder.canvas.moveUp}
                   >
                     <ArrowUp className="size-3.5" />
                   </Button>
@@ -302,9 +332,12 @@ export function BuilderCanvas({
                     variant="ghost"
                     size="icon-xs"
                     disabled={index === fields.length - 1}
-                    onClick={() => move(index, index + 1)}
+                    onClick={() => {
+                      pushHistory(getValues())
+                      move(index, index + 1)
+                    }}
                     className="cursor-pointer text-muted-foreground hover:text-foreground"
-                    title="Move question down"
+                    title={dict.builder.canvas.moveDown}
                   >
                     <ArrowDown className="size-3.5" />
                   </Button>
@@ -315,7 +348,9 @@ export function BuilderCanvas({
 
                 <div className="flex items-center gap-3">
                   <div className="flex items-center gap-2 border-r pr-3">
-                    <span className="text-xs text-muted-foreground">Required</span>
+                    <span className="text-xs text-muted-foreground">
+                      {dict.builder.canvas.required}
+                    </span>
                     <Switch
                       checked={currentQuestion?.required || false}
                       onCheckedChange={(checked) =>
@@ -331,7 +366,7 @@ export function BuilderCanvas({
                     size="icon-xs"
                     onClick={() => onDuplicateQuestion(index)}
                     className="cursor-pointer text-muted-foreground hover:text-foreground"
-                    title="Duplicate question"
+                    title={dict.builder.canvas.duplicateQuestion}
                   >
                     <Copy className="size-3.5" />
                   </Button>
@@ -341,12 +376,12 @@ export function BuilderCanvas({
                     size="icon-xs"
                     onClick={() => {
                       onDeleteQuestion(index)
-                      if (activeQuestionId === field.id) {
+                      if (activeQuestionId === questionId || activeQuestionId === field.id) {
                         setActiveQuestionId(null)
                       }
                     }}
                     className="cursor-pointer text-muted-foreground hover:text-destructive"
-                    title="Delete question"
+                    title={dict.builder.canvas.deleteQuestion}
                   >
                     <Trash2 className="size-3.5" />
                   </Button>
@@ -364,7 +399,7 @@ export function BuilderCanvas({
             className="cursor-pointer gap-2 shadow-sm font-medium w-full sm:w-auto"
           >
             <Plus className="size-4" />
-            Add Question
+            {dict.builder.canvas.addQuestion}
           </Button>
 
           <div className="flex flex-wrap items-center justify-center gap-1.5 text-xs">
@@ -374,7 +409,7 @@ export function BuilderCanvas({
               onClick={() => onAddQuestion("SHORT_TEXT")}
               className="cursor-pointer"
             >
-              + Text
+              {dict.builder.canvas.quickText}
             </Button>
             <Button
               variant="outline"
@@ -382,7 +417,7 @@ export function BuilderCanvas({
               onClick={() => onAddQuestion("SINGLE_CHOICE")}
               className="cursor-pointer"
             >
-              + Radio
+              {dict.builder.canvas.quickRadio}
             </Button>
             <Button
               variant="outline"
@@ -390,7 +425,7 @@ export function BuilderCanvas({
               onClick={() => onAddQuestion("MULTIPLE_CHOICE")}
               className="cursor-pointer"
             >
-              + Checkbox
+              {dict.builder.canvas.quickCheckbox}
             </Button>
             <Button
               variant="outline"
@@ -398,7 +433,7 @@ export function BuilderCanvas({
               onClick={() => onAddQuestion("DROPDOWN")}
               className="cursor-pointer"
             >
-              + Dropdown
+              {dict.builder.canvas.quickDropdown}
             </Button>
             <Button
               variant="outline"
@@ -406,7 +441,7 @@ export function BuilderCanvas({
               onClick={() => onAddQuestion("FILE_UPLOAD")}
               className="cursor-pointer"
             >
-              + File Upload
+              {dict.builder.canvas.quickFile}
             </Button>
           </div>
         </div>

@@ -5,6 +5,7 @@ import { Download, Loader2 } from "lucide-react"
 import { toast } from "sonner"
 import { Button } from "@/components/ui/button"
 import { exportFormResponsesCSV } from "@/actions/response-actions"
+import { useLanguage } from "@/lib/i18n/language-context"
 
 interface ExportCsvButtonProps {
   formId: string
@@ -12,6 +13,7 @@ interface ExportCsvButtonProps {
 }
 
 export function ExportCsvButton({ formId, disabled }: ExportCsvButtonProps) {
+  const { dict } = useLanguage()
   const [isExporting, startTransition] = React.useTransition()
 
   const handleExport = () => {
@@ -28,12 +30,12 @@ export function ExportCsvButton({ formId, disabled }: ExportCsvButtonProps) {
           link.click()
           document.body.removeChild(link)
           URL.revokeObjectURL(url)
-          toast.success("Responses exported as CSV!")
+          toast.success(dict.responses.exportSuccess)
         } else {
-          toast.error(res.error || "Failed to generate CSV export")
+          toast.error(res.error || dict.responses.exportFailed)
         }
       } catch {
-        toast.error("An error occurred during export")
+        toast.error(dict.responses.exportFailed)
       }
     })
   }
@@ -51,7 +53,7 @@ export function ExportCsvButton({ formId, disabled }: ExportCsvButtonProps) {
       ) : (
         <Download className="size-3.5 text-muted-foreground" />
       )}
-      <span>{isExporting ? "Exporting..." : "Export CSV"}</span>
+      <span>{isExporting ? dict.responses.exporting : dict.responses.exportCsv}</span>
     </Button>
   )
 }

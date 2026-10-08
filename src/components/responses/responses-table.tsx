@@ -23,6 +23,7 @@ import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Card } from "@/components/ui/card"
 import type { FormSubmissionRow } from "@/actions/response-actions"
+import { useLanguage } from "@/lib/i18n/language-context"
 
 interface ResponsesTableProps {
   questions: Array<{ id: string; label: string; type: string }>
@@ -45,6 +46,7 @@ export function ResponsesTable({
   onInspect,
   onDelete,
 }: ResponsesTableProps) {
+  const { dict, language } = useLanguage()
   // Show first 3 questions as table preview columns
   const previewQuestions = questions.slice(0, 3)
 
@@ -54,13 +56,17 @@ export function ResponsesTable({
         <div className="size-12 rounded-full bg-muted flex items-center justify-center mb-3">
           <FileText className="size-6 text-muted-foreground" />
         </div>
-        <h3 className="text-base font-semibold text-foreground">No responses recorded yet</h3>
+        <h3 className="text-base font-semibold text-foreground">
+          {dict.responses.noResponsesTitle}
+        </h3>
         <p className="text-xs text-muted-foreground mt-1 max-w-sm">
-          Publish your form and share the public link with respondents to start collecting submissions.
+          {dict.responses.noResponsesDesc}
         </p>
       </Card>
     )
   }
+
+  const locale = language === "tr" ? "tr-TR" : "en-US"
 
   return (
     <div className="space-y-4">
@@ -70,14 +76,14 @@ export function ResponsesTable({
           <TableHeader className="bg-muted/40">
             <TableRow>
               <TableHead className="w-16 font-semibold">#</TableHead>
-              <TableHead className="w-44 font-semibold">Submitted At</TableHead>
+              <TableHead className="w-44 font-semibold">{dict.responses.colSubmittedAt}</TableHead>
               {previewQuestions.map((q) => (
                 <TableHead key={q.id} className="max-w-[200px] truncate font-semibold">
                   {q.label}
                 </TableHead>
               ))}
-              <TableHead className="w-24 text-center font-semibold">Files</TableHead>
-              <TableHead className="w-28 text-right font-semibold">Actions</TableHead>
+              <TableHead className="w-24 text-center font-semibold">{dict.responses.colFiles}</TableHead>
+              <TableHead className="w-28 text-right font-semibold">{dict.responses.colActions}</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -98,7 +104,7 @@ export function ResponsesTable({
                   <TableCell className="text-xs text-muted-foreground whitespace-nowrap">
                     <span className="flex items-center gap-1.5">
                       <Calendar className="size-3 text-primary shrink-0" />
-                      {new Date(sub.submittedAt).toLocaleString(undefined, {
+                      {new Date(sub.submittedAt).toLocaleString(locale, {
                         month: "short",
                         day: "numeric",
                         hour: "2-digit",
@@ -124,7 +130,7 @@ export function ResponsesTable({
                     {hasAttachment ? (
                       <Badge variant="secondary" className="text-[10px] gap-1 px-1.5 py-0">
                         <Paperclip className="size-3" />
-                        File
+                        {dict.responses.badgeFile}
                       </Badge>
                     ) : (
                       <span className="text-xs text-muted-foreground">-</span>
@@ -139,7 +145,7 @@ export function ResponsesTable({
                         size="icon-xs"
                         onClick={() => onInspect(sub)}
                         className="cursor-pointer text-muted-foreground hover:text-foreground"
-                        title="Inspect full response"
+                        title={dict.responses.inspectTooltip}
                       >
                         <Eye className="size-3.5" />
                       </Button>
@@ -148,7 +154,7 @@ export function ResponsesTable({
                         size="icon-xs"
                         onClick={() => onDelete(sub.id)}
                         className="cursor-pointer text-muted-foreground hover:text-destructive"
-                        title="Delete submission"
+                        title={dict.responses.deleteTooltip}
                       >
                         <Trash2 className="size-3.5" />
                       </Button>
@@ -164,12 +170,16 @@ export function ResponsesTable({
       {/* Pagination Controls */}
       <div className="flex items-center justify-between px-2 text-xs text-muted-foreground">
         <div>
-          Showing {submissions.length} of {totalCount} {totalCount === 1 ? "submission" : "submissions"}
+          {language === "tr"
+            ? `${totalCount} yanıttan ${submissions.length} tanesi gösteriliyor`
+            : `Showing ${submissions.length} of ${totalCount} ${totalCount === 1 ? "submission" : "submissions"}`}
         </div>
 
         <div className="flex items-center gap-2">
           <span>
-            Page {currentPage} of {totalPages}
+            {dict.responses.pageOf
+              .replace("{page}", String(currentPage))
+              .replace("{pages}", String(totalPages))}
           </span>
           <div className="flex items-center gap-1">
             <Button
