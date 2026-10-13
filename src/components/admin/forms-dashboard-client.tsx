@@ -6,7 +6,6 @@ import { FileText, ArrowLeft, Layers, MessageSquare } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import { Card } from "@/components/ui/card"
 import { ThemeToggle } from "@/components/theme-toggle"
-import { LanguageToggle } from "@/components/language-toggle"
 import { CreateFormButton } from "@/components/admin/create-form-button"
 import { FormCardActions } from "@/components/admin/form-card-actions"
 import { useLanguage } from "@/lib/i18n/language-context"
@@ -62,7 +61,6 @@ export function FormsDashboardClient({ initialForms }: FormsDashboardClientProps
         </div>
 
         <div className="flex items-center gap-2 sm:gap-3">
-          <LanguageToggle />
           <ThemeToggle />
           <CreateFormButton />
         </div>

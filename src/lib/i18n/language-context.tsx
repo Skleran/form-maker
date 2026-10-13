@@ -40,21 +40,11 @@ function subscribe(callback: () => void): () => void {
 }
 
 function getSnapshot(): Language {
-  if (typeof window === "undefined") return "en"
-  try {
-    const saved = localStorage.getItem(STORAGE_KEY) as Language | null
-    if (saved === "en" || saved === "tr") return saved
-    if (typeof navigator !== "undefined" && navigator.language?.toLowerCase().startsWith("tr")) {
-      return "tr"
-    }
-  } catch {
-    // Ignore storage errors
-  }
-  return "en"
+  return "tr"
 }
 
 function getServerSnapshot(): Language {
-  return "en"
+  return "tr"
 }
 
 export function LanguageProvider({ children }: { children: React.ReactNode }) {

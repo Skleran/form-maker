@@ -37,7 +37,6 @@ import {
 import { useBuilderStore } from "@/stores/use-builder-store"
 import type { FormBuilderValues } from "@/lib/validations/form"
 import { ThemeToggle } from "@/components/theme-toggle"
-import { LanguageToggle } from "@/components/language-toggle"
 import { useLanguage } from "@/lib/i18n/language-context"
 
 interface BuilderHeaderProps {
@@ -350,7 +349,6 @@ export function BuilderHeader({
               <TooltipContent>{dict.builder.header.inspectorTooltip}</TooltipContent>
             </Tooltip>
 
-            <LanguageToggle />
             <ThemeToggle />
           </div>
         </div>

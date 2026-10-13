@@ -158,27 +158,40 @@ export async function saveForm(
       }
     }
 
-    // Atomic transaction: update form metadata, clear existing questions, re-insert updated list
+    // Atomic transaction: update form metadata and reconcile questions
     const updated = await prisma.$transaction(async (tx) => {
-      // 1. Delete current questions
+      // 1. Delete questions that were removed by the user
+      const incomingIds = values.questions.map((q) => q.id).filter(Boolean)
       await tx.question.deleteMany({
-        where: { formId },
+        where: {
+          formId,
+          id: { notIn: incomingIds },
+        },
       })
 
-      // 2. Create updated questions
-      const questionData = values.questions.map((q, idx) => ({
-        formId,
-        orderIndex: idx,
-        type: q.type as QuestionType,
-        label: q.label || "Untitled Question",
-        required: Boolean(q.required),
-        options: q.options || [],
-        config: q.config || {},
-      }))
-
-      if (questionData.length > 0) {
-        await tx.question.createMany({
-          data: questionData,
+      // 2. Upsert updated or new questions
+      for (let idx = 0; idx < values.questions.length; idx++) {
+        const q = values.questions[idx]
+        await tx.question.upsert({
+          where: { id: q.id },
+          create: {
+            id: q.id,
+            formId,
+            orderIndex: idx,
+            type: q.type as QuestionType,
+            label: q.label || "Untitled Question",
+            required: Boolean(q.required),
+            options: q.options || [],
+            config: q.config || {},
+          },
+          update: {
+            orderIndex: idx,
+            type: q.type as QuestionType,
+            label: q.label || "Untitled Question",
+            required: Boolean(q.required),
+            options: q.options || [],
+            config: q.config || {},
+          },
         })
       }
 
@@ -188,6 +201,7 @@ export async function saveForm(
         data: {
           title: values.title,
           description: values.description,
+          headerImage: values.headerImage || null,
           slug: values.slug,
           isPublished: values.isPublished,
         },

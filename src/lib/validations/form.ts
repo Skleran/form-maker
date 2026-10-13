@@ -21,6 +21,7 @@ export const questionConfigSchema = z.object({
   maxLength: z.number().positive().optional(),
   maxFileSizeMb: z.number().positive().optional(),
   allowedMimeTypes: z.array(z.string()).optional(),
+  icon: z.string().nullable().optional(),
 })
 
 export const questionItemSchema = z.object({
@@ -37,6 +38,7 @@ export const questionItemSchema = z.object({
 export const formBuilderSchema = z.object({
   title: z.string().min(1, "Form title is required"),
   description: z.string(),
+  headerImage: z.string().nullable().optional(),
   slug: z
     .string()
     .min(1, "Form URL slug is required")

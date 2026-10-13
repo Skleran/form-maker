@@ -20,6 +20,7 @@ interface InitialFormData {
   id: string
   title: string
   description: string | null
+  headerImage?: string | null
   slug: string
   isPublished: boolean
   questions: Array<{
@@ -70,6 +71,7 @@ export function FormBuilder({ initialForm }: FormBuilderProps) {
     () => ({
       title: initialForm.title || "Untitled Form",
       description: initialForm.description || "",
+      headerImage: initialForm.headerImage || null,
       slug: initialForm.slug,
       isPublished: initialForm.isPublished,
       questions: initialForm.questions.map((q, idx) => ({

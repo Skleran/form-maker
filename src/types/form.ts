@@ -18,6 +18,7 @@ export interface QuestionConfig {
   maxLength?: number
   maxFileSizeMb?: number
   allowedMimeTypes?: string[]
+  icon?: string | null
 }
 
 export interface QuestionFormItem {
@@ -35,6 +36,7 @@ export interface FormMetadata {
   id?: string
   title: string
   description?: string | null
+  headerImage?: string | null
   slug: string
   isPublished: boolean
 }

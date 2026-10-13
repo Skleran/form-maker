@@ -32,6 +32,7 @@ import { useBuilderStore } from "@/stores/use-builder-store"
 import type { FormBuilderValues, QuestionItemValues } from "@/lib/validations/form"
 import type { QuestionType } from "@/types/form"
 import { useLanguage } from "@/lib/i18n/language-context"
+import { QUESTION_ICON_OPTIONS } from "@/components/form/question-icon"
 
 interface BuilderInspectorProps {
   onDuplicateQuestion: (index: number) => void
@@ -236,6 +237,72 @@ export function BuilderInspector({
                         <div className="flex items-center gap-2">
                           <Icon className="size-3.5 text-muted-foreground" />
                           <span>{t.label}</span>
+                        </div>
+                      </SelectItem>
+                    )
+                  })}
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Question Icon Selector */}
+            <div className="space-y-1">
+              <div className="flex items-center justify-between">
+                <label className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+                  {language === "tr" ? "Soru İkonu" : "Question Icon"}
+                </label>
+                {activeQuestion.config?.icon && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setValue(`questions.${activeIndex}.config.icon`, undefined, {
+                        shouldDirty: true,
+                      })
+                    }}
+                    className="text-[10px] text-muted-foreground hover:text-destructive underline cursor-pointer"
+                  >
+                    {language === "tr" ? "Kaldır" : "Remove"}
+                  </button>
+                )}
+              </div>
+              <Select
+                value={activeQuestion.config?.icon || "none"}
+                onValueChange={(val) => {
+                  const nextVal = !val || val === "none" ? undefined : val
+                  setValue(`questions.${activeIndex}.config.icon`, nextVal, {
+                    shouldDirty: true,
+                  })
+                }}
+              >
+                <SelectTrigger className="w-full h-8 text-xs">
+                  <SelectValue placeholder={language === "tr" ? "İkon seçin..." : "Select icon..."}>
+                    {(val: string | null) => {
+                      if (!val || val === "none") return language === "tr" ? "Yok (İkonsuz)" : "None (No icon)"
+                      const iconOpt = QUESTION_ICON_OPTIONS.find((item) => item.value === val)
+                      if (!iconOpt) return language === "tr" ? "Yok (İkonsuz)" : "None"
+                      const Icon = iconOpt.icon
+                      return (
+                        <span className="flex items-center gap-1.5 truncate">
+                          <Icon className="size-3.5 text-primary shrink-0" />
+                          <span className="truncate">{iconOpt.label}</span>
+                        </span>
+                      )
+                    }}
+                  </SelectValue>
+                </SelectTrigger>
+                <SelectContent className="max-h-56">
+                  <SelectItem value="none" className="text-xs">
+                    <span className="text-muted-foreground">
+                      {language === "tr" ? "Yok (İkonsuz)" : "None (No icon)"}
+                    </span>
+                  </SelectItem>
+                  {QUESTION_ICON_OPTIONS.map((opt) => {
+                    const Icon = opt.icon
+                    return (
+                      <SelectItem key={opt.value} value={opt.value} className="text-xs">
+                        <div className="flex items-center gap-2">
+                          <Icon className="size-3.5 text-primary shrink-0" />
+                          <span>{opt.label}</span>
                         </div>
                       </SelectItem>
                     )

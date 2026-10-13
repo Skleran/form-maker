@@ -2,7 +2,6 @@
 
 import Link from "next/link";
 import { ThemeToggle } from "@/components/theme-toggle";
-import { LanguageToggle } from "@/components/language-toggle";
 import { buttonVariants } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import {
@@ -38,7 +37,6 @@ export default function Home() {
           </div>
 
           <div className="flex items-center gap-2 sm:gap-3">
-            <LanguageToggle />
             <ThemeToggle />
             <Link
               href="/admin/forms"

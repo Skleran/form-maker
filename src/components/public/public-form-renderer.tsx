@@ -26,11 +26,12 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { ThemeToggle } from "@/components/theme-toggle"
-import { LanguageToggle } from "@/components/language-toggle"
 import { buildDynamicFormSchema } from "@/lib/validations/dynamic-schema"
 import { submitFormResponse } from "@/actions/submission-actions"
 import type { QuestionFormItem, QuestionConfig } from "@/types/form"
 import { useLanguage } from "@/lib/i18n/language-context"
+import { cn } from "@/lib/utils"
+import { QuestionIcon } from "@/components/form/question-icon"
 
 interface FileUploadValue {
   name: string
@@ -217,6 +218,7 @@ interface PublicFormRendererProps {
     id: string
     title: string
     description: string | null
+    headerImage?: string | null
     slug: string
     isPublished: boolean
     questions: QuestionFormItem[]
@@ -384,26 +386,42 @@ export function PublicFormRenderer({ form, isPreview = false }: PublicFormRender
             <span>{dict.publicForm.brand}</span>
           </div>
           <div className="flex items-center gap-2 sm:gap-3">
-            <LanguageToggle />
             <ThemeToggle />
           </div>
         </div>
 
         <form onSubmit={handleSubmit(onSubmit)} className="mx-auto max-w-2xl space-y-4">
-          {/* Form Title & Description Card */}
-          <Card className="border-t-4 border-t-primary p-6 sm:p-8 bg-card shadow-sm">
-            <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-foreground">
-              {form.title}
-            </h1>
-            {form.description && (
-              <p className="mt-2 text-sm text-muted-foreground whitespace-pre-wrap leading-relaxed">
-                {form.description}
-              </p>
+          {/* Form Header Banner & Title Card */}
+          <div className="space-y-0">
+            {form.headerImage && (
+              <div className="overflow-hidden rounded-t-xl border border-b-0 shadow-sm bg-muted/20">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={form.headerImage}
+                  alt={form.title}
+                  className="w-full h-44 sm:h-56 object-cover"
+                />
+              </div>
             )}
-            <div className="mt-6 pt-3 border-t text-xs text-destructive font-medium">
-              {dict.publicForm.requiredIndicator}
-            </div>
-          </Card>
+            <Card
+              className={cn(
+                "p-6 sm:p-8 bg-card shadow-sm transition-all",
+                form.headerImage ? "rounded-t-none border-t-0" : "border-t-4 border-t-primary"
+              )}
+            >
+              <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-foreground">
+                {form.title}
+              </h1>
+              {form.description && (
+                <p className="mt-2 text-sm text-muted-foreground whitespace-pre-wrap leading-relaxed">
+                  {form.description}
+                </p>
+              )}
+              <div className="mt-6 pt-3 border-t text-xs text-destructive font-medium">
+                {dict.publicForm.requiredIndicator}
+              </div>
+            </Card>
+          </div>
 
           {/* Dynamic Question Cards */}
           {form.questions.map((q) => {
@@ -417,14 +435,21 @@ export function PublicFormRenderer({ form, isPreview = false }: PublicFormRender
                 }`}
               >
                 {/* Question Label & Description */}
-                <div className="space-y-1 mb-4">
-                  <label className="text-base font-semibold text-foreground flex items-baseline gap-1">
-                    <span>{q.label}</span>
-                    {q.required && <span className="text-destructive font-bold">*</span>}
-                  </label>
-                  {q.config?.description && (
-                    <p className="text-xs text-muted-foreground">{q.config.description}</p>
+                <div className="flex items-start gap-2.5 mb-4">
+                  {q.config?.icon && (
+                    <div className="p-1.5 rounded-md bg-primary/10 text-primary shrink-0 mt-0.5">
+                      <QuestionIcon name={q.config.icon} className="size-4" />
+                    </div>
                   )}
+                  <div className="space-y-1 flex-1 min-w-0">
+                    <label className="text-base font-semibold text-foreground flex items-baseline gap-1">
+                      <span>{q.label}</span>
+                      {q.required && <span className="text-destructive font-bold">*</span>}
+                    </label>
+                    {q.config?.description && (
+                      <p className="text-xs text-muted-foreground">{q.config.description}</p>
+                    )}
+                  </div>
                 </div>
 
                 {/* Question Controls based on type */}

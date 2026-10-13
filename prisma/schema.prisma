@@ -23,6 +23,7 @@ model Form {
   id          String       @id @default(cuid())
   title       String
   description String?      @db.Text
+  headerImage String?      @db.Text
   slug        String       @unique
   isPublished Boolean      @default(false)
   createdAt   DateTime     @default(now())
