@@ -399,7 +399,7 @@ export function PublicFormRenderer({ form, isPreview = false }: PublicFormRender
                 <img
                   src={form.headerImage}
                   alt={form.title}
-                  className="w-full h-44 sm:h-56 object-cover"
+                  className="w-full aspect-[4/1] object-cover block"
                 />
               </div>
             )}

@@ -4,8 +4,9 @@ import * as React from "react"
 import { Check, RotateCcw, X } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
+import { useLanguage } from "@/lib/i18n/language-context"
 
-interface CropBox {
+export interface CropBox {
   x: number
   y: number
   width: number
@@ -15,8 +16,9 @@ interface CropBox {
 interface HeaderImageCropModalProps {
   isOpen: boolean
   imageSrc: string
+  initialCrop?: CropBox | null
   onClose: () => void
-  onSave: (croppedDataUrl: string) => void
+  onSave: (croppedDataUrl: string, cropBox: CropBox) => void
 }
 
 const BANNER_ASPECT_RATIO = 4 // 4:1 width to height banner (e.g. 1200x300)
@@ -24,9 +26,11 @@ const BANNER_ASPECT_RATIO = 4 // 4:1 width to height banner (e.g. 1200x300)
 export function HeaderImageCropModal({
   isOpen,
   imageSrc,
+  initialCrop,
   onClose,
   onSave,
 }: HeaderImageCropModalProps) {
+  const { language } = useLanguage()
   const imageRef = React.useRef<HTMLImageElement>(null)
   const containerRef = React.useRef<HTMLDivElement>(null)
 
@@ -50,8 +54,8 @@ export function HeaderImageCropModal({
     startCrop: { x: 0, y: 0, width: 0, height: 0 },
   })
 
-  const initializeCrop = React.useCallback(
-    (dispW: number, dispH: number) => {
+  const getDefaultCrop = React.useCallback(
+    (dispW: number, dispH: number): CropBox => {
       let cropW = dispW * 0.96
       let cropH = cropW / BANNER_ASPECT_RATIO
 
@@ -63,20 +67,50 @@ export function HeaderImageCropModal({
       const x = Math.max(0, (dispW - cropW) / 2)
       const y = Math.max(0, (dispH - cropH) / 2)
 
-      setCrop({ x, y, width: cropW, height: cropH })
+      return { x, y, width: cropW, height: cropH }
     },
     []
+  )
+
+  const applyCrop = React.useCallback(
+    (dispW: number, dispH: number) => {
+      if (
+        initialCrop &&
+        typeof initialCrop.x === "number" &&
+        typeof initialCrop.y === "number" &&
+        typeof initialCrop.width === "number" &&
+        typeof initialCrop.height === "number" &&
+        initialCrop.width > 0 &&
+        initialCrop.height > 0
+      ) {
+        let cropW = initialCrop.width * dispW
+        let cropH = initialCrop.height * dispH
+        let cropX = initialCrop.x * dispW
+        let cropY = initialCrop.y * dispH
+
+        cropW = Math.min(cropW, dispW)
+        cropH = Math.min(cropH, dispH)
+        cropX = Math.max(0, Math.min(dispW - cropW, cropX))
+        cropY = Math.max(0, Math.min(dispH - cropH, cropY))
+
+        setCrop({ x: cropX, y: cropY, width: cropW, height: cropH })
+        return
+      }
+
+      setCrop(getDefaultCrop(dispW, dispH))
+    },
+    [initialCrop, getDefaultCrop]
   )
 
   const handleImageLoad = () => {
     if (!imageRef.current) return
     const rect = imageRef.current.getBoundingClientRect()
     setDisplaySize({ width: rect.width, height: rect.height })
-    initializeCrop(rect.width, rect.height)
+    applyCrop(rect.width, rect.height)
     setImageLoaded(true)
   }
 
-  // Update display dimensions on window resize
+  // Update display dimensions on window resize proportionally
   React.useEffect(() => {
     if (!isOpen || !imageLoaded) return
 
@@ -84,15 +118,26 @@ export function HeaderImageCropModal({
       if (imageRef.current) {
         const rect = imageRef.current.getBoundingClientRect()
         if (rect.width > 0 && rect.height > 0) {
-          setDisplaySize({ width: rect.width, height: rect.height })
-          initializeCrop(rect.width, rect.height)
+          setDisplaySize((prev) => {
+            if (prev.width > 0 && prev.height > 0) {
+              const ratioX = rect.width / prev.width
+              const ratioY = rect.height / prev.height
+              setCrop((c) => ({
+                x: c.x * ratioX,
+                y: c.y * ratioY,
+                width: c.width * ratioX,
+                height: c.height * ratioY,
+              }))
+            }
+            return { width: rect.width, height: rect.height }
+          })
         }
       }
     }
 
     window.addEventListener("resize", handleResize)
     return () => window.removeEventListener("resize", handleResize)
-  }, [isOpen, imageLoaded, initializeCrop])
+  }, [isOpen, imageLoaded])
 
   // Mouse / Pointer events for dragging and resizing
   const startDrag = (
@@ -204,17 +249,23 @@ export function HeaderImageCropModal({
     const scaleX = img.naturalWidth / displaySize.width
     const scaleY = img.naturalHeight / displaySize.height
 
-    const sx = crop.x * scaleX
-    const sy = crop.y * scaleY
-    const sWidth = crop.width * scaleX
-    const sHeight = crop.height * scaleY
+    const sx = Math.max(0, Math.min(img.naturalWidth - 1, crop.x * scaleX))
+    const sy = Math.max(0, Math.min(img.naturalHeight - 1, crop.y * scaleY))
+    const sWidth = Math.min(img.naturalWidth - sx, crop.width * scaleX)
+    const sHeight = Math.min(img.naturalHeight - sy, crop.height * scaleY)
 
     ctx.imageSmoothingEnabled = true
     ctx.imageSmoothingQuality = "high"
     ctx.drawImage(img, sx, sy, sWidth, sHeight, 0, 0, targetWidth, targetHeight)
 
     const croppedDataUrl = canvas.toDataURL("image/jpeg", 0.92)
-    onSave(croppedDataUrl)
+    const normalizedCrop: CropBox = {
+      x: crop.x / displaySize.width,
+      y: crop.y / displaySize.height,
+      width: crop.width / displaySize.width,
+      height: crop.height / displaySize.height,
+    }
+    onSave(croppedDataUrl, normalizedCrop)
     onClose()
   }
 
@@ -226,7 +277,7 @@ export function HeaderImageCropModal({
         {/* Header */}
         <div className="flex items-center justify-between px-5 py-3.5 border-b bg-muted/20 shrink-0">
           <h2 className="text-base font-semibold tracking-tight text-foreground">
-            Pozisyon Başlığı
+            {language === "tr" ? "Kapak Görseli Konumu" : "Cover Image Position"}
           </h2>
           <Button
             type="button"
@@ -254,7 +305,7 @@ export function HeaderImageCropModal({
               src={imageSrc}
               alt="Kırpılacak Görsel"
               onLoad={handleImageLoad}
-              className="max-h-[55vh] max-w-full block select-none pointer-events-none object-contain"
+              className="max-h-[55vh] max-w-full w-auto h-auto block select-none pointer-events-none"
               draggable={false}
             />
 
@@ -359,14 +410,14 @@ export function HeaderImageCropModal({
               size="xs"
               onClick={() => {
                 if (displaySize.width > 0 && displaySize.height > 0) {
-                  initializeCrop(displaySize.width, displaySize.height)
+                  setCrop(getDefaultCrop(displaySize.width, displaySize.height))
                 }
               }}
               className="cursor-pointer gap-1.5 text-xs text-muted-foreground hover:text-foreground"
-              title="Kırpma alanını ortala ve sıfırla"
+              title={language === "tr" ? "Kırpma alanını ortala ve sıfırla" : "Reset crop area to center"}
             >
               <RotateCcw className="size-3" />
-              Sıfırla
+              {language === "tr" ? "Sıfırla" : "Reset"}
             </Button>
           </div>
 
@@ -378,7 +429,7 @@ export function HeaderImageCropModal({
               onClick={onClose}
               className="cursor-pointer text-xs"
             >
-              İptal
+              {language === "tr" ? "İptal" : "Cancel"}
             </Button>
             <Button
               type="button"
@@ -387,7 +438,7 @@ export function HeaderImageCropModal({
               className="cursor-pointer gap-1.5 text-xs font-semibold shadow-xs"
             >
               <Check className="size-3.5" />
-              Kaydet
+              {language === "tr" ? "Kaydet" : "Save"}
             </Button>
           </div>
         </div>

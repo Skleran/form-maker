@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache"
 import { prisma } from "@/lib/prisma"
 import { formBuilderSchema, type FormBuilderValues } from "@/lib/validations/form"
-import type { QuestionType } from "@prisma/client"
+import { Prisma, type QuestionType } from "@prisma/client"
 
 export type ActionResult<T = unknown> =
   | { success: true; data: T; error?: never }
@@ -202,6 +202,11 @@ export async function saveForm(
           title: values.title,
           description: values.description,
           headerImage: values.headerImage || null,
+          headerImageRaw: values.headerImage ? (values.headerImageRaw || values.headerImage) : null,
+          headerImageCrop:
+            values.headerImage && values.headerImageCrop
+              ? (values.headerImageCrop as Prisma.InputJsonValue)
+              : Prisma.DbNull,
           slug: values.slug,
           isPublished: values.isPublished,
         },

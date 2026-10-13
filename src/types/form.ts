@@ -32,11 +32,20 @@ export interface QuestionFormItem {
   config: QuestionConfig
 }
 
+export interface HeaderImageCrop {
+  x: number
+  y: number
+  width: number
+  height: number
+}
+
 export interface FormMetadata {
   id?: string
   title: string
   description?: string | null
   headerImage?: string | null
+  headerImageRaw?: string | null
+  headerImageCrop?: HeaderImageCrop | null
   slug: string
   isPublished: boolean
 }

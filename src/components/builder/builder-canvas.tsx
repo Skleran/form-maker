@@ -83,8 +83,11 @@ export function BuilderCanvas({
 
   // Header image state & crop modal
   const headerImage = watch("headerImage")
+  const headerImageRaw = watch("headerImageRaw")
+  const headerImageCrop = watch("headerImageCrop")
   const headerImageInputRef = React.useRef<HTMLInputElement>(null)
   const [rawImageForCrop, setRawImageForCrop] = React.useState<string | null>(null)
+  const [activeCropForModal, setActiveCropForModal] = React.useState<FormBuilderValues["headerImageCrop"]>(null)
   const [isCropModalOpen, setIsCropModalOpen] = React.useState(false)
 
   // Drag and Drop state
@@ -119,8 +122,42 @@ export function BuilderCanvas({
     const reader = new FileReader()
     reader.onload = () => {
       const dataUrl = reader.result as string
-      setRawImageForCrop(dataUrl)
-      setIsCropModalOpen(true)
+      // Optimize large images to max 2000px so raw base64 stays compact
+      const img = new Image()
+      img.onload = () => {
+        const maxDim = 2000
+        let { width, height } = img
+        if (width > maxDim || height > maxDim) {
+          if (width > height) {
+            height = Math.round((height * maxDim) / width)
+            width = maxDim
+          } else {
+            width = Math.round((width * maxDim) / height)
+            height = maxDim
+          }
+          const canvas = document.createElement("canvas")
+          canvas.width = width
+          canvas.height = height
+          const ctx = canvas.getContext("2d")
+          if (ctx) {
+            ctx.drawImage(img, 0, 0, width, height)
+            const optimized = canvas.toDataURL("image/jpeg", 0.9)
+            setRawImageForCrop(optimized)
+            setActiveCropForModal(null)
+            setIsCropModalOpen(true)
+            return
+          }
+        }
+        setRawImageForCrop(dataUrl)
+        setActiveCropForModal(null)
+        setIsCropModalOpen(true)
+      }
+      img.onerror = () => {
+        setRawImageForCrop(dataUrl)
+        setActiveCropForModal(null)
+        setIsCropModalOpen(true)
+      }
+      img.src = dataUrl
     }
     reader.readAsDataURL(file)
   }
@@ -333,7 +370,7 @@ export function BuilderCanvas({
               <img
                 src={headerImage}
                 alt="Form Kapak Görseli"
-                className="w-full h-44 sm:h-52 object-cover"
+                className="w-full aspect-[4/1] object-cover block"
               />
               <div className="absolute top-3 right-3 flex items-center gap-2 opacity-90 group-hover:opacity-100 transition-opacity">
                 <Button
@@ -341,8 +378,12 @@ export function BuilderCanvas({
                   variant="secondary"
                   size="xs"
                   onClick={() => {
-                    setRawImageForCrop(rawImageForCrop || headerImage)
-                    setIsCropModalOpen(true)
+                    const sourceImage = headerImageRaw || rawImageForCrop || headerImage
+                    if (sourceImage) {
+                      setRawImageForCrop(sourceImage)
+                      setActiveCropForModal(headerImageCrop || null)
+                      setIsCropModalOpen(true)
+                    }
                   }}
                   className="cursor-pointer gap-1.5 shadow-sm bg-background/85 hover:bg-background backdrop-blur-xs text-xs font-medium"
                 >
@@ -366,7 +407,10 @@ export function BuilderCanvas({
                   onClick={() => {
                     pushHistory(getValues())
                     setValue("headerImage", null, { shouldDirty: true })
+                    setValue("headerImageRaw", null, { shouldDirty: true })
+                    setValue("headerImageCrop", null, { shouldDirty: true })
                     setRawImageForCrop(null)
+                    setActiveCropForModal(null)
                   }}
                   className="cursor-pointer shadow-sm"
                   title={language === "tr" ? "Kapak Görselini Kaldır" : "Remove Cover Image"}
@@ -865,10 +909,14 @@ export function BuilderCanvas({
         <HeaderImageCropModal
           isOpen={isCropModalOpen}
           imageSrc={rawImageForCrop}
+          initialCrop={activeCropForModal}
           onClose={() => setIsCropModalOpen(false)}
-          onSave={(croppedDataUrl) => {
+          onSave={(croppedDataUrl, normalizedCrop) => {
             pushHistory(getValues())
             setValue("headerImage", croppedDataUrl, { shouldDirty: true })
+            setValue("headerImageRaw", rawImageForCrop, { shouldDirty: true })
+            setValue("headerImageCrop", normalizedCrop, { shouldDirty: true })
+            setActiveCropForModal(normalizedCrop)
             toast.success(
               language === "tr"
                 ? "Kapak görseli başarıyla ayarlandı."

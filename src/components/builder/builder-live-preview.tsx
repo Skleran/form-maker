@@ -105,19 +105,36 @@ export function BuilderLivePreview() {
                 className="space-y-4"
               >
                 {/* Form Title & Description Card */}
-                <Card className="border-t-4 border-t-primary p-6 shadow-sm bg-card">
-                  <h1 className="text-2xl font-bold tracking-tight text-foreground">
-                    {formValues.title || "Untitled Form"}
-                  </h1>
-                  {formValues.description && (
-                    <p className="mt-2 text-sm text-muted-foreground whitespace-pre-wrap">
-                      {formValues.description}
-                    </p>
+                <div className="space-y-0">
+                  {formValues.headerImage && (
+                    <div className="overflow-hidden rounded-t-xl border border-b-0 shadow-sm bg-muted/20">
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img
+                        src={formValues.headerImage}
+                        alt={formValues.title || "Header"}
+                        className="w-full aspect-[4/1] object-cover block"
+                      />
+                    </div>
                   )}
-                  <div className="mt-4 pt-3 border-t text-xs text-destructive font-medium">
-                    * Indicates required question
-                  </div>
-                </Card>
+                  <Card
+                    className={cn(
+                      "p-6 shadow-sm bg-card",
+                      formValues.headerImage ? "rounded-t-none border-t-0" : "border-t-4 border-t-primary"
+                    )}
+                  >
+                    <h1 className="text-2xl font-bold tracking-tight text-foreground">
+                      {formValues.title || "Untitled Form"}
+                    </h1>
+                    {formValues.description && (
+                      <p className="mt-2 text-sm text-muted-foreground whitespace-pre-wrap">
+                        {formValues.description}
+                      </p>
+                    )}
+                    <div className="mt-4 pt-3 border-t text-xs text-destructive font-medium">
+                      * Indicates required question
+                    </div>
+                  </Card>
+                </div>
 
                 {/* Question Cards */}
                 {(formValues.questions || []).map((q, idx) => (

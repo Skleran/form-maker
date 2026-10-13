@@ -35,10 +35,22 @@ export const questionItemSchema = z.object({
   config: questionConfigSchema,
 })
 
+export const headerImageCropSchema = z
+  .object({
+    x: z.number(),
+    y: z.number(),
+    width: z.number(),
+    height: z.number(),
+  })
+  .nullable()
+  .optional()
+
 export const formBuilderSchema = z.object({
   title: z.string().min(1, "Form title is required"),
   description: z.string(),
   headerImage: z.string().nullable().optional(),
+  headerImageRaw: z.string().nullable().optional(),
+  headerImageCrop: headerImageCropSchema,
   slug: z
     .string()
     .min(1, "Form URL slug is required")

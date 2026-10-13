@@ -21,6 +21,8 @@ interface InitialFormData {
   title: string
   description: string | null
   headerImage?: string | null
+  headerImageRaw?: string | null
+  headerImageCrop?: unknown
   slug: string
   isPublished: boolean
   questions: Array<{
@@ -72,6 +74,8 @@ export function FormBuilder({ initialForm }: FormBuilderProps) {
       title: initialForm.title || "Untitled Form",
       description: initialForm.description || "",
       headerImage: initialForm.headerImage || null,
+      headerImageRaw: initialForm.headerImageRaw || null,
+      headerImageCrop: (initialForm.headerImageCrop as FormBuilderValues["headerImageCrop"]) || null,
       slug: initialForm.slug,
       isPublished: initialForm.isPublished,
       questions: initialForm.questions.map((q, idx) => ({
