@@ -1,0 +1,44 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: form-maker-db
+    restart: always
+    environment:
+      POSTGRES_USER: ${DB_USER:-formmaker}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-changeme_secure_password}
+      POSTGRES_DB: ${DB_NAME:-formmaker}
+    ports:
+      # Expose only to localhost for security (DirectAdmin host access or tools)
+      - "127.0.0.1:5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-formmaker} -d ${DB_NAME:-formmaker}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: form-maker-app
+    restart: always
+    depends_on:
+      postgres:
+        condition: service_healthy
+    ports:
+      # Bound to localhost:3000 so DirectAdmin (Nginx / Apache) can reverse proxy to it
+      - "127.0.0.1:3000:3000"
+    environment:
+      NODE_ENV: production
+      DATABASE_URL: "postgresql://${DB_USER:-formmaker}:${DB_PASSWORD:-changeme_secure_password}@postgres:5432/${DB_NAME:-formmaker}"
+      DIRECT_URL: "postgresql://${DB_USER:-formmaker}:${DB_PASSWORD:-changeme_secure_password}@postgres:5432/${DB_NAME:-formmaker}"
+      NEXT_PUBLIC_APP_URL: ${NEXT_PUBLIC_APP_URL:-http://localhost:3000}
+      ADMIN_USERNAME: ${ADMIN_USERNAME:-admin}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:-admin123}
+      AUTH_SECRET: ${AUTH_SECRET:-change_this_to_a_random_32_character_string}
+
+volumes:
+  postgres_data:
+    driver: local
