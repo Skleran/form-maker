@@ -18,6 +18,7 @@ export async function getPublicFormBySlug(slug: string) {
       where: { slug },
       include: {
         questions: {
+          where: { isDeleted: false },
           orderBy: { orderIndex: "asc" },
         },
       },
@@ -66,6 +67,7 @@ export async function submitFormResponse(
       where: { id: formId },
       include: {
         questions: {
+          where: { isDeleted: false },
           orderBy: { orderIndex: "asc" },
         },
       },
@@ -140,6 +142,8 @@ export async function submitFormResponse(
         answerRecords.push({
           submissionId: sub.id,
           questionId: q.id,
+          questionLabel: q.label,
+          questionType: q.type,
           valueText,
           valueJson: valueJson ? JSON.parse(JSON.stringify(valueJson)) : null,
           fileUrl,

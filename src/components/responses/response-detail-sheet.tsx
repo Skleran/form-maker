@@ -122,7 +122,10 @@ export function ResponseDetailSheet({
 
   return (
     <Sheet open={isOpen} onOpenChange={(open) => !open && onClose()}>
-      <SheetContent className="w-full sm:max-w-lg overflow-y-auto p-0 flex flex-col">
+      <SheetContent
+        showCloseButton={false}
+        className="w-full sm:max-w-lg overflow-y-auto p-0 flex flex-col"
+      >
         {/* Header */}
         <SheetHeader className="p-6 border-b bg-muted/20 space-y-2">
           <div className="flex items-center justify-between">

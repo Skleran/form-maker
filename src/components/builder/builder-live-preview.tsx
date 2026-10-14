@@ -123,7 +123,7 @@ export function BuilderLivePreview() {
                     )}
                   >
                     <h1 className="text-2xl font-bold tracking-tight text-foreground">
-                      {formValues.title || "Untitled Form"}
+                      {formValues.title || "Başlıksız Form"}
                     </h1>
                     {formValues.description && (
                       <p className="mt-2 text-sm text-muted-foreground whitespace-pre-wrap">
@@ -131,7 +131,7 @@ export function BuilderLivePreview() {
                       </p>
                     )}
                     <div className="mt-4 pt-3 border-t text-xs text-destructive font-medium">
-                      * Indicates required question
+                      * Zorunlu soruyu belirtir
                     </div>
                   </Card>
                 </div>
@@ -141,7 +141,7 @@ export function BuilderLivePreview() {
                   <Card key={q.id || idx} className="p-6 shadow-sm bg-card border">
                     <div className="space-y-1.5 mb-4">
                       <label className="text-sm font-semibold text-foreground flex items-baseline gap-1">
-                        <span>{q.label || `Question ${idx + 1}`}</span>
+                        <span>{q.label || `Soru ${idx + 1}`}</span>
                         {q.required && <span className="text-destructive">*</span>}
                       </label>
                       {q.config?.description && (
@@ -153,7 +153,7 @@ export function BuilderLivePreview() {
                     {q.type === "SHORT_TEXT" && (
                       <Input
                         required={q.required}
-                        placeholder={q.config?.placeholder || "Your answer"}
+                        placeholder={q.config?.placeholder || "Yanıtınız"}
                         className="text-sm"
                       />
                     )}
@@ -162,7 +162,7 @@ export function BuilderLivePreview() {
                       <Textarea
                         required={q.required}
                         rows={3}
-                        placeholder={q.config?.placeholder || "Your answer"}
+                        placeholder={q.config?.placeholder || "Yanıtınız"}
                         className="text-sm resize-none"
                       />
                     )}
@@ -203,7 +203,7 @@ export function BuilderLivePreview() {
                     {q.type === "DROPDOWN" && (
                       <Select>
                         <SelectTrigger className="w-full">
-                          <SelectValue placeholder="Choose an option" />
+                          <SelectValue placeholder="Bir seçenek seçin" />
                         </SelectTrigger>
                         <SelectContent>
                           {(q.options || []).map((opt) => (
@@ -219,10 +219,10 @@ export function BuilderLivePreview() {
                       <div className="rounded-lg border-2 border-dashed border-muted-foreground/30 p-6 text-center bg-muted/10">
                         <Upload className="size-8 text-muted-foreground mx-auto mb-2" />
                         <p className="text-xs font-medium text-foreground">
-                          Click or drag file to simulate upload
+                          Yüklemeyi simüle etmek için tıklayın veya dosyayı sürükleyin
                         </p>
                         <p className="text-[11px] text-muted-foreground mt-0.5">
-                          Max size: {q.config?.maxFileSizeMb || 10} MB
+                          Maksimum boyut: {q.config?.maxFileSizeMb || 10} MB
                         </p>
                       </div>
                     )}
@@ -231,7 +231,7 @@ export function BuilderLivePreview() {
 
                 <div className="flex justify-between items-center pt-2">
                   <Button type="submit" className="cursor-pointer shadow-sm">
-                    Submit Simulation
+                    Gönder (Önizleme)
                   </Button>
                   <Button
                     type="button"
@@ -240,7 +240,7 @@ export function BuilderLivePreview() {
                     onClick={() => setIsLivePreview(false)}
                     className="text-muted-foreground cursor-pointer"
                   >
-                    Close Preview
+                    Önizlemeyi Kapat
                   </Button>
                 </div>
               </form>

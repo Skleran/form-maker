@@ -71,7 +71,7 @@ export function FormBuilder({ initialForm }: FormBuilderProps) {
   // Memoized initial form values
   const initialValues = React.useMemo<FormBuilderValues>(
     () => ({
-      title: initialForm.title || "Untitled Form",
+      title: initialForm.title || "Başlıksız Form",
       description: initialForm.description || "",
       headerImage: initialForm.headerImage || null,
       headerImageRaw: initialForm.headerImageRaw || null,
@@ -189,7 +189,7 @@ export function FormBuilder({ initialForm }: FormBuilderProps) {
       } else {
         setActiveQuestionId(null)
       }
-      toast.info("Undo performed")
+      toast.info("Geri alma işlemi yapıldı")
       setTimeout(() => {
         isApplyingHistoryRef.current = false
       }, 100)
@@ -212,7 +212,7 @@ export function FormBuilder({ initialForm }: FormBuilderProps) {
       } else {
         setActiveQuestionId(null)
       }
-      toast.info("Redo performed")
+      toast.info("Yineleme işlemi yapıldı")
       setTimeout(() => {
         isApplyingHistoryRef.current = false
       }, 100)
@@ -244,7 +244,7 @@ export function FormBuilder({ initialForm }: FormBuilderProps) {
   const handleSave = async () => {
     const isValid = await methods.trigger()
     if (!isValid) {
-      toast.error("Please resolve validation errors before saving.")
+      toast.error("Lütfen kaydetmeden önce formdaki hataları giderin.")
       return
     }
 
@@ -260,12 +260,12 @@ export function FormBuilder({ initialForm }: FormBuilderProps) {
         savedSnapshotRef.current = values
         previousSnapshotRef.current = values
         clearHistory()
-        toast.success("Form saved successfully!")
+        toast.success("Form başarıyla kaydedildi!")
       } else {
-        toast.error(res.error || "Failed to save form.")
+        toast.error(res.error || "Form kaydedilemedi.")
       }
     } catch {
-      toast.error("An unexpected error occurred while saving.")
+      toast.error("Kaydetme sırasında beklenmeyen bir hata oluştu.")
     } finally {
       setIsSaving(false)
     }
@@ -284,7 +284,7 @@ export function FormBuilder({ initialForm }: FormBuilderProps) {
     } else {
       setActiveQuestionId(null)
     }
-    toast.info("Unsaved changes discarded")
+    toast.info("Kaydedilmemiş değişiklikler geri alındı")
     setTimeout(() => {
       isApplyingHistoryRef.current = false
     }, 100)
@@ -302,13 +302,13 @@ export function FormBuilder({ initialForm }: FormBuilderProps) {
       id: newId,
       orderIndex: currentQuestions.length,
       type,
-      label: "Untitled Question",
+      label: "Başlıksız Soru",
       required: false,
       options: ["SINGLE_CHOICE", "MULTIPLE_CHOICE", "DROPDOWN"].includes(type)
-        ? [{ id: `opt_${Date.now()}_1`, label: "Option 1" }]
+        ? [{ id: `opt_${Date.now()}_1`, label: "Seçenek 1" }]
         : [],
       config: {
-        placeholder: type === "SHORT_TEXT" ? "Enter your answer..." : undefined,
+        placeholder: type === "SHORT_TEXT" ? "Yanıtınızı girin..." : undefined,
         maxFileSizeMb: type === "FILE_UPLOAD" ? 10 : undefined,
       },
     }
@@ -331,7 +331,7 @@ export function FormBuilder({ initialForm }: FormBuilderProps) {
     const duplicated = {
       ...target,
       id: newId,
-      label: `${target.label} (Copy)`,
+      label: `${target.label} (Kopya)`,
       options: target.options?.map((opt, i) => ({
         id: `opt_${Date.now()}_${i + 1}`,
         label: opt.label,
@@ -346,7 +346,7 @@ export function FormBuilder({ initialForm }: FormBuilderProps) {
 
     methods.setValue("questions", updated, { shouldDirty: true })
     setActiveQuestionId(newId)
-    toast.info("Question duplicated")
+    toast.info("Soru çoğaltıldı")
   }
 
   const handleDeleteQuestion = (index: number) => {
@@ -363,7 +363,12 @@ export function FormBuilder({ initialForm }: FormBuilderProps) {
     if (activeQuestionId === target.id) {
       setActiveQuestionId(updated[0]?.id || null)
     }
-    toast.info("Question removed")
+
+    if (initialForm._count?.submissions && initialForm._count.submissions > 0) {
+      toast.info("Soru kaldırıldı. Bu soruya verilmiş eski yanıtlar yanıtlarda arşiv olarak korunacaktır.")
+    } else {
+      toast.info("Soru kaldırıldı")
+    }
   }
 
   return (

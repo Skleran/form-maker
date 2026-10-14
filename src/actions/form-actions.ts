@@ -60,6 +60,7 @@ export async function getFormById(id: string) {
       where: { id },
       include: {
         questions: {
+          where: { isDeleted: false },
           orderBy: { orderIndex: "asc" },
         },
         _count: {
@@ -95,8 +96,8 @@ export async function createForm(customTitle?: string): Promise<ActionResult<{ i
 
     const form = await prisma.form.create({
       data: {
-        title: customTitle || "Untitled Form",
-        description: "Form description",
+        title: customTitle || "Başlıksız Form",
+        description: "Form açıklaması",
         slug,
         isPublished: false,
         questions: {
@@ -104,11 +105,11 @@ export async function createForm(customTitle?: string): Promise<ActionResult<{ i
             {
               orderIndex: 0,
               type: "SHORT_TEXT",
-              label: "Untitled Question",
+              label: "Başlıksız Soru",
               required: false,
               options: [],
               config: {
-                placeholder: "Enter your answer...",
+                placeholder: "Yanıtınızı girin...",
               },
             },
           ],
@@ -160,16 +161,38 @@ export async function saveForm(
 
     // Atomic transaction: update form metadata and reconcile questions
     const updated = await prisma.$transaction(async (tx) => {
-      // 1. Delete questions that were removed by the user
+      // 1. Reconcile questions removed in the builder
       const incomingIds = values.questions.map((q) => q.id).filter(Boolean)
-      await tx.question.deleteMany({
+      const removedQuestions = await tx.question.findMany({
         where: {
           formId,
+          isDeleted: false,
           id: { notIn: incomingIds },
+        },
+        select: {
+          id: true,
+          _count: {
+            select: { answers: true },
+          },
         },
       })
 
-      // 2. Upsert updated or new questions
+      for (const removedQ of removedQuestions) {
+        if (removedQ._count.answers > 0) {
+          // Preserve historical answers by soft-deleting/archiving the question
+          await tx.question.update({
+            where: { id: removedQ.id },
+            data: { isDeleted: true },
+          })
+        } else {
+          // Never answered: safely delete clean
+          await tx.question.delete({
+            where: { id: removedQ.id },
+          })
+        }
+      }
+
+      // 2. Upsert updated or new questions (ensuring isDeleted: false)
       for (let idx = 0; idx < values.questions.length; idx++) {
         const q = values.questions[idx]
         await tx.question.upsert({
@@ -179,18 +202,20 @@ export async function saveForm(
             formId,
             orderIndex: idx,
             type: q.type as QuestionType,
-            label: q.label || "Untitled Question",
+            label: q.label || "Başlıksız Soru",
             required: Boolean(q.required),
             options: q.options || [],
             config: q.config || {},
+            isDeleted: false,
           },
           update: {
             orderIndex: idx,
             type: q.type as QuestionType,
-            label: q.label || "Untitled Question",
+            label: q.label || "Başlıksız Soru",
             required: Boolean(q.required),
             options: q.options || [],
             config: q.config || {},
+            isDeleted: false,
           },
         })
       }

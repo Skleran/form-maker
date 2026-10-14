@@ -45,10 +45,10 @@ export function ResponsesView({ formId }: ResponsesViewProps) {
           setData(res.data)
           setCurrentPage(page)
         } else {
-          toast.error(res.error || "Failed to load responses")
+          toast.error(res.error || "Yanıtlar yüklenemedi")
         }
       } catch {
-        toast.error("Failed to load responses")
+        toast.error("Yanıtlar yüklenemedi")
       } finally {
         setIsLoading(false)
       }

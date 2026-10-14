@@ -355,7 +355,7 @@ export function BuilderHeader({
 
         {/* Tabs Navigation (URL Search Param Synced) */}
         <div className="flex items-center justify-between border-t px-4 sm:px-6 bg-muted/20">
-          <Tabs value={currentTab} onValueChange={handleTabChange} className="w-full">
+          <Tabs value={currentTab} onValueChange={handleTabChange} className="w-auto">
             <TabsList className="bg-transparent h-10 p-0 space-x-6">
               <TabsTrigger
                 value="questions"
@@ -387,10 +387,10 @@ export function BuilderHeader({
               href={`/forms/${slug}`}
               target="_blank"
               rel="noopener noreferrer"
-              className="hidden sm:inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors"
+              className="hidden sm:inline-flex items-center gap-1.5 text-xs font-medium text-muted-foreground hover:text-foreground transition-colors shrink-0 whitespace-nowrap px-2.5 py-1 rounded-md hover:bg-muted/50"
             >
-              {dict.builder.header.openLive}
-              <ExternalLink className="size-3" />
+              <span>{dict.builder.header.openLive}</span>
+              <ExternalLink className="size-3.5" />
             </a>
           )}
         </div>
@@ -398,27 +398,27 @@ export function BuilderHeader({
 
       {/* Unsaved Changes Confirmation Dialog */}
       <Dialog open={showUnsavedDialog} onOpenChange={setShowUnsavedDialog}>
-        <DialogContent className="sm:max-w-md">
+        <DialogContent className="sm:max-w-[560px]">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2 text-foreground font-semibold">
-              <AlertTriangle className="size-5 text-amber-500" />
-              {dict.builder.header.unsavedModalTitle}
+              <AlertTriangle className="size-5 text-amber-500 shrink-0" />
+              <span>{dict.builder.header.unsavedModalTitle}</span>
             </DialogTitle>
             <DialogDescription className="text-sm text-muted-foreground pt-1.5">
               {dict.builder.header.unsavedModalDesc}
             </DialogDescription>
           </DialogHeader>
 
-          <DialogFooter className="flex flex-col-reverse sm:flex-row gap-2 sm:justify-between pt-3">
+          <DialogFooter className="flex flex-col-reverse sm:flex-row gap-2.5 sm:justify-between items-stretch sm:items-center pt-3">
             <Button
               variant="destructive"
               size="sm"
               onClick={handleConfirmDiscard}
-              className="cursor-pointer"
+              className="cursor-pointer shrink-0 whitespace-nowrap"
             >
               {dict.builder.header.discardAndLeave}
             </Button>
-            <div className="flex gap-2">
+            <div className="flex items-center gap-2 shrink-0">
               <Button
                 variant="outline"
                 size="sm"
@@ -426,14 +426,14 @@ export function BuilderHeader({
                   setShowUnsavedDialog(false)
                   setPendingAction(null)
                 }}
-                className="cursor-pointer"
+                className="cursor-pointer shrink-0 whitespace-nowrap"
               >
                 {dict.builder.header.keepEditing}
               </Button>
               <Button
                 size="sm"
                 onClick={handleSaveAndProceed}
-                className="cursor-pointer"
+                className="cursor-pointer shrink-0 whitespace-nowrap"
               >
                 {dict.builder.header.saveAndLeave}
               </Button>

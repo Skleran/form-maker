@@ -9,7 +9,7 @@ export function buildDynamicFormSchema(questions: QuestionFormItem[]) {
 
   for (const q of questions) {
     const key = q.id
-    const label = q.label || "This field"
+    const label = q.label || "Bu alan"
 
     switch (q.type) {
       case "SHORT_TEXT": {
@@ -17,18 +17,18 @@ export function buildDynamicFormSchema(questions: QuestionFormItem[]) {
         if (q.config?.minLength && q.config.minLength > 0) {
           baseString = baseString.min(
             q.config.minLength,
-            `${label} must be at least ${q.config.minLength} characters`
+            `"${label}" en az ${q.config.minLength} karakter olmalıdır`
           )
         }
         if (q.config?.maxLength && q.config.maxLength > 0) {
           baseString = baseString.max(
             q.config.maxLength,
-            `${label} cannot exceed ${q.config.maxLength} characters`
+            `"${label}" en fazla ${q.config.maxLength} karakter olabilir`
           )
         }
 
         if (q.required) {
-          shape[key] = baseString.trim().min(1, `${label} is required`)
+          shape[key] = baseString.trim().min(1, `"${label}" alanı zorunludur`)
         } else {
           shape[key] = baseString.optional().default("")
         }
@@ -40,18 +40,18 @@ export function buildDynamicFormSchema(questions: QuestionFormItem[]) {
         if (q.config?.minLength && q.config.minLength > 0) {
           baseString = baseString.min(
             q.config.minLength,
-            `${label} must be at least ${q.config.minLength} characters`
+            `"${label}" en az ${q.config.minLength} karakter olmalıdır`
           )
         }
         if (q.config?.maxLength && q.config.maxLength > 0) {
           baseString = baseString.max(
             q.config.maxLength,
-            `${label} cannot exceed ${q.config.maxLength} characters`
+            `"${label}" en fazla ${q.config.maxLength} karakter olabilir`
           )
         }
 
         if (q.required) {
-          shape[key] = baseString.trim().min(1, `${label} is required`)
+          shape[key] = baseString.trim().min(1, `"${label}" alanı zorunludur`)
         } else {
           shape[key] = baseString.optional().default("")
         }
@@ -60,7 +60,7 @@ export function buildDynamicFormSchema(questions: QuestionFormItem[]) {
 
       case "SINGLE_CHOICE": {
         if (q.required) {
-          shape[key] = z.string().min(1, `Please select an option for "${label}"`)
+          shape[key] = z.string().min(1, `Lütfen "${label}" için bir seçenek belirleyin`)
         } else {
           shape[key] = z.string().optional().default("")
         }
@@ -71,7 +71,7 @@ export function buildDynamicFormSchema(questions: QuestionFormItem[]) {
         if (q.required) {
           shape[key] = z
             .array(z.string())
-            .min(1, `Please select at least one option for "${label}"`)
+            .min(1, `Lütfen "${label}" için en az bir seçenek seçin`)
         } else {
           shape[key] = z.array(z.string()).default([])
         }
@@ -80,7 +80,7 @@ export function buildDynamicFormSchema(questions: QuestionFormItem[]) {
 
       case "DROPDOWN": {
         if (q.required) {
-          shape[key] = z.string().min(1, `Please choose an option for "${label}"`)
+          shape[key] = z.string().min(1, `Lütfen "${label}" için bir seçenek belirleyin`)
         } else {
           shape[key] = z.string().optional().default("")
         }
@@ -99,7 +99,7 @@ export function buildDynamicFormSchema(questions: QuestionFormItem[]) {
         if (q.required) {
           shape[key] = fileObject.refine(
             (file) => Boolean(file && file.name && file.size > 0),
-            { message: `Please attach a file for "${label}"` }
+            { message: `Lütfen "${label}" için bir dosya ekleyin` }
           )
         } else {
           shape[key] = fileObject.optional().nullable()

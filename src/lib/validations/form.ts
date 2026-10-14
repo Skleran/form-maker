@@ -11,7 +11,7 @@ export const questionTypeEnum = z.enum([
 
 export const choiceOptionSchema = z.object({
   id: z.string(),
-  label: z.string().min(1, "Option label cannot be empty"),
+  label: z.string().min(1, "Seçenek adı boş bırakılamaz"),
 })
 
 export const questionConfigSchema = z.object({
@@ -29,7 +29,7 @@ export const questionItemSchema = z.object({
   formId: z.string().optional(),
   orderIndex: z.number().int().nonnegative(),
   type: questionTypeEnum,
-  label: z.string().min(1, "Question label is required"),
+  label: z.string().min(1, "Soru başlığı zorunludur"),
   required: z.boolean(),
   options: z.array(choiceOptionSchema),
   config: questionConfigSchema,
@@ -46,17 +46,17 @@ export const headerImageCropSchema = z
   .optional()
 
 export const formBuilderSchema = z.object({
-  title: z.string().min(1, "Form title is required"),
+  title: z.string().min(1, "Form başlığı zorunludur"),
   description: z.string(),
   headerImage: z.string().nullable().optional(),
   headerImageRaw: z.string().nullable().optional(),
   headerImageCrop: headerImageCropSchema,
   slug: z
     .string()
-    .min(1, "Form URL slug is required")
+    .min(1, "Form bağlantı adresi (slug) zorunludur")
     .regex(
       /^[a-z0-9-]+$/,
-      "Slug must contain only lowercase alphanumeric characters and dashes"
+      "Bağlantı adresi yalnızca küçük harf, rakam ve tire (-) içerebilir"
     ),
   isPublished: z.boolean(),
   questions: z.array(questionItemSchema),

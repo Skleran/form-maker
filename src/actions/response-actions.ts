@@ -1,6 +1,7 @@
 "use server"
 
 import { revalidatePath } from "next/cache"
+import { headers } from "next/headers"
 import { prisma } from "@/lib/prisma"
 
 export interface ResponseAnswerItem {
@@ -52,7 +53,7 @@ export async function getFormResponses(
       where: { id: formId },
       include: {
         questions: {
-          orderBy: { orderIndex: "asc" },
+          orderBy: [{ isDeleted: "asc" }, { orderIndex: "asc" }],
         },
       },
     })
@@ -82,16 +83,20 @@ export async function getFormResponses(
     const submissions: FormSubmissionRow[] = rawSubmissions.map((sub) => {
       const answersMap: FormSubmissionRow["answersMap"] = {}
       const answersList: ResponseAnswerItem[] = sub.answers.map((a) => {
-        answersMap[a.questionId] = {
+        const qId = a.questionId || a.id
+        const label = a.question?.label || a.questionLabel || "Soru"
+        const type = a.question?.type || a.questionType || "SHORT_TEXT"
+
+        answersMap[qId] = {
           text: a.valueText,
           json: a.valueJson,
           fileUrl: a.fileUrl,
         }
         return {
           id: a.id,
-          questionId: a.questionId,
-          questionLabel: a.question.label,
-          questionType: a.question.type,
+          questionId: qId,
+          questionLabel: label,
+          questionType: type,
           valueText: a.valueText,
           valueJson: a.valueJson,
           fileUrl: a.fileUrl,
@@ -107,6 +112,37 @@ export async function getFormResponses(
       }
     })
 
+    // Collect questions and any historical orphan questions from answers
+    const questionsMap = new Map<
+      string,
+      { id: string; label: string; type: string; orderIndex: number; isDeleted?: boolean }
+    >()
+
+    form.questions.forEach((q) => {
+      questionsMap.set(q.id, {
+        id: q.id,
+        label: q.isDeleted ? `${q.label} (Arşiv)` : q.label,
+        type: q.type,
+        orderIndex: q.orderIndex,
+        isDeleted: q.isDeleted,
+      })
+    })
+
+    for (const sub of rawSubmissions) {
+      for (const a of sub.answers) {
+        const qKey = a.questionId || a.id
+        if (!questionsMap.has(qKey)) {
+          questionsMap.set(qKey, {
+            id: qKey,
+            label: `${a.questionLabel || a.question?.label || "Soru"} (Arşiv)`,
+            type: a.questionType || a.question?.type || "SHORT_TEXT",
+            orderIndex: 9999,
+            isDeleted: true,
+          })
+        }
+      }
+    }
+
     return {
       success: true,
       data: {
@@ -115,12 +151,7 @@ export async function getFormResponses(
           title: form.title,
           slug: form.slug,
         },
-        questions: form.questions.map((q) => ({
-          id: q.id,
-          label: q.label,
-          type: q.type,
-          orderIndex: q.orderIndex,
-        })),
+        questions: Array.from(questionsMap.values()),
         submissions,
         totalCount,
         totalPages: Math.max(1, Math.ceil(totalCount / pageSize)),
@@ -187,7 +218,7 @@ export async function exportFormResponsesCSV(
       where: { id: formId },
       include: {
         questions: {
-          orderBy: { orderIndex: "asc" },
+          orderBy: [{ isDeleted: "asc" }, { orderIndex: "asc" }],
         },
       },
     })
@@ -200,34 +231,92 @@ export async function exportFormResponsesCSV(
       where: { formId },
       orderBy: { submittedAt: "desc" },
       include: {
-        answers: true,
+        answers: {
+          include: {
+            question: true,
+          },
+        },
       },
     })
 
+    // Collect all questions, including active, archived, and orphan answer references
+    const questionsMap = new Map<string, { id: string; label: string }>()
+    form.questions.forEach((q) => {
+      questionsMap.set(q.id, {
+        id: q.id,
+        label: q.isDeleted ? `${q.label} (Arşiv)` : (q.label || `Soru ${q.orderIndex + 1}`),
+      })
+    })
+
+    for (const sub of allSubmissions) {
+      for (const a of sub.answers) {
+        const qKey = a.questionId || a.id
+        if (!questionsMap.has(qKey)) {
+          questionsMap.set(qKey, {
+            id: qKey,
+            label: `${a.questionLabel || a.question?.label || "Eski Soru"} (Arşiv)`,
+          })
+        }
+      }
+    }
+
+    const targetQuestions = Array.from(questionsMap.values())
+
+    // Resolve app base URL to generate clean download links for files
+    let baseUrl = process.env.NEXT_PUBLIC_APP_URL || ""
+    if (!baseUrl) {
+      try {
+        const headerList = await headers()
+        const host = headerList.get("x-forwarded-host") || headerList.get("host") || "localhost:3000"
+        const proto = headerList.get("x-forwarded-proto") || (host.startsWith("localhost") ? "http" : "https")
+        baseUrl = `${proto}://${host}`
+      } catch {
+        baseUrl = ""
+      }
+    }
+
     // Header row
-    const headers = [
-      "Submission ID",
-      "Submission Timestamp",
-      ...form.questions.map((q) => q.label || `Question ${q.orderIndex + 1}`),
+    const headersList = [
+      "Yanıt ID",
+      "Gönderilme Tarihi",
+      ...targetQuestions.map((q) => q.label),
     ]
 
-    const csvRows: string[] = [headers.map(escapeCSV).join(",")]
+    const csvRows: string[] = [headersList.map(escapeCSV).join(",")]
 
     // Data rows
     for (const sub of allSubmissions) {
-      const answerByQuestionId = new Map(sub.answers.map((a) => [a.questionId, a]))
+      const answerByQuestionKey = new Map(sub.answers.map((a) => [a.questionId || a.id, a]))
 
       const rowValues: string[] = [
         escapeCSV(sub.id),
         escapeCSV(sub.submittedAt.toISOString()),
       ]
 
-      for (const q of form.questions) {
-        const ans = answerByQuestionId.get(q.id)
+      for (const q of targetQuestions) {
+        const ans = answerByQuestionKey.get(q.id)
+        const hasFile = Boolean(
+          ans?.fileUrl ||
+          (ans?.valueJson && typeof ans.valueJson === "object" && ("dataUrl" in ans.valueJson || "url" in ans.valueJson))
+        )
+
         if (!ans) {
           rowValues.push('""')
-        } else if (ans.fileUrl) {
-          rowValues.push(escapeCSV(`${ans.valueText || "File"} (${ans.fileUrl})`))
+        } else if (hasFile) {
+          const directHttpUrl =
+            ans.fileUrl?.startsWith("http://") || ans.fileUrl?.startsWith("https://")
+              ? ans.fileUrl
+              : null
+
+          if (directHttpUrl) {
+            rowValues.push(escapeCSV(directHttpUrl))
+          } else if (baseUrl) {
+            const fileName = ans.valueText || "dosya"
+            const downloadUrl = `${baseUrl}/api/answers/${ans.id}/file/${encodeURIComponent(fileName)}`
+            rowValues.push(escapeCSV(downloadUrl))
+          } else {
+            rowValues.push(escapeCSV(ans.valueText || "Dosya"))
+          }
         } else if (ans.valueText) {
           rowValues.push(escapeCSV(ans.valueText))
         } else if (ans.valueJson) {
