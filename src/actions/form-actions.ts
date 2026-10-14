@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache"
 import { prisma } from "@/lib/prisma"
 import { formBuilderSchema, type FormBuilderValues } from "@/lib/validations/form"
 import { Prisma, type QuestionType } from "@prisma/client"
+import { getAdminSession } from "@/lib/auth"
 
 export type ActionResult<T = unknown> =
   | { success: true; data: T; error?: never }
@@ -29,6 +30,10 @@ export async function listForms(): Promise<
     }>
   >
 > {
+  const session = await getAdminSession()
+  if (!session) {
+    return { success: false, error: "Yetkisiz erişim: Yönetici girişi gereklidir." }
+  }
   try {
     const forms = await prisma.form.findMany({
       orderBy: { updatedAt: "desc" },
@@ -55,6 +60,11 @@ export async function listForms(): Promise<
  * Retrieves a single form by ID along with its questions ordered by orderIndex
  */
 export async function getFormById(id: string) {
+  const session = await getAdminSession()
+  if (!session) {
+    return { success: false, error: "Yetkisiz erişim: Yönetici girişi gereklidir." } as const
+  }
+
   try {
     const form = await prisma.form.findUnique({
       where: { id },
@@ -89,6 +99,11 @@ export async function getFormById(id: string) {
  * Creates a new blank form with default title and initial short text question
  */
 export async function createForm(customTitle?: string): Promise<ActionResult<{ id: string }>> {
+  const session = await getAdminSession()
+  if (!session) {
+    return { success: false, error: "Yetkisiz erişim: Yönetici girişi gereklidir." }
+  }
+
   try {
     const timestamp = Date.now().toString(36)
     const randomSuffix = Math.random().toString(36).substring(2, 6)
@@ -135,6 +150,11 @@ export async function saveForm(
   formId: string,
   rawValues: FormBuilderValues
 ): Promise<ActionResult<{ id: string; updatedAt: Date }>> {
+  const session = await getAdminSession()
+  if (!session) {
+    return { success: false, error: "Yetkisiz erişim: Yönetici girişi gereklidir." }
+  }
+
   try {
     const parsed = formBuilderSchema.safeParse(rawValues)
     if (!parsed.success) {
@@ -262,6 +282,11 @@ export async function toggleFormPublish(
   formId: string,
   isPublished: boolean
 ): Promise<ActionResult<{ isPublished: boolean }>> {
+  const session = await getAdminSession()
+  if (!session) {
+    return { success: false, error: "Yetkisiz erişim: Yönetici girişi gereklidir." }
+  }
+
   try {
     const updated = await prisma.form.update({
       where: { id: formId },
@@ -287,6 +312,11 @@ export async function toggleFormPublish(
  * Deletes a form and all related questions and responses
  */
 export async function deleteForm(formId: string): Promise<ActionResult<void>> {
+  const session = await getAdminSession()
+  if (!session) {
+    return { success: false, error: "Yetkisiz erişim: Yönetici girişi gereklidir." }
+  }
+
   try {
     await prisma.form.delete({
       where: { id: formId },

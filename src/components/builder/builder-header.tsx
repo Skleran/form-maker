@@ -37,6 +37,7 @@ import {
 import { useBuilderStore } from "@/stores/use-builder-store"
 import type { FormBuilderValues } from "@/lib/validations/form"
 import { ThemeToggle } from "@/components/theme-toggle"
+import { LogoutButton } from "@/components/admin/logout-button"
 import { useLanguage } from "@/lib/i18n/language-context"
 
 interface BuilderHeaderProps {
@@ -350,6 +351,7 @@ export function BuilderHeader({
             </Tooltip>
 
             <ThemeToggle />
+            <LogoutButton size="icon-sm" />
           </div>
         </div>
 

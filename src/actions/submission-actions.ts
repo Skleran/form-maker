@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache"
 import { prisma } from "@/lib/prisma"
 import { buildDynamicFormSchema } from "@/lib/validations/dynamic-schema"
 import type { QuestionFormItem } from "@/types/form"
+import { getAdminSession } from "@/lib/auth"
 
 export type SubmissionResult =
   | { success: true; data: { submissionId: string } }
@@ -25,14 +26,21 @@ export async function getPublicFormBySlug(slug: string) {
     })
 
     if (!form) {
-      return { success: false, error: "Form not found" } as const
+      return { success: false, error: "Form bulunamadı." } as const
     }
+
+    const session = await getAdminSession()
+    const isAdmin = Boolean(session)
+
+    // Security check: If form is in draft/unpublished mode and caller is not an authenticated admin,
+    // do not leak question configurations or draft schema over the wire.
+    const questionsToReturn = (!form.isPublished && !isAdmin) ? [] : form.questions
 
     return {
       success: true,
       data: {
         ...form,
-        questions: form.questions.map((q) => ({
+        questions: questionsToReturn.map((q) => ({
           id: q.id,
           formId: q.formId,
           orderIndex: q.orderIndex,
@@ -48,7 +56,7 @@ export async function getPublicFormBySlug(slug: string) {
     console.error("Failed to fetch public form:", error)
     return {
       success: false,
-      error: error instanceof Error ? error.message : "Failed to load form.",
+      error: error instanceof Error ? error.message : "Form yüklenirken hata oluştu.",
     } as const
   }
 }
@@ -74,11 +82,11 @@ export async function submitFormResponse(
     })
 
     if (!form) {
-      return { success: false, error: "Form does not exist" }
+      return { success: false, error: "Form bulunamadı." }
     }
 
     if (!form.isPublished) {
-      return { success: false, error: "This form is not currently accepting submissions." }
+      return { success: false, error: "Bu form şu anda yayında değildir ve yanıt kabul etmemektedir." }
     }
 
     const questionItems: QuestionFormItem[] = form.questions.map((q) => ({
@@ -97,7 +105,7 @@ export async function submitFormResponse(
     const parseResult = schema.safeParse(rawAnswers)
 
     if (!parseResult.success) {
-      const firstIssue = parseResult.error.issues[0]?.message || "Validation failed"
+      const firstIssue = parseResult.error.issues[0]?.message || "Doğrulama hatası oluştu."
       return { success: false, error: firstIssue }
     }
 
@@ -176,7 +184,7 @@ export async function submitFormResponse(
     console.error("Submission failed:", error)
     return {
       success: false,
-      error: error instanceof Error ? error.message : "Failed to record submission.",
+      error: error instanceof Error ? error.message : "Yanıt kaydedilirken bir hata oluştu.",
     }
   }
 }

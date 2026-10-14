@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache"
 import { headers } from "next/headers"
 import { prisma } from "@/lib/prisma"
+import { getAdminSession } from "@/lib/auth"
 
 export interface ResponseAnswerItem {
   id: string
@@ -48,6 +49,11 @@ export async function getFormResponses(
   page: number = 1,
   pageSize: number = 10
 ): Promise<{ success: true; data: PaginatedResponsesResult } | { success: false; error: string }> {
+  const session = await getAdminSession()
+  if (!session) {
+    return { success: false, error: "Yetkisiz erişim: Yönetici girişi gereklidir." }
+  }
+
   try {
     const form = await prisma.form.findUnique({
       where: { id: formId },
@@ -174,6 +180,11 @@ export async function deleteSubmission(
   submissionId: string,
   formId: string
 ): Promise<{ success: boolean; error?: string }> {
+  const session = await getAdminSession()
+  if (!session) {
+    return { success: false, error: "Yetkisiz erişim: Yönetici girişi gereklidir." }
+  }
+
   try {
     await prisma.submission.delete({
       where: { id: submissionId },
@@ -213,6 +224,11 @@ function escapeCSV(value: unknown): string {
 export async function exportFormResponsesCSV(
   formId: string
 ): Promise<{ success: true; data: { csv: string; filename: string } } | { success: false; error: string }> {
+  const session = await getAdminSession()
+  if (!session) {
+    return { success: false, error: "Yetkisiz erişim: Yönetici girişi gereklidir." }
+  }
+
   try {
     const form = await prisma.form.findUnique({
       where: { id: formId },

@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server"
 import { prisma } from "@/lib/prisma"
+import { getAdminSession } from "@/lib/auth"
 
 interface RouteContext {
   params: Promise<{
@@ -11,9 +12,17 @@ interface RouteContext {
 /**
  * Serves uploaded files stored in the Answer model cleanly via standard HTTP response
  * Eliminates embedding huge base64 strings in CSV exports
+ * Only accessible to authenticated administrators
  */
 export async function GET(request: Request, context: RouteContext) {
   try {
+    const session = await getAdminSession()
+    if (!session) {
+      return new NextResponse("Yetkisiz erişim: Dosyayı görüntülemek için yönetici girişi yapmalısınız.", {
+        status: 401,
+      })
+    }
+
     const { answerId } = await context.params
 
     if (!answerId) {
