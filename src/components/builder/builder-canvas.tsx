@@ -1,7 +1,7 @@
-"use client"
+"use client";
 
-import * as React from "react"
-import { useFieldArray, useFormContext } from "react-hook-form"
+import * as React from "react";
+import { useFieldArray, useFormContext } from "react-hook-form";
 import {
   AlignLeft,
   ArrowDown,
@@ -19,46 +19,46 @@ import {
   Type,
   Upload,
   X,
-} from "lucide-react"
-import { toast } from "sonner"
+} from "lucide-react";
+import { toast } from "sonner";
 
-import { Button } from "@/components/ui/button"
-import { Card } from "@/components/ui/card"
-import { Input } from "@/components/ui/input"
-import { Switch } from "@/components/ui/switch"
-import { Textarea } from "@/components/ui/textarea"
+import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Switch } from "@/components/ui/switch";
+import { Textarea } from "@/components/ui/textarea";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/ui/select"
-import { Separator } from "@/components/ui/separator"
-import { useBuilderStore } from "@/stores/use-builder-store"
-import type { FormBuilderValues } from "@/lib/validations/form"
-import type { QuestionType } from "@/types/form"
-import { cn } from "@/lib/utils"
-import { useLanguage } from "@/lib/i18n/language-context"
-import { QuestionIcon } from "@/components/form/question-icon"
-import { HeaderImageCropModal } from "./header-image-crop-modal"
+} from "@/components/ui/select";
+import { Separator } from "@/components/ui/separator";
+import { useBuilderStore } from "@/stores/use-builder-store";
+import type { FormBuilderValues } from "@/lib/validations/form";
+import type { QuestionType } from "@/types/form";
+import { cn } from "@/lib/utils";
+import { useLanguage } from "@/lib/i18n/language-context";
+import { QuestionIcon } from "@/components/form/question-icon";
+import { HeaderImageCropModal } from "./header-image-crop-modal";
 
 interface BuilderCanvasProps {
-  onDuplicateQuestion: (index: number) => void
-  onDeleteQuestion: (index: number) => void
-  onAddQuestion: (type?: QuestionType) => void
+  onDuplicateQuestion: (index: number) => void;
+  onDeleteQuestion: (index: number) => void;
+  onAddQuestion: (type?: QuestionType) => void;
 }
 
 interface ActiveDragState {
-  index: number
-  pointerY: number
-  pointerX: number
-  initialPointerY: number
-  initialPointerX: number
-  cardRect: DOMRect
-  overIndex: number
-  questionLabel: string
-  questionType: QuestionType
+  index: number;
+  pointerY: number;
+  pointerX: number;
+  initialPointerY: number;
+  initialPointerX: number;
+  cardRect: DOMRect;
+  overIndex: number;
+  questionLabel: string;
+  questionType: QuestionType;
 }
 
 export function BuilderCanvas({
@@ -66,12 +66,13 @@ export function BuilderCanvas({
   onDeleteQuestion,
   onAddQuestion,
 }: BuilderCanvasProps) {
-  const { dict, language } = useLanguage()
-  const { register, control, watch, setValue, getValues } = useFormContext<FormBuilderValues>()
+  const { dict, language } = useLanguage();
+  const { register, control, watch, setValue, getValues } =
+    useFormContext<FormBuilderValues>();
   const { fields, move } = useFieldArray({
     control,
     name: "questions",
-  })
+  });
 
   const {
     activeQuestionId,
@@ -79,207 +80,228 @@ export function BuilderCanvas({
     isInspectorOpen,
     setIsInspectorOpen,
     pushHistory,
-  } = useBuilderStore()
+  } = useBuilderStore();
 
   // Header image state & crop modal
-  const headerImage = watch("headerImage")
-  const headerImageRaw = watch("headerImageRaw")
-  const headerImageCrop = watch("headerImageCrop")
-  const headerImageInputRef = React.useRef<HTMLInputElement>(null)
-  const [rawImageForCrop, setRawImageForCrop] = React.useState<string | null>(null)
-  const [activeCropForModal, setActiveCropForModal] = React.useState<FormBuilderValues["headerImageCrop"]>(null)
-  const [isCropModalOpen, setIsCropModalOpen] = React.useState(false)
+  const headerImage = watch("headerImage");
+  const headerImageRaw = watch("headerImageRaw");
+  const headerImageCrop = watch("headerImageCrop");
+  const headerImageInputRef = React.useRef<HTMLInputElement>(null);
+  const [rawImageForCrop, setRawImageForCrop] = React.useState<string | null>(
+    null,
+  );
+  const [activeCropForModal, setActiveCropForModal] =
+    React.useState<FormBuilderValues["headerImageCrop"]>(null);
+  const [isCropModalOpen, setIsCropModalOpen] = React.useState(false);
 
   // Drag and Drop state
-  const scrollContainerRef = React.useRef<HTMLDivElement>(null)
-  const cardRefs = React.useRef<(HTMLDivElement | null)[]>([])
-  const [activeDrag, setActiveDrag] = React.useState<ActiveDragState | null>(null)
-  const pointerYRef = React.useRef<number>(0)
-  const activeDragRef = React.useRef<ActiveDragState | null>(null)
+  const scrollContainerRef = React.useRef<HTMLDivElement>(null);
+  const cardRefs = React.useRef<(HTMLDivElement | null)[]>([]);
+  const [activeDrag, setActiveDrag] = React.useState<ActiveDragState | null>(
+    null,
+  );
+  const pointerYRef = React.useRef<number>(0);
+  const activeDragRef = React.useRef<ActiveDragState | null>(null);
 
   React.useEffect(() => {
-    activeDragRef.current = activeDrag
-  }, [activeDrag])
+    activeDragRef.current = activeDrag;
+  }, [activeDrag]);
 
   const handleHeaderImageFileSelect = (file: File) => {
     if (file.size > 10 * 1024 * 1024) {
       toast.error(
         language === "tr"
           ? "Kapak görseli boyutu en fazla 10 MB olabilir."
-          : "Cover image must be 10 MB or less."
-      )
-      return
+          : "Cover image must be 10 MB or less.",
+      );
+      return;
     }
     if (!file.type.startsWith("image/")) {
       toast.error(
         language === "tr"
           ? "Lütfen geçerli bir görsel dosyası seçin (PNG, JPG, WebP)."
-          : "Please select a valid image file (PNG, JPG, WebP)."
-      )
-      return
+          : "Please select a valid image file (PNG, JPG, WebP).",
+      );
+      return;
     }
 
-    const reader = new FileReader()
+    const reader = new FileReader();
     reader.onload = () => {
-      const dataUrl = reader.result as string
+      const dataUrl = reader.result as string;
       // Optimize large images to max 2000px so raw base64 stays compact
-      const img = new Image()
+      const img = new Image();
       img.onload = () => {
-        const maxDim = 2000
-        let { width, height } = img
+        const maxDim = 2000;
+        let { width, height } = img;
         if (width > maxDim || height > maxDim) {
           if (width > height) {
-            height = Math.round((height * maxDim) / width)
-            width = maxDim
+            height = Math.round((height * maxDim) / width);
+            width = maxDim;
           } else {
-            width = Math.round((width * maxDim) / height)
-            height = maxDim
+            width = Math.round((width * maxDim) / height);
+            height = maxDim;
           }
-          const canvas = document.createElement("canvas")
-          canvas.width = width
-          canvas.height = height
-          const ctx = canvas.getContext("2d")
+          const canvas = document.createElement("canvas");
+          canvas.width = width;
+          canvas.height = height;
+          const ctx = canvas.getContext("2d");
           if (ctx) {
-            ctx.drawImage(img, 0, 0, width, height)
-            const optimized = canvas.toDataURL("image/jpeg", 0.9)
-            setRawImageForCrop(optimized)
-            setActiveCropForModal(null)
-            setIsCropModalOpen(true)
-            return
+            ctx.drawImage(img, 0, 0, width, height);
+            const optimized = canvas.toDataURL("image/jpeg", 0.9);
+            setRawImageForCrop(optimized);
+            setActiveCropForModal(null);
+            setIsCropModalOpen(true);
+            return;
           }
         }
-        setRawImageForCrop(dataUrl)
-        setActiveCropForModal(null)
-        setIsCropModalOpen(true)
-      }
+        setRawImageForCrop(dataUrl);
+        setActiveCropForModal(null);
+        setIsCropModalOpen(true);
+      };
       img.onerror = () => {
-        setRawImageForCrop(dataUrl)
-        setActiveCropForModal(null)
-        setIsCropModalOpen(true)
-      }
-      img.src = dataUrl
-    }
-    reader.readAsDataURL(file)
-  }
+        setRawImageForCrop(dataUrl);
+        setActiveCropForModal(null);
+        setIsCropModalOpen(true);
+      };
+      img.src = dataUrl;
+    };
+    reader.readAsDataURL(file);
+  };
 
   // Calculate target question index based on cursor Y and currently dragged index
   const calculateOverIndex = React.useCallback(
     (clientY: number, dragIndex: number) => {
-      const cards = cardRefs.current
-      if (!cards.length) return 0
-      if (dragIndex < 0 || dragIndex >= cards.length) return 0
+      const cards = cardRefs.current;
+      if (!cards.length) return 0;
+      if (dragIndex < 0 || dragIndex >= cards.length) return 0;
 
-      const dragEl = cards[dragIndex]
+      const dragEl = cards[dragIndex];
       if (dragEl) {
-        const dragRect = dragEl.getBoundingClientRect()
+        const dragRect = dragEl.getBoundingClientRect();
 
         // If pointer is still within the dragged card, remain at dragIndex (no slot shown)
         if (clientY >= dragRect.top && clientY <= dragRect.bottom) {
-          return dragIndex
+          return dragIndex;
         }
 
         // When moving DOWNWARDS (clientY is below the dragged card's bottom):
         if (clientY > dragRect.bottom) {
           for (let i = cards.length - 1; i > dragIndex; i--) {
-            const el = cards[i]
-            if (!el) continue
-            const rect = el.getBoundingClientRect()
+            const el = cards[i];
+            if (!el) continue;
+            const rect = el.getBoundingClientRect();
             if (clientY >= rect.top) {
-              return i
+              return i;
             }
           }
-          return Math.min(dragIndex + 1, cards.length - 1)
+          return Math.min(dragIndex + 1, cards.length - 1);
         }
 
         // When moving UPWARDS (clientY is above the dragged card's top):
         if (clientY < dragRect.top) {
           for (let i = 0; i < dragIndex; i++) {
-            const el = cards[i]
-            if (!el) continue
-            const rect = el.getBoundingClientRect()
+            const el = cards[i];
+            if (!el) continue;
+            const rect = el.getBoundingClientRect();
             if (clientY <= rect.bottom) {
-              return i
+              return i;
             }
           }
-          return Math.max(dragIndex - 1, 0)
+          return Math.max(dragIndex - 1, 0);
         }
       }
 
       // Fallback midpoint calculation
       for (let i = 0; i < cards.length; i++) {
-        const el = cards[i]
-        if (!el) continue
-        const rect = el.getBoundingClientRect()
+        const el = cards[i];
+        if (!el) continue;
+        const rect = el.getBoundingClientRect();
         if (clientY < rect.top + rect.height / 2) {
-          return i
+          return i;
         }
       }
-      return cards.length - 1
+      return cards.length - 1;
     },
-    []
-  )
+    [],
+  );
 
   // Auto-scroll loop while dragging near container top or bottom
   React.useEffect(() => {
-    if (!activeDrag) return
+    if (!activeDrag) return;
 
-    let animationFrameId: number
+    let animationFrameId: number;
 
     const performAutoScroll = () => {
-      const container = scrollContainerRef.current
-      if (!container || !activeDragRef.current) return
+      const container = scrollContainerRef.current;
+      if (!container || !activeDragRef.current) return;
 
-      const rect = container.getBoundingClientRect()
-      const currentY = pointerYRef.current
-      const edgeThreshold = 110 // Distance in px from top or bottom edge to trigger scroll
-      const maxScrollSpeed = 20
+      const rect = container.getBoundingClientRect();
+      const currentY = pointerYRef.current;
+      const edgeThreshold = 110; // Distance in px from top or bottom edge to trigger scroll
+      const maxScrollSpeed = 20;
 
       // Check top edge auto-scroll
       if (currentY < rect.top + edgeThreshold) {
-        const proximity = Math.max(0, rect.top + edgeThreshold - currentY)
-        const speed = Math.max(3, (proximity / edgeThreshold) * maxScrollSpeed)
-        container.scrollTop -= speed
+        const proximity = Math.max(0, rect.top + edgeThreshold - currentY);
+        const speed = Math.max(3, (proximity / edgeThreshold) * maxScrollSpeed);
+        container.scrollTop -= speed;
 
-        const nextOver = calculateOverIndex(currentY, activeDragRef.current.index)
-        if (activeDragRef.current && nextOver !== activeDragRef.current.overIndex) {
-          setActiveDrag((prev) => (prev ? { ...prev, overIndex: nextOver } : null))
+        const nextOver = calculateOverIndex(
+          currentY,
+          activeDragRef.current.index,
+        );
+        if (
+          activeDragRef.current &&
+          nextOver !== activeDragRef.current.overIndex
+        ) {
+          setActiveDrag((prev) =>
+            prev ? { ...prev, overIndex: nextOver } : null,
+          );
         }
       }
       // Check bottom edge auto-scroll
       else if (currentY > rect.bottom - edgeThreshold) {
-        const proximity = Math.max(0, currentY - (rect.bottom - edgeThreshold))
-        const speed = Math.max(3, (proximity / edgeThreshold) * maxScrollSpeed)
-        container.scrollTop += speed
+        const proximity = Math.max(0, currentY - (rect.bottom - edgeThreshold));
+        const speed = Math.max(3, (proximity / edgeThreshold) * maxScrollSpeed);
+        container.scrollTop += speed;
 
-        const nextOver = calculateOverIndex(currentY, activeDragRef.current.index)
-        if (activeDragRef.current && nextOver !== activeDragRef.current.overIndex) {
-          setActiveDrag((prev) => (prev ? { ...prev, overIndex: nextOver } : null))
+        const nextOver = calculateOverIndex(
+          currentY,
+          activeDragRef.current.index,
+        );
+        if (
+          activeDragRef.current &&
+          nextOver !== activeDragRef.current.overIndex
+        ) {
+          setActiveDrag((prev) =>
+            prev ? { ...prev, overIndex: nextOver } : null,
+          );
         }
       }
 
-      animationFrameId = requestAnimationFrame(performAutoScroll)
-    }
+      animationFrameId = requestAnimationFrame(performAutoScroll);
+    };
 
-    animationFrameId = requestAnimationFrame(performAutoScroll)
-    return () => cancelAnimationFrame(animationFrameId)
-  }, [activeDrag, calculateOverIndex])
+    animationFrameId = requestAnimationFrame(performAutoScroll);
+    return () => cancelAnimationFrame(animationFrameId);
+  }, [activeDrag, calculateOverIndex]);
 
   // Drag handle pointer down
   const handleGripPointerDown = (
     e: React.PointerEvent<HTMLDivElement>,
-    index: number
+    index: number,
   ) => {
-    if (e.button !== 0) return
-    e.preventDefault()
-    e.stopPropagation()
+    if (e.button !== 0) return;
+    e.preventDefault();
+    e.stopPropagation();
 
-    const cardEl = cardRefs.current[index]
-    if (!cardEl) return
+    const cardEl = cardRefs.current[index];
+    if (!cardEl) return;
 
-    const cardRect = cardEl.getBoundingClientRect()
-    pointerYRef.current = e.clientY
+    const cardRect = cardEl.getBoundingClientRect();
+    pointerYRef.current = e.clientY;
 
-    const currentQuestion = getValues(`questions.${index}`)
+    const currentQuestion = getValues(`questions.${index}`);
 
     const initialDrag: ActiveDragState = {
       index,
@@ -291,65 +313,108 @@ export function BuilderCanvas({
       overIndex: index,
       questionLabel: currentQuestion?.label || `Soru ${index + 1}`,
       questionType: (currentQuestion?.type || "SHORT_TEXT") as QuestionType,
-    }
+    };
 
-    setActiveDrag(initialDrag)
+    setActiveDrag(initialDrag);
 
     const handleWindowPointerMove = (moveEvent: PointerEvent) => {
-      moveEvent.preventDefault()
-      pointerYRef.current = moveEvent.clientY
-      const nextOver = calculateOverIndex(moveEvent.clientY, initialDrag.index)
+      moveEvent.preventDefault();
+      pointerYRef.current = moveEvent.clientY;
+      const nextOver = calculateOverIndex(moveEvent.clientY, initialDrag.index);
 
       setActiveDrag((prev) => {
-        if (!prev) return null
+        if (!prev) return null;
         return {
           ...prev,
           pointerY: moveEvent.clientY,
           pointerX: moveEvent.clientX,
           overIndex: nextOver,
-        }
-      })
-    }
+        };
+      });
+    };
 
     const handleWindowPointerUp = (upEvent: PointerEvent) => {
-      upEvent.preventDefault()
-      window.removeEventListener("pointermove", handleWindowPointerMove)
-      window.removeEventListener("pointerup", handleWindowPointerUp)
-      window.removeEventListener("pointercancel", handleWindowPointerUp)
+      upEvent.preventDefault();
+      window.removeEventListener("pointermove", handleWindowPointerMove);
+      window.removeEventListener("pointerup", handleWindowPointerUp);
+      window.removeEventListener("pointercancel", handleWindowPointerUp);
 
-      const finalDrag = activeDragRef.current
+      const finalDrag = activeDragRef.current;
       if (finalDrag && finalDrag.overIndex !== finalDrag.index) {
-        pushHistory(getValues())
-        move(finalDrag.index, finalDrag.overIndex)
-        const targetFieldId = fields[finalDrag.index]?.id
+        pushHistory(getValues());
+        move(finalDrag.index, finalDrag.overIndex);
+        const targetFieldId = fields[finalDrag.index]?.id;
         if (targetFieldId) {
-          setActiveQuestionId(targetFieldId)
+          setActiveQuestionId(targetFieldId);
         }
       }
 
-      setActiveDrag(null)
-    }
+      setActiveDrag(null);
+    };
 
-    window.addEventListener("pointermove", handleWindowPointerMove, { passive: false })
-    window.addEventListener("pointerup", handleWindowPointerUp)
-    window.addEventListener("pointercancel", handleWindowPointerUp)
-  }
+    window.addEventListener("pointermove", handleWindowPointerMove, {
+      passive: false,
+    });
+    window.addEventListener("pointerup", handleWindowPointerUp);
+    window.addEventListener("pointercancel", handleWindowPointerUp);
+  };
 
-  const questionTypesList = React.useMemo(() => [
-    { value: "SHORT_TEXT" as QuestionType, label: dict.builder.canvas.questionTypes.SHORT_TEXT, icon: Type },
-    { value: "LONG_TEXT" as QuestionType, label: dict.builder.canvas.questionTypes.LONG_TEXT, icon: AlignLeft },
-    { value: "SINGLE_CHOICE" as QuestionType, label: dict.builder.canvas.questionTypes.SINGLE_CHOICE, icon: Radio },
-    { value: "MULTIPLE_CHOICE" as QuestionType, label: dict.builder.canvas.questionTypes.MULTIPLE_CHOICE, icon: CheckSquare },
-    { value: "DROPDOWN" as QuestionType, label: dict.builder.canvas.questionTypes.DROPDOWN, icon: ChevronDown },
-    { value: "FILE_UPLOAD" as QuestionType, label: dict.builder.canvas.questionTypes.FILE_UPLOAD, icon: FileUp },
-  ], [dict])
+  const questionTypesList = React.useMemo(
+    () => [
+      {
+        value: "SHORT_TEXT" as QuestionType,
+        label: dict.builder.canvas.questionTypes.SHORT_TEXT,
+        icon: Type,
+      },
+      {
+        value: "LONG_TEXT" as QuestionType,
+        label: dict.builder.canvas.questionTypes.LONG_TEXT,
+        icon: AlignLeft,
+      },
+      {
+        value: "SINGLE_CHOICE" as QuestionType,
+        label: dict.builder.canvas.questionTypes.SINGLE_CHOICE,
+        icon: Radio,
+      },
+      {
+        value: "MULTIPLE_CHOICE" as QuestionType,
+        label: dict.builder.canvas.questionTypes.MULTIPLE_CHOICE,
+        icon: CheckSquare,
+      },
+      {
+        value: "DROPDOWN" as QuestionType,
+        label: dict.builder.canvas.questionTypes.DROPDOWN,
+        icon: ChevronDown,
+      },
+      {
+        value: "FILE_UPLOAD" as QuestionType,
+        label: dict.builder.canvas.questionTypes.FILE_UPLOAD,
+        icon: FileUp,
+      },
+    ],
+    [dict],
+  );
 
   return (
     <div
       ref={scrollContainerRef}
+      onClick={(e) => {
+        if (e.target === e.currentTarget) {
+          setActiveQuestionId(null);
+          setIsInspectorOpen(false);
+        }
+      }}
       className="flex-1 h-full overflow-y-auto px-4 py-8 sm:px-8 bg-muted/15 relative"
     >
-      <div className="mx-auto max-w-3xl space-y-4">
+      <div
+        className="mx-auto max-w-3xl space-y-4"
+        onClick={(e) => {
+          if (e.target === e.currentTarget) {
+            setActiveQuestionId(null);
+            setIsInspectorOpen(false);
+          }
+        }}
+      >
         {/* Form Header Banner & Metadata Card */}
         <div className="space-y-0">
           <input
@@ -358,9 +423,9 @@ export function BuilderCanvas({
             accept="image/*"
             className="hidden"
             onChange={(e) => {
-              const file = e.target.files?.[0]
-              if (file) handleHeaderImageFileSelect(file)
-              e.target.value = ""
+              const file = e.target.files?.[0];
+              if (file) handleHeaderImageFileSelect(file);
+              e.target.value = "";
             }}
           />
 
@@ -378,11 +443,12 @@ export function BuilderCanvas({
                   variant="secondary"
                   size="xs"
                   onClick={() => {
-                    const sourceImage = headerImageRaw || rawImageForCrop || headerImage
+                    const sourceImage =
+                      headerImageRaw || rawImageForCrop || headerImage;
                     if (sourceImage) {
-                      setRawImageForCrop(sourceImage)
-                      setActiveCropForModal(headerImageCrop || null)
-                      setIsCropModalOpen(true)
+                      setRawImageForCrop(sourceImage);
+                      setActiveCropForModal(headerImageCrop || null);
+                      setIsCropModalOpen(true);
                     }
                   }}
                   className="cursor-pointer gap-1.5 shadow-sm bg-background/85 hover:bg-background backdrop-blur-xs text-xs font-medium"
@@ -405,15 +471,19 @@ export function BuilderCanvas({
                   variant="destructive"
                   size="icon-xs"
                   onClick={() => {
-                    pushHistory(getValues())
-                    setValue("headerImage", null, { shouldDirty: true })
-                    setValue("headerImageRaw", null, { shouldDirty: true })
-                    setValue("headerImageCrop", null, { shouldDirty: true })
-                    setRawImageForCrop(null)
-                    setActiveCropForModal(null)
+                    pushHistory(getValues());
+                    setValue("headerImage", null, { shouldDirty: true });
+                    setValue("headerImageRaw", null, { shouldDirty: true });
+                    setValue("headerImageCrop", null, { shouldDirty: true });
+                    setRawImageForCrop(null);
+                    setActiveCropForModal(null);
                   }}
                   className="cursor-pointer shadow-sm"
-                  title={language === "tr" ? "Kapak Görselini Kaldır" : "Remove Cover Image"}
+                  title={
+                    language === "tr"
+                      ? "Kapak Görselini Kaldır"
+                      : "Remove Cover Image"
+                  }
                 >
                   <Trash2 className="size-3.5" />
                 </Button>
@@ -437,24 +507,65 @@ export function BuilderCanvas({
           <Card
             className={cn(
               "p-6 shadow-sm bg-card transition-all",
-              headerImage ? "rounded-t-none border-t-0" : "border-t-4 border-t-primary"
+              headerImage
+                ? "rounded-t-none border-t-0"
+                : "border-t-4 border-t-primary",
             )}
           >
             <div className="space-y-4">
-              <div>
-                <Input
-                  placeholder={dict.builder.canvas.titlePlaceholder}
-                  {...register("title")}
-                  className="border-none px-0 text-2xl font-bold tracking-tight shadow-none focus-visible:ring-0 placeholder:text-muted-foreground/60 h-auto py-1"
-                />
+              {/* Form Title */}
+              <div className="space-y-1.5">
+                <div className="flex items-center justify-between">
+                  <label
+                    htmlFor="form-builder-title"
+                    className="text-xs font-semibold text-muted-foreground flex items-center gap-1.5 select-none"
+                  >
+                    <Type className="size-3.5 text-primary" />
+                    <span>
+                      {language === "tr" ? "Form Başlığı" : "Form Title"}
+                    </span>
+                  </label>
+                  <span className="text-[11px] text-muted-foreground/60 select-none">
+                    {language === "tr" ? "Zorunlu" : "Required"}
+                  </span>
+                </div>
+                <div className="group rounded-lg border border-border/90 bg-muted/70 hover:bg-muted/90 hover:border-foreground/25 focus-within:ring-2 focus-within:ring-primary/20 transition-all duration-200 shadow-xs">
+                  <Input
+                    id="form-builder-title"
+                    placeholder={dict.builder.canvas.titlePlaceholder}
+                    {...register("title")}
+                    className="border-0 bg-transparent px-3.5 py-2 text-xl sm:text-2xl font-bold tracking-tight shadow-none focus-visible:ring-0 focus-visible:border-0 placeholder:text-muted-foreground/50 h-auto w-full dark:bg-transparent"
+                  />
+                </div>
               </div>
-              <div>
-                <Textarea
-                  placeholder={dict.builder.canvas.descPlaceholder}
-                  rows={2}
-                  {...register("description")}
-                  className="border-none px-0 text-sm shadow-none focus-visible:ring-0 placeholder:text-muted-foreground/60 resize-none min-h-[44px]"
-                />
+
+              {/* Form Description */}
+              <div className="space-y-1.5">
+                <div className="flex items-center justify-between">
+                  <label
+                    htmlFor="form-builder-description"
+                    className="text-xs font-semibold text-muted-foreground flex items-center gap-1.5 select-none"
+                  >
+                    <AlignLeft className="size-3.5 text-primary" />
+                    <span>
+                      {language === "tr"
+                        ? "Form Açıklaması"
+                        : "Form Description"}
+                    </span>
+                  </label>
+                  <span className="text-[11px] text-muted-foreground/60 select-none">
+                    {language === "tr" ? "İsteğe bağlı" : "Optional"}
+                  </span>
+                </div>
+                <div className="group rounded-lg border border-border/90 bg-muted/70 hover:bg-muted/90 hover:border-foreground/25 focus-within:ring-2 focus-within:ring-primary/20 transition-all duration-200 shadow-xs">
+                  <Textarea
+                    id="form-builder-description"
+                    placeholder={dict.builder.canvas.descPlaceholder}
+                    rows={2}
+                    {...register("description")}
+                    className="border-0 bg-transparent px-3.5 py-2.5 text-sm shadow-none focus-visible:ring-0 focus-visible:border-0 placeholder:text-muted-foreground/50 resize-none min-h-[56px] w-full dark:bg-transparent"
+                  />
+                </div>
               </div>
             </div>
           </Card>
@@ -462,22 +573,30 @@ export function BuilderCanvas({
 
         {/* Dynamic Questions List via useFieldArray */}
         {fields.map((field, index) => {
-          const currentQuestion = watch(`questions.${index}`)
-          const questionId = currentQuestion?.id || field.id
-          const isActive = activeQuestionId === questionId || activeQuestionId === field.id
+          const currentQuestion = watch(`questions.${index}`);
+          const questionId = currentQuestion?.id || field.id;
+          const isSelected =
+            activeQuestionId === questionId || activeQuestionId === field.id;
+          const isActive = isInspectorOpen && isSelected;
           const isChoiceType =
             currentQuestion?.type === "SINGLE_CHOICE" ||
             currentQuestion?.type === "MULTIPLE_CHOICE" ||
-            currentQuestion?.type === "DROPDOWN"
+            currentQuestion?.type === "DROPDOWN";
 
-          const isHeld = activeDrag?.index === index
-          const isMovingUp = activeDrag ? activeDrag.overIndex < activeDrag.index : false
-          const isMovingDown = activeDrag ? activeDrag.overIndex > activeDrag.index : false
+          const isHeld = activeDrag?.index === index;
+          const isMovingUp = activeDrag
+            ? activeDrag.overIndex < activeDrag.index
+            : false;
+          const isMovingDown = activeDrag
+            ? activeDrag.overIndex > activeDrag.index
+            : false;
 
-          const showDropSlotBefore =
-            Boolean(activeDrag && isMovingUp && activeDrag.overIndex === index)
-          const showDropSlotAfter =
-            Boolean(activeDrag && isMovingDown && activeDrag.overIndex === index)
+          const showDropSlotBefore = Boolean(
+            activeDrag && isMovingUp && activeDrag.overIndex === index,
+          );
+          const showDropSlotAfter = Boolean(
+            activeDrag && isMovingDown && activeDrag.overIndex === index,
+          );
 
           return (
             <React.Fragment key={field.id}>
@@ -495,30 +614,35 @@ export function BuilderCanvas({
 
               <Card
                 ref={(el) => {
-                  cardRefs.current[index] = el
+                  cardRefs.current[index] = el;
                 }}
                 onClick={() => {
-                  setActiveQuestionId(questionId)
+                  setActiveQuestionId(questionId);
                   if (!isInspectorOpen) {
-                    setIsInspectorOpen(true)
+                    setIsInspectorOpen(true);
                   }
                 }}
                 onFocusCapture={() => {
-                  setActiveQuestionId(questionId)
+                  setActiveQuestionId(questionId);
                 }}
                 className={cn(
-                  "relative p-6 shadow-sm transition-all duration-150 cursor-pointer border bg-card",
-                  isHeld && "opacity-25 border-dashed border-primary/60 scale-[0.99] bg-muted/30",
+                  "relative p-6 shadow-sm transition-all duration-150 cursor-pointer border bg-card overflow-visible",
+                  isHeld &&
+                    "opacity-25 border-dashed border-primary/60 scale-[0.99] bg-muted/30",
                   !isHeld && isActive
                     ? "border-primary ring-2 ring-primary/20 shadow-md"
-                    : !isHeld && "hover:border-border/80 hover:shadow"
+                    : !isHeld && "hover:border-border/80 hover:shadow",
                 )}
               >
                 {/* Top Center Drag Grip Handle (Google Forms Style) */}
                 <div
                   onPointerDown={(e) => handleGripPointerDown(e, index)}
-                  className="absolute -top-3 left-1/2 -translate-x-1/2 z-10 flex h-6 w-12 cursor-grab active:cursor-grabbing items-center justify-center rounded-md border bg-card text-muted-foreground shadow-xs hover:bg-muted hover:text-foreground hover:scale-105 active:scale-95 transition-all select-none touch-none group"
-                  title={language === "tr" ? "Soruyu taşımak için basılı tutun ve sürükleyin" : "Drag to reorder question"}
+                  className="absolute -top-3 left-1/2 -translate-x-1/2 z-20 flex h-6 w-12 cursor-grab active:cursor-grabbing items-center justify-center rounded-md border bg-card text-muted-foreground shadow-xs hover:bg-muted hover:text-foreground hover:scale-105 active:scale-95 transition-all select-none touch-none group"
+                  title={
+                    language === "tr"
+                      ? "Soruyu taşımak için basılı tutun ve sürükleyin"
+                      : "Drag to reorder question"
+                  }
                 >
                   <GripHorizontal className="size-4 text-muted-foreground/70 group-hover:text-foreground transition-colors" />
                 </div>
@@ -532,9 +656,16 @@ export function BuilderCanvas({
                     {currentQuestion?.config?.icon && (
                       <div
                         className="p-1.5 rounded-md bg-primary/10 text-primary shrink-0"
-                        title={language === "tr" ? `İkon: ${currentQuestion.config.icon}` : `Icon: ${currentQuestion.config.icon}`}
+                        title={
+                          language === "tr"
+                            ? `İkon: ${currentQuestion.config.icon}`
+                            : `Icon: ${currentQuestion.config.icon}`
+                        }
                       >
-                        <QuestionIcon name={currentQuestion.config.icon} className="size-4" />
+                        <QuestionIcon
+                          name={currentQuestion.config.icon}
+                          className="size-4"
+                        />
                       </div>
                     )}
                     <Input
@@ -548,40 +679,55 @@ export function BuilderCanvas({
                     <Select
                       value={currentQuestion?.type || "SHORT_TEXT"}
                       onValueChange={(val) => {
-                        if (!val) return
-                        const typedVal = val as QuestionType
-                        setValue(`questions.${index}.type`, typedVal, { shouldDirty: true })
+                        if (!val) return;
+                        const typedVal = val as QuestionType;
+                        setValue(`questions.${index}.type`, typedVal, {
+                          shouldDirty: true,
+                        });
                         if (
-                          ["SINGLE_CHOICE", "MULTIPLE_CHOICE", "DROPDOWN"].includes(typedVal) &&
-                          (!currentQuestion?.options || currentQuestion.options.length === 0)
+                          [
+                            "SINGLE_CHOICE",
+                            "MULTIPLE_CHOICE",
+                            "DROPDOWN",
+                          ].includes(typedVal) &&
+                          (!currentQuestion?.options ||
+                            currentQuestion.options.length === 0)
                         ) {
                           setValue(`questions.${index}.options`, [
                             {
                               id: `opt_${Date.now()}_1`,
-                              label: language === "tr" ? "Seçenek 1" : "Option 1",
+                              label:
+                                language === "tr" ? "Seçenek 1" : "Option 1",
                             },
-                          ])
+                          ]);
                         }
                       }}
                     >
                       <SelectTrigger className="w-44 h-8 text-xs">
                         <SelectValue>
                           {(val: string | null) => {
-                            const selected = questionTypesList.find((t) => t.value === val)
-                            if (!selected) return language === "tr" ? "Tür seçin" : "Select type"
-                            const Icon = selected.icon
+                            const selected = questionTypesList.find(
+                              (t) => t.value === val,
+                            );
+                            if (!selected)
+                              return language === "tr"
+                                ? "Tür seçin"
+                                : "Select type";
+                            const Icon = selected.icon;
                             return (
                               <span className="flex items-center gap-1.5 truncate">
                                 <Icon className="size-3.5 text-muted-foreground shrink-0" />
-                                <span className="truncate">{selected.label}</span>
+                                <span className="truncate">
+                                  {selected.label}
+                                </span>
                               </span>
-                            )
+                            );
                           }}
                         </SelectValue>
                       </SelectTrigger>
                       <SelectContent>
                         {questionTypesList.map((t) => {
-                          const Icon = t.icon
+                          const Icon = t.icon;
                           return (
                             <SelectItem key={t.value} value={t.value}>
                               <div className="flex items-center gap-2">
@@ -589,7 +735,7 @@ export function BuilderCanvas({
                                 <span>{t.label}</span>
                               </div>
                             </SelectItem>
-                          )
+                          );
                         })}
                       </SelectContent>
                     </Select>
@@ -608,7 +754,10 @@ export function BuilderCanvas({
                   {currentQuestion?.type === "SHORT_TEXT" && (
                     <Input
                       disabled
-                      placeholder={currentQuestion.config?.placeholder || dict.builder.canvas.shortTextPlaceholder}
+                      placeholder={
+                        currentQuestion.config?.placeholder ||
+                        dict.builder.canvas.shortTextPlaceholder
+                      }
                       className="border-dashed bg-muted/20 text-xs text-muted-foreground"
                     />
                   )}
@@ -617,7 +766,10 @@ export function BuilderCanvas({
                     <Textarea
                       disabled
                       rows={3}
-                      placeholder={currentQuestion.config?.placeholder || dict.builder.canvas.longTextPlaceholder}
+                      placeholder={
+                        currentQuestion.config?.placeholder ||
+                        dict.builder.canvas.longTextPlaceholder
+                      }
                       className="border-dashed bg-muted/20 text-xs text-muted-foreground resize-none"
                     />
                   )}
@@ -625,7 +777,10 @@ export function BuilderCanvas({
                   {isChoiceType && (
                     <div className="space-y-2">
                       {(currentQuestion?.options || []).map((opt, optIndex) => (
-                        <div key={opt.id || optIndex} className="flex items-center gap-2.5">
+                        <div
+                          key={opt.id || optIndex}
+                          className="flex items-center gap-2.5"
+                        >
                           {currentQuestion.type === "SINGLE_CHOICE" && (
                             <div className="size-4 rounded-full border border-muted-foreground/50 shrink-0" />
                           )}
@@ -639,8 +794,13 @@ export function BuilderCanvas({
                           )}
 
                           <Input
-                            placeholder={dict.builder.canvas.optionPlaceholder.replace("{index}", String(optIndex + 1))}
-                            {...register(`questions.${index}.options.${optIndex}.label`)}
+                            placeholder={dict.builder.canvas.optionPlaceholder.replace(
+                              "{index}",
+                              String(optIndex + 1),
+                            )}
+                            {...register(
+                              `questions.${index}.options.${optIndex}.label`,
+                            )}
                             className="h-8 text-xs border-transparent hover:border-input focus:border-ring"
                           />
 
@@ -649,12 +809,18 @@ export function BuilderCanvas({
                               variant="ghost"
                               size="icon-xs"
                               onClick={(e) => {
-                                e.stopPropagation()
-                                const current = currentQuestion.options || []
-                                const updated = current.filter((_, i) => i !== optIndex)
-                                setValue(`questions.${index}.options`, updated, {
-                                 shouldDirty: true,
-                                })
+                                e.stopPropagation();
+                                const current = currentQuestion.options || [];
+                                const updated = current.filter(
+                                  (_, i) => i !== optIndex,
+                                );
+                                setValue(
+                                  `questions.${index}.options`,
+                                  updated,
+                                  {
+                                    shouldDirty: true,
+                                  },
+                                );
                               }}
                               className="text-muted-foreground hover:text-destructive cursor-pointer"
                               title={dict.builder.canvas.removeOption}
@@ -669,18 +835,23 @@ export function BuilderCanvas({
                         variant="ghost"
                         size="sm"
                         onClick={(e) => {
-                          e.stopPropagation()
-                          const current = currentQuestion?.options || []
+                          e.stopPropagation();
+                          const current = currentQuestion?.options || [];
                           const newOption = {
                             id: `opt_${Date.now()}_${current.length + 1}`,
-                            label: dict.builder.canvas.optionPlaceholder.replace(
-                              "{index}",
-                              String(current.length + 1)
-                            ),
-                          }
-                          setValue(`questions.${index}.options`, [...current, newOption], {
-                            shouldDirty: true,
-                          })
+                            label:
+                              dict.builder.canvas.optionPlaceholder.replace(
+                                "{index}",
+                                String(current.length + 1),
+                              ),
+                          };
+                          setValue(
+                            `questions.${index}.options`,
+                            [...current, newOption],
+                            {
+                              shouldDirty: true,
+                            },
+                          );
                         }}
                         className="cursor-pointer text-xs text-primary hover:text-primary/80 gap-1.5 h-7 px-2 font-medium"
                       >
@@ -698,15 +869,21 @@ export function BuilderCanvas({
                       </p>
                       <p className="text-[11px] text-muted-foreground mt-0.5">
                         {dict.builder.canvas.fileZoneDesc
-                          .replace("{max}", String(currentQuestion.config?.maxFileSizeMb || 10))
+                          .replace(
+                            "{max}",
+                            String(currentQuestion.config?.maxFileSizeMb || 10),
+                          )
                           .replace(
                             "{types}",
                             currentQuestion.config?.allowedMimeTypes?.length
                               ? dict.builder.canvas.customTypesAccepted.replace(
                                   "{count}",
-                                  String(currentQuestion.config.allowedMimeTypes.length)
+                                  String(
+                                    currentQuestion.config.allowedMimeTypes
+                                      .length,
+                                  ),
                                 )
-                              : dict.builder.canvas.allTypesAccepted
+                              : dict.builder.canvas.allTypesAccepted,
                           )}
                       </p>
                     </div>
@@ -726,8 +903,8 @@ export function BuilderCanvas({
                       size="icon-xs"
                       disabled={index === 0}
                       onClick={() => {
-                        pushHistory(getValues())
-                        move(index, index - 1)
+                        pushHistory(getValues());
+                        move(index, index - 1);
                       }}
                       className="cursor-pointer text-muted-foreground hover:text-foreground"
                       title={dict.builder.canvas.moveUp}
@@ -739,8 +916,8 @@ export function BuilderCanvas({
                       size="icon-xs"
                       disabled={index === fields.length - 1}
                       onClick={() => {
-                        pushHistory(getValues())
-                        move(index, index + 1)
+                        pushHistory(getValues());
+                        move(index, index + 1);
                       }}
                       className="cursor-pointer text-muted-foreground hover:text-foreground"
                       title={dict.builder.canvas.moveDown}
@@ -780,10 +957,15 @@ export function BuilderCanvas({
                     <Button
                       variant="ghost"
                       size="icon-xs"
-                      onClick={() => {
-                        onDeleteQuestion(index)
-                        if (activeQuestionId === questionId || activeQuestionId === field.id) {
-                          setActiveQuestionId(null)
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onDeleteQuestion(index);
+                        if (
+                          activeQuestionId === questionId ||
+                          activeQuestionId === field.id
+                        ) {
+                          setActiveQuestionId(null);
+                          setIsInspectorOpen(false);
                         }
                       }}
                       className="cursor-pointer text-muted-foreground hover:text-destructive"
@@ -807,7 +989,7 @@ export function BuilderCanvas({
                 </div>
               )}
             </React.Fragment>
-          )
+          );
         })}
 
         {/* Add Question Controls */}
@@ -871,7 +1053,9 @@ export function BuilderCanvas({
         <div
           style={{
             position: "fixed",
-            top: activeDrag.pointerY - (activeDrag.initialPointerY - activeDrag.cardRect.top),
+            top:
+              activeDrag.pointerY -
+              (activeDrag.initialPointerY - activeDrag.cardRect.top),
             left: activeDrag.cardRect.left,
             width: activeDrag.cardRect.width,
             pointerEvents: "none",
@@ -889,7 +1073,9 @@ export function BuilderCanvas({
               </span>
             </div>
             <span className="text-xs font-medium text-muted-foreground bg-muted px-2 py-0.5 rounded shrink-0">
-              {questionTypesList.find((t) => t.value === activeDrag.questionType)?.label || activeDrag.questionType}
+              {questionTypesList.find(
+                (t) => t.value === activeDrag.questionType,
+              )?.label || activeDrag.questionType}
             </span>
           </div>
           <div className="flex items-center justify-between text-xs text-muted-foreground border-t pt-2 mt-2">
@@ -898,7 +1084,9 @@ export function BuilderCanvas({
               {language === "tr" ? "Sürükleniyor..." : "Dragging..."}
             </span>
             <span className="text-primary font-semibold">
-              {language === "tr" ? `Hedef Konum: #${activeDrag.overIndex + 1}` : `Target Position: #${activeDrag.overIndex + 1}`}
+              {language === "tr"
+                ? `Hedef Konum: #${activeDrag.overIndex + 1}`
+                : `Target Position: #${activeDrag.overIndex + 1}`}
             </span>
           </div>
         </div>
@@ -912,19 +1100,19 @@ export function BuilderCanvas({
           initialCrop={activeCropForModal}
           onClose={() => setIsCropModalOpen(false)}
           onSave={(croppedDataUrl, normalizedCrop) => {
-            pushHistory(getValues())
-            setValue("headerImage", croppedDataUrl, { shouldDirty: true })
-            setValue("headerImageRaw", rawImageForCrop, { shouldDirty: true })
-            setValue("headerImageCrop", normalizedCrop, { shouldDirty: true })
-            setActiveCropForModal(normalizedCrop)
+            pushHistory(getValues());
+            setValue("headerImage", croppedDataUrl, { shouldDirty: true });
+            setValue("headerImageRaw", rawImageForCrop, { shouldDirty: true });
+            setValue("headerImageCrop", normalizedCrop, { shouldDirty: true });
+            setActiveCropForModal(normalizedCrop);
             toast.success(
               language === "tr"
                 ? "Kapak görseli başarıyla ayarlandı."
-                : "Cover image set successfully."
-            )
+                : "Cover image set successfully.",
+            );
           }}
         />
       )}
     </div>
-  )
+  );
 }

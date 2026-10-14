@@ -51,6 +51,7 @@ export function FormBuilder({ initialForm }: FormBuilderProps) {
   const {
     activeQuestionId,
     setActiveQuestionId,
+    setIsInspectorOpen,
     setIsSaving,
     setLastSavedAt,
     setIsDirty,
@@ -61,8 +62,9 @@ export function FormBuilder({ initialForm }: FormBuilderProps) {
     resetWorkspace,
   } = useBuilderStore()
 
-  // Reset workspace state on initial load
+  // Reset workspace state on mount and unmount
   React.useEffect(() => {
+    resetWorkspace()
     return () => {
       resetWorkspace()
     }
@@ -101,12 +103,6 @@ export function FormBuilder({ initialForm }: FormBuilderProps) {
   // Reference to the latest saved (or initial) snapshot
   const savedSnapshotRef = React.useRef<FormBuilderValues>(initialValues)
 
-  // Select initial question on first load if available
-  React.useEffect(() => {
-    if (!activeQuestionId && initialForm.questions.length > 0) {
-      setActiveQuestionId(initialForm.questions[0].id)
-    }
-  }, [activeQuestionId, initialForm.questions, setActiveQuestionId])
 
   // Synchronize form dirty state with Zustand store
   const isFormDirty = methods.formState.isDirty
@@ -366,7 +362,8 @@ export function FormBuilder({ initialForm }: FormBuilderProps) {
 
     methods.setValue("questions", updated, { shouldDirty: true })
     if (activeQuestionId === target.id) {
-      setActiveQuestionId(updated[0]?.id || null)
+      setActiveQuestionId(null)
+      setIsInspectorOpen(false)
     }
 
     if (initialForm._count?.submissions && initialForm._count.submissions > 0) {

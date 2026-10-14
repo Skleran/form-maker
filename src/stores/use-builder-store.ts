@@ -50,7 +50,7 @@ export type BuilderStore = BuilderState & BuilderActions
 const initialState: BuilderState = {
   activeQuestionId: null,
   previewDevice: "desktop",
-  isInspectorOpen: true,
+  isInspectorOpen: false,
   isLivePreview: false,
   isSaving: false,
   lastSavedAt: null,
@@ -65,17 +65,26 @@ export const useBuilderStore = create<BuilderStore>((set) => ({
   ...initialState,
 
   setActiveQuestionId: (id) =>
-    set((state) => ({
+    set({
       activeQuestionId: id,
-      // Automatically open inspector if a question is selected
-      isInspectorOpen: id !== null ? true : state.isInspectorOpen,
-    })),
+    }),
 
   setPreviewDevice: (device) => set({ previewDevice: device }),
 
-  setIsInspectorOpen: (isOpen) => set({ isInspectorOpen: isOpen }),
+  setIsInspectorOpen: (isOpen) =>
+    set((state) => ({
+      isInspectorOpen: isOpen,
+      activeQuestionId: isOpen ? state.activeQuestionId : null,
+    })),
 
-  toggleInspector: () => set((state) => ({ isInspectorOpen: !state.isInspectorOpen })),
+  toggleInspector: () =>
+    set((state) => {
+      const nextOpen = !state.isInspectorOpen
+      return {
+        isInspectorOpen: nextOpen,
+        activeQuestionId: nextOpen ? state.activeQuestionId : null,
+      }
+    }),
 
   setIsLivePreview: (isLive) => set({ isLivePreview: isLive }),
 

@@ -1,9 +1,9 @@
-"use client"
+"use client";
 
-import * as React from "react"
-import { usePathname, useRouter, useSearchParams } from "next/navigation"
-import { useFormContext } from "react-hook-form"
-import { toast } from "sonner"
+import * as React from "react";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { useFormContext } from "react-hook-form";
+import { toast } from "sonner";
 import {
   AlertTriangle,
   ArrowLeft,
@@ -16,16 +16,16 @@ import {
   Redo2,
   Save,
   Undo2,
-} from "lucide-react"
+} from "lucide-react";
 
-import { Button, buttonVariants } from "@/components/ui/button"
-import { Switch } from "@/components/ui/switch"
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { Button, buttonVariants } from "@/components/ui/button";
+import { Switch } from "@/components/ui/switch";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Tooltip,
   TooltipContent,
   TooltipTrigger,
-} from "@/components/ui/tooltip"
+} from "@/components/ui/tooltip";
 import {
   Dialog,
   DialogContent,
@@ -33,20 +33,20 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from "@/components/ui/dialog"
-import { useBuilderStore } from "@/stores/use-builder-store"
-import type { FormBuilderValues } from "@/lib/validations/form"
-import { ThemeToggle } from "@/components/theme-toggle"
-import { LogoutButton } from "@/components/admin/logout-button"
-import { useLanguage } from "@/lib/i18n/language-context"
+} from "@/components/ui/dialog";
+import { useBuilderStore } from "@/stores/use-builder-store";
+import type { FormBuilderValues } from "@/lib/validations/form";
+import { ThemeToggle } from "@/components/theme-toggle";
+import { LogoutButton } from "@/components/admin/logout-button";
+import { useLanguage } from "@/lib/i18n/language-context";
 
 interface BuilderHeaderProps {
-  formId?: string
-  submissionCount?: number
-  onSave: () => Promise<void>
-  onUndo: () => void
-  onRedo: () => void
-  onDiscard: () => void
+  formId?: string;
+  submissionCount?: number;
+  onSave: () => Promise<void>;
+  onUndo: () => void;
+  onRedo: () => void;
+  onDiscard: () => void;
 }
 
 export function BuilderHeader({
@@ -56,15 +56,15 @@ export function BuilderHeader({
   onRedo,
   onDiscard,
 }: BuilderHeaderProps) {
-  const router = useRouter()
-  const pathname = usePathname()
-  const searchParams = useSearchParams()
-  const { dict, language } = useLanguage()
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const { dict, language } = useLanguage();
 
-  const { watch, setValue } = useFormContext<FormBuilderValues>()
-  const title = watch("title")
-  const slug = watch("slug")
-  const isPublished = watch("isPublished")
+  const { watch, setValue } = useFormContext<FormBuilderValues>();
+  const title = watch("title");
+  const slug = watch("slug");
+  const isPublished = watch("isPublished");
 
   const {
     isInspectorOpen,
@@ -74,72 +74,74 @@ export function BuilderHeader({
     isDirty,
     canUndo,
     canRedo,
-  } = useBuilderStore()
+  } = useBuilderStore();
 
-  const currentTab = searchParams.get("tab") || "questions"
+  const currentTab = searchParams.get("tab") || "questions";
 
   // Unsaved changes navigation interception dialog state
-  const [showUnsavedDialog, setShowUnsavedDialog] = React.useState(false)
-  const [pendingAction, setPendingAction] = React.useState<(() => void) | null>(null)
+  const [showUnsavedDialog, setShowUnsavedDialog] = React.useState(false);
+  const [pendingAction, setPendingAction] = React.useState<(() => void) | null>(
+    null,
+  );
 
   const handleTabChange = (value: string) => {
-    if (value === currentTab) return
+    if (value === currentTab) return;
 
     if (isDirty) {
       setPendingAction(() => () => {
-        const params = new URLSearchParams(searchParams.toString())
-        params.set("tab", value)
-        router.replace(`${pathname}?${params.toString()}`)
-      })
-      setShowUnsavedDialog(true)
-      return
+        const params = new URLSearchParams(searchParams.toString());
+        params.set("tab", value);
+        router.replace(`${pathname}?${params.toString()}`);
+      });
+      setShowUnsavedDialog(true);
+      return;
     }
 
-    const params = new URLSearchParams(searchParams.toString())
-    params.set("tab", value)
-    router.replace(`${pathname}?${params.toString()}`)
-  }
+    const params = new URLSearchParams(searchParams.toString());
+    params.set("tab", value);
+    router.replace(`${pathname}?${params.toString()}`);
+  };
 
   const handleBackClick = (e: React.MouseEvent) => {
     if (isDirty) {
-      e.preventDefault()
+      e.preventDefault();
       setPendingAction(() => () => {
-        router.push("/admin/forms")
-      })
-      setShowUnsavedDialog(true)
+        router.push("/admin/forms");
+      });
+      setShowUnsavedDialog(true);
     } else {
-      router.push("/admin/forms")
+      router.push("/admin/forms");
     }
-  }
+  };
 
   const handleConfirmDiscard = () => {
-    onDiscard()
-    setShowUnsavedDialog(false)
+    onDiscard();
+    setShowUnsavedDialog(false);
     if (pendingAction) {
-      pendingAction()
-      setPendingAction(null)
+      pendingAction();
+      setPendingAction(null);
     } else {
-      router.push("/admin/forms")
+      router.push("/admin/forms");
     }
-  }
+  };
 
   const handleSaveAndProceed = async () => {
-    await onSave()
-    setShowUnsavedDialog(false)
+    await onSave();
+    setShowUnsavedDialog(false);
     if (pendingAction) {
-      pendingAction()
-      setPendingAction(null)
+      pendingAction();
+      setPendingAction(null);
     } else {
-      router.push("/admin/forms")
+      router.push("/admin/forms");
     }
-  }
+  };
 
   const handleCopyLink = () => {
-    const origin = typeof window !== "undefined" ? window.location.origin : ""
-    const publicUrl = `${origin}/forms/${slug}`
-    navigator.clipboard.writeText(publicUrl)
-    toast.success(dict.builder.header.shareToast)
-  }
+    const origin = typeof window !== "undefined" ? window.location.origin : "";
+    const publicUrl = `${origin}/forms/${slug}`;
+    navigator.clipboard.writeText(publicUrl);
+    toast.success(dict.builder.header.shareToast);
+  };
 
   return (
     <>
@@ -154,7 +156,8 @@ export function BuilderHeader({
               className={buttonVariants({
                 variant: "ghost",
                 size: "icon-sm",
-                className: "cursor-pointer text-muted-foreground hover:text-foreground",
+                className:
+                  "cursor-pointer text-muted-foreground hover:text-foreground",
               })}
               title={dict.builder.header.backToForms}
             >
@@ -176,10 +179,13 @@ export function BuilderHeader({
                 <span className="hidden md:inline-flex items-center gap-1 text-xs text-muted-foreground shrink-0">
                   <Check className="size-3 text-emerald-500" />
                   {dict.builder.header.saved}{" "}
-                  {lastSavedAt.toLocaleTimeString(language === "tr" ? "tr-TR" : "en-US", {
-                    hour: "2-digit",
-                    minute: "2-digit",
-                  })}
+                  {lastSavedAt.toLocaleTimeString(
+                    language === "tr" ? "tr-TR" : "en-US",
+                    {
+                      hour: "2-digit",
+                      minute: "2-digit",
+                    },
+                  )}
                 </span>
               ) : (
                 <span className="hidden md:inline-flex items-center gap-1 text-xs text-muted-foreground/70 shrink-0">
@@ -207,7 +213,9 @@ export function BuilderHeader({
                     </Button>
                   }
                 />
-                <TooltipContent side="bottom">{dict.builder.header.undoTooltip}</TooltipContent>
+                <TooltipContent side="bottom">
+                  {dict.builder.header.undoTooltip}
+                </TooltipContent>
               </Tooltip>
 
               <Tooltip>
@@ -224,7 +232,9 @@ export function BuilderHeader({
                     </Button>
                   }
                 />
-                <TooltipContent side="bottom">{dict.builder.header.redoTooltip}</TooltipContent>
+                <TooltipContent side="bottom">
+                  {dict.builder.header.redoTooltip}
+                </TooltipContent>
               </Tooltip>
             </div>
           </div>
@@ -258,17 +268,19 @@ export function BuilderHeader({
             {/* Published Toggle */}
             <div className="flex items-center gap-2 border-r pr-3 mr-1">
               <span className="text-xs font-medium text-muted-foreground hidden sm:inline">
-                {isPublished ? dict.builder.header.live : dict.builder.header.draft}
+                {isPublished
+                  ? dict.builder.header.live
+                  : dict.builder.header.draft}
               </span>
               <Switch
                 checked={isPublished}
                 onCheckedChange={(checked) => {
-                  setValue("isPublished", checked, { shouldDirty: true })
+                  setValue("isPublished", checked, { shouldDirty: true });
                   toast.info(
                     checked
                       ? dict.builder.header.publishedToast
-                      : dict.builder.header.draftToast
-                  )
+                      : dict.builder.header.draftToast,
+                  );
                 }}
                 title={
                   isPublished
@@ -289,7 +301,8 @@ export function BuilderHeader({
                     className={buttonVariants({
                       variant: "outline",
                       size: "sm",
-                      className: "cursor-pointer hidden sm:inline-flex items-center gap-1.5",
+                      className:
+                        "cursor-pointer hidden sm:inline-flex items-center gap-1.5",
                     })}
                   >
                     <Eye className="size-3.5 text-muted-foreground" />
@@ -297,7 +310,9 @@ export function BuilderHeader({
                   </a>
                 }
               />
-              <TooltipContent side="bottom">{dict.builder.header.previewTooltip}</TooltipContent>
+              <TooltipContent side="bottom">
+                {dict.builder.header.previewTooltip}
+              </TooltipContent>
             </Tooltip>
 
             {/* Copy Link Button */}
@@ -315,7 +330,9 @@ export function BuilderHeader({
                   </Button>
                 }
               />
-              <TooltipContent side="bottom">{dict.builder.header.shareTooltip}</TooltipContent>
+              <TooltipContent side="bottom">
+                {dict.builder.header.shareTooltip}
+              </TooltipContent>
             </Tooltip>
 
             {/* Save Button */}
@@ -333,7 +350,11 @@ export function BuilderHeader({
                     ) : (
                       <Save className="size-3.5" />
                     )}
-                    <span>{isSaving ? dict.builder.header.saving : dict.builder.header.save}</span>
+                    <span>
+                      {isSaving
+                        ? dict.builder.header.saving
+                        : dict.builder.header.save}
+                    </span>
                   </Button>
                 }
               />
@@ -361,7 +382,9 @@ export function BuilderHeader({
                   </Button>
                 }
               />
-              <TooltipContent side="bottom">{dict.builder.header.inspectorTooltip}</TooltipContent>
+              <TooltipContent side="bottom">
+                {dict.builder.header.inspectorTooltip}
+              </TooltipContent>
             </Tooltip>
 
             <ThemeToggle />
@@ -371,7 +394,11 @@ export function BuilderHeader({
 
         {/* Tabs Navigation (URL Search Param Synced) */}
         <div className="flex items-center justify-between border-t px-4 sm:px-6 bg-muted/20">
-          <Tabs value={currentTab} onValueChange={handleTabChange} className="w-auto">
+          <Tabs
+            value={currentTab}
+            onValueChange={handleTabChange}
+            className="w-auto"
+          >
             <TabsList className="bg-transparent h-10 p-0 space-x-6">
               <TabsTrigger
                 value="questions"
@@ -439,8 +466,8 @@ export function BuilderHeader({
                 variant="outline"
                 size="sm"
                 onClick={() => {
-                  setShowUnsavedDialog(false)
-                  setPendingAction(null)
+                  setShowUnsavedDialog(false);
+                  setPendingAction(null);
                 }}
                 className="cursor-pointer shrink-0 whitespace-nowrap"
               >
@@ -458,5 +485,5 @@ export function BuilderHeader({
         </DialogContent>
       </Dialog>
     </>
-  )
+  );
 }
