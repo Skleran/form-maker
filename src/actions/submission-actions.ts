@@ -31,10 +31,7 @@ export async function getPublicFormBySlug(slug: string) {
 
     const session = await getAdminSession()
     const isAdmin = Boolean(session)
-
-    // Security check: If form is in draft/unpublished mode and caller is not an authenticated admin,
-    // do not leak question configurations or draft schema over the wire.
-    const questionsToReturn = (!form.isPublished && !isAdmin) ? [] : form.questions
+    const questionsToReturn = !form.isPublished && !isAdmin ? [] : form.questions
 
     return {
       success: true,
@@ -100,7 +97,6 @@ export async function submitFormResponse(
       config: (q.config as Record<string, unknown>) || {},
     }))
 
-    // 2. Validate answers through dynamically generated Zod schema
     const schema = buildDynamicFormSchema(questionItems)
     const parseResult = schema.safeParse(rawAnswers)
 
@@ -111,7 +107,6 @@ export async function submitFormResponse(
 
     const validatedAnswers = parseResult.data
 
-    // 3. Atomically persist Submission and Answer records
     const submission = await prisma.$transaction(async (tx) => {
       const sub = await tx.submission.create({
         data: {
@@ -167,7 +162,6 @@ export async function submitFormResponse(
       return sub
     })
 
-    // Revalidate admin cache
     try {
       revalidatePath("/admin/forms")
       revalidatePath(`/admin/forms/${formId}/edit`)

@@ -284,6 +284,18 @@ const enContent = {
       submitAnother: "Submit another response",
       footer: "Powered by FormMaker • In-House Form Management Platform",
     },
+    notFound: {
+      badge: "404 Error",
+      title: "Page or Form Not Found",
+      description: "The form you are looking for might have been deleted, unpublished, or the link may be incorrect.",
+      tipsTitle: "What can you do?",
+      tip1: "Check that the URL was entered correctly.",
+      tip2: "Confirm with the form author whether the form is published.",
+      tip3: "If you are an administrator, visit the management dashboard.",
+      goBack: "Go Back",
+      returnHome: "Return Home",
+      goToAdmin: "Forms Dashboard",
+    },
   }
 
 const trContent: Translations = {
@@ -563,6 +575,18 @@ const trContent: Translations = {
       successTitle: "Yanıtınız kaydedildi.",
       submitAnother: "Başka bir yanıt gönder",
       footer: "FormMaker tarafından desteklenmektedir • Kurum İçi Form Yönetim Platformu",
+    },
+    notFound: {
+      badge: "404 Hatası",
+      title: "Sayfa veya Form Bulunamadı",
+      description: "Ulaşmaya çalıştığınız form silinmiş, yayından kaldırılmış veya bağlantı adresi (URL) yanlış yazılmış olabilir.",
+      tipsTitle: "Ne yapabilirsiniz?",
+      tip1: "Bağlantı adresinin (URL) doğru yazıldığından emin olun.",
+      tip2: "Formun yayında olup olmadığını form sahibiyle teyit edin.",
+      tip3: "Yöneticiyseniz formlar paneline giderek formu kontrol edin.",
+      goBack: "Geri Dön",
+      returnHome: "Ana Sayfaya Dön",
+      goToAdmin: "Formlar Paneli",
     },
 }
 

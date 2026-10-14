@@ -54,23 +54,16 @@ export default async function PublicFormPage({
   }
 
   const form = res.data
-
-  // Verify whether current visitor is authenticated admin
   const session = await getAdminSession()
   const isAdmin = Boolean(session)
 
-  // Security Gate 1: If form is in draft/unpublished mode,
-  // ONLY authenticated admins are permitted to view/preview it.
   if (!form.isPublished) {
     if (!isAdmin) {
       return <FormNotActive title={form.title} />
     }
-    // Admin is previewing their own draft form
     return <PublicFormRenderer form={form} isPreview={true} />
   }
 
-  // Security Gate 2: If form is published, regular visitors always get live form.
-  // Only authenticated admins can run simulation preview.
   const isPreview = isAdmin && isPreviewRequested
 
   return <PublicFormRenderer form={form} isPreview={isPreview} />

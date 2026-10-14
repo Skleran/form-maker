@@ -8,7 +8,6 @@ export async function proxy(request: NextRequest) {
 
   const isAuth = token ? await verifySessionToken(token) : null
 
-  // 1. Guard all /admin routes
   if (pathname.startsWith("/admin")) {
     if (!isAuth) {
       const loginUrl = new URL("/login", request.url)
@@ -21,7 +20,6 @@ export async function proxy(request: NextRequest) {
     return NextResponse.next()
   }
 
-  // 2. Redirect logged-in admin away from /login
   if (pathname === "/login") {
     if (isAuth) {
       const from = request.nextUrl.searchParams.get("from") || "/admin/forms"

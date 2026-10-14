@@ -164,7 +164,6 @@ export async function saveForm(
 
     const values = parsed.data
 
-    // Check if slug is taken by another form
     const existingSlug = await prisma.form.findFirst({
       where: {
         slug: values.slug,
@@ -179,9 +178,7 @@ export async function saveForm(
       }
     }
 
-    // Atomic transaction: update form metadata and reconcile questions
     const updated = await prisma.$transaction(async (tx) => {
-      // 1. Reconcile questions removed in the builder
       const incomingIds = values.questions.map((q) => q.id).filter(Boolean)
       const removedQuestions = await tx.question.findMany({
         where: {
@@ -199,20 +196,18 @@ export async function saveForm(
 
       for (const removedQ of removedQuestions) {
         if (removedQ._count.answers > 0) {
-          // Preserve historical answers by soft-deleting/archiving the question
+          // Soft-delete to preserve existing submission answers
           await tx.question.update({
             where: { id: removedQ.id },
             data: { isDeleted: true },
           })
         } else {
-          // Never answered: safely delete clean
           await tx.question.delete({
             where: { id: removedQ.id },
           })
         }
       }
 
-      // 2. Upsert updated or new questions (ensuring isDeleted: false)
       for (let idx = 0; idx < values.questions.length; idx++) {
         const q = values.questions[idx]
         await tx.question.upsert({

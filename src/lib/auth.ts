@@ -1,7 +1,5 @@
-/**
- * In-House Single-Admin Session & Cryptography Utilities
- * Uses Web Crypto API (supported natively in both Node.js and Next.js Edge Runtime)
- */
+
+//Single-Admin Session & Cryptography Utilities
 
 export const SESSION_COOKIE_NAME = "admin_session"
 
@@ -64,9 +62,8 @@ function base64UrlDecode(str: string): Uint8Array {
   return bytes
 }
 
-/**
- * Creates an HMAC-SHA256 signed session token for the authenticated admin
- */
+
+// Toke generation and verification functions
 export async function createSessionToken(username: string): Promise<string> {
   const payload: SessionPayload = {
     sub: username,
@@ -89,9 +86,8 @@ export async function createSessionToken(username: string): Promise<string> {
   return `${payloadBase64}.${signatureBase64}`
 }
 
-/**
- * Verifies an HMAC-SHA256 signed session token. Returns the payload or null if invalid/expired.
- */
+
+// Verifies an HMAC-SHA256 signed session token. Returns the payload or null if invalid/expired.
 export async function verifySessionToken(token: string): Promise<SessionPayload | null> {
   if (!token || typeof token !== "string") return null
   const parts = token.split(".")

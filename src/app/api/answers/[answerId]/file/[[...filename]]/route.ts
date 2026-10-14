@@ -9,11 +9,7 @@ interface RouteContext {
   }>
 }
 
-/**
- * Serves uploaded files stored in the Answer model cleanly via standard HTTP response
- * Eliminates embedding huge base64 strings in CSV exports
- * Only accessible to authenticated administrators
- */
+// Serves uploaded answer files to authenticated administrators
 export async function GET(request: Request, context: RouteContext) {
   try {
     const session = await getAdminSession()
@@ -46,7 +42,6 @@ export async function GET(request: Request, context: RouteContext) {
     let fileUrl = answer.fileUrl
     let fileName = answer.valueText || "dosya"
 
-    // Fallback to valueJson if fileUrl is empty
     if (!fileUrl && answer.valueJson && typeof answer.valueJson === "object") {
       const json = answer.valueJson as { url?: string; dataUrl?: string; name?: string }
       fileUrl = json.url || json.dataUrl || null
@@ -59,12 +54,10 @@ export async function GET(request: Request, context: RouteContext) {
       return new NextResponse("Bu yanıtta dosya kaydı bulunamadı", { status: 404 })
     }
 
-    // 1. External URLs (Supabase storage, S3, MinIO)
     if (fileUrl.startsWith("http://") || fileUrl.startsWith("https://")) {
       return NextResponse.redirect(fileUrl, 302)
     }
 
-    // 2. Base64 Data URLs
     if (fileUrl.startsWith("data:")) {
       const match = fileUrl.match(/^data:([^;]+);base64,(.+)$/)
       if (!match) {

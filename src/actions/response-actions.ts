@@ -255,7 +255,6 @@ export async function exportFormResponsesCSV(
       },
     })
 
-    // Collect all questions, including active, archived, and orphan answer references
     const questionsMap = new Map<string, { id: string; label: string }>()
     form.questions.forEach((q) => {
       questionsMap.set(q.id, {
@@ -278,7 +277,6 @@ export async function exportFormResponsesCSV(
 
     const targetQuestions = Array.from(questionsMap.values())
 
-    // Resolve app base URL to generate clean download links for files
     let baseUrl = process.env.NEXT_PUBLIC_APP_URL || ""
     if (!baseUrl) {
       try {
@@ -291,7 +289,6 @@ export async function exportFormResponsesCSV(
       }
     }
 
-    // Header row
     const headersList = [
       "Yanıt ID",
       "Gönderilme Tarihi",
@@ -300,7 +297,6 @@ export async function exportFormResponsesCSV(
 
     const csvRows: string[] = [headersList.map(escapeCSV).join(",")]
 
-    // Data rows
     for (const sub of allSubmissions) {
       const answerByQuestionKey = new Map(sub.answers.map((a) => [a.questionId || a.id, a]))
 
