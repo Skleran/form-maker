@@ -207,7 +207,7 @@ export function BuilderHeader({
                     </Button>
                   }
                 />
-                <TooltipContent>{dict.builder.header.undoTooltip}</TooltipContent>
+                <TooltipContent side="bottom">{dict.builder.header.undoTooltip}</TooltipContent>
               </Tooltip>
 
               <Tooltip>
@@ -224,7 +224,7 @@ export function BuilderHeader({
                     </Button>
                   }
                 />
-                <TooltipContent>{dict.builder.header.redoTooltip}</TooltipContent>
+                <TooltipContent side="bottom">{dict.builder.header.redoTooltip}</TooltipContent>
               </Tooltip>
             </div>
           </div>
@@ -297,7 +297,7 @@ export function BuilderHeader({
                   </a>
                 }
               />
-              <TooltipContent>{dict.builder.header.previewTooltip}</TooltipContent>
+              <TooltipContent side="bottom">{dict.builder.header.previewTooltip}</TooltipContent>
             </Tooltip>
 
             {/* Copy Link Button */}
@@ -315,23 +315,37 @@ export function BuilderHeader({
                   </Button>
                 }
               />
-              <TooltipContent>{dict.builder.header.shareTooltip}</TooltipContent>
+              <TooltipContent side="bottom">{dict.builder.header.shareTooltip}</TooltipContent>
             </Tooltip>
 
             {/* Save Button */}
-            <Button
-              size="sm"
-              onClick={onSave}
-              disabled={isSaving}
-              className="cursor-pointer items-center gap-1.5 shadow-sm"
-            >
-              {isSaving ? (
-                <Loader2 className="size-3.5 animate-spin" />
-              ) : (
-                <Save className="size-3.5" />
-              )}
-              <span>{isSaving ? dict.builder.header.saving : dict.builder.header.save}</span>
-            </Button>
+            <Tooltip>
+              <TooltipTrigger
+                render={
+                  <Button
+                    size="sm"
+                    onClick={onSave}
+                    disabled={isSaving}
+                    className="cursor-pointer items-center gap-1.5 shadow-sm"
+                  >
+                    {isSaving ? (
+                      <Loader2 className="size-3.5 animate-spin" />
+                    ) : (
+                      <Save className="size-3.5" />
+                    )}
+                    <span>{isSaving ? dict.builder.header.saving : dict.builder.header.save}</span>
+                  </Button>
+                }
+              />
+              <TooltipContent side="bottom" sideOffset={8}>
+                <div className="flex items-center gap-1.5 text-xs">
+                  <span>{dict.builder.header.save}</span>
+                  <kbd className="rounded bg-muted px-1.5 py-0.5 text-[10px] font-mono text-muted-foreground border">
+                    Ctrl+S
+                  </kbd>
+                </div>
+              </TooltipContent>
+            </Tooltip>
 
             {/* Inspector Toggle */}
             <Tooltip>
@@ -347,7 +361,7 @@ export function BuilderHeader({
                   </Button>
                 }
               />
-              <TooltipContent>{dict.builder.header.inspectorTooltip}</TooltipContent>
+              <TooltipContent side="bottom">{dict.builder.header.inspectorTooltip}</TooltipContent>
             </Tooltip>
 
             <ThemeToggle />

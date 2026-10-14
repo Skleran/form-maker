@@ -219,29 +219,10 @@ export function FormBuilder({ initialForm }: FormBuilderProps) {
     }
   }, [methods, redo, activeQuestionId, setActiveQuestionId])
 
-  // Global keyboard shortcuts: Ctrl/Cmd + Z (Undo), Ctrl/Cmd + Shift + Z or Ctrl/Cmd + Y (Redo)
-  React.useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "z") {
-        if (e.shiftKey) {
-          e.preventDefault()
-          handleRedo()
-        } else {
-          e.preventDefault()
-          handleUndo()
-        }
-      } else if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "y") {
-        e.preventDefault()
-        handleRedo()
-      }
-    }
-
-    window.addEventListener("keydown", handleKeyDown)
-    return () => window.removeEventListener("keydown", handleKeyDown)
-  }, [handleUndo, handleRedo])
-
   // Save handler
-  const handleSave = async () => {
+  const handleSave = React.useCallback(async () => {
+    if (useBuilderStore.getState().isSaving) return
+
     const isValid = await methods.trigger()
     if (!isValid) {
       toast.error("Lütfen kaydetmeden önce formdaki hataları giderin.")
@@ -269,7 +250,31 @@ export function FormBuilder({ initialForm }: FormBuilderProps) {
     } finally {
       setIsSaving(false)
     }
-  }
+  }, [methods, initialForm.id, setIsSaving, setLastSavedAt, setIsDirty, clearHistory])
+
+  // Global keyboard shortcuts: Ctrl/Cmd + S (Save), Ctrl/Cmd + Z (Undo), Ctrl/Cmd + Shift + Z / Ctrl/Cmd + Y (Redo)
+  React.useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "s") {
+        e.preventDefault()
+        handleSave()
+      } else if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "z") {
+        if (e.shiftKey) {
+          e.preventDefault()
+          handleRedo()
+        } else {
+          e.preventDefault()
+          handleUndo()
+        }
+      } else if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "y") {
+        e.preventDefault()
+        handleRedo()
+      }
+    }
+
+    window.addEventListener("keydown", handleKeyDown)
+    return () => window.removeEventListener("keydown", handleKeyDown)
+  }, [handleSave, handleUndo, handleRedo])
 
   // Discard handler: reverts all changes back to initial or last saved state
   const handleDiscard = React.useCallback(() => {
