@@ -2,7 +2,14 @@
 
 import * as React from "react"
 import { useSearchParams } from "next/navigation"
-import { FormProvider, useForm, useWatch } from "react-hook-form"
+import {
+  FormProvider,
+  useForm,
+  useFormState,
+  useWatch,
+  type Control,
+  type UseFormGetValues,
+} from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { toast } from "sonner"
 
@@ -44,31 +51,103 @@ interface FormBuilderProps {
   initialForm: InitialFormData
 }
 
+const FormHistoryObserver = React.memo(function FormHistoryObserver({
+  control,
+  getValues,
+  isApplyingHistoryRef,
+  isInitialMountRef,
+  previousSnapshotRef,
+}: {
+  control: Control<FormBuilderValues>
+  getValues: UseFormGetValues<FormBuilderValues>
+  isApplyingHistoryRef: React.MutableRefObject<boolean>
+  isInitialMountRef: React.MutableRefObject<boolean>
+  previousSnapshotRef: React.MutableRefObject<FormBuilderValues>
+}) {
+  const { isDirty } = useFormState({ control })
+  const watchedValues = useWatch({ control })
+  const debounceTimerRef = React.useRef<NodeJS.Timeout | null>(null)
+
+  React.useEffect(() => {
+    useBuilderStore.getState().setIsDirty(isDirty)
+  }, [isDirty])
+
+  React.useEffect(() => {
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      if (isDirty) {
+        e.preventDefault()
+        e.returnValue = ""
+      }
+    }
+
+    window.addEventListener("beforeunload", handleBeforeUnload)
+    return () => window.removeEventListener("beforeunload", handleBeforeUnload)
+  }, [isDirty])
+
+  React.useEffect(() => {
+    if (isInitialMountRef.current || isApplyingHistoryRef.current) return
+    if (!isDirty) return
+
+    const currentValues = getValues()
+    if (
+      previousSnapshotRef.current &&
+      JSON.stringify(previousSnapshotRef.current) === JSON.stringify(currentValues)
+    ) {
+      return
+    }
+
+    if (debounceTimerRef.current) {
+      clearTimeout(debounceTimerRef.current)
+    }
+
+    debounceTimerRef.current = setTimeout(() => {
+      if (previousSnapshotRef.current) {
+        useBuilderStore.getState().pushHistory(previousSnapshotRef.current)
+      }
+      previousSnapshotRef.current = getValues()
+    }, 600)
+
+    return () => {
+      if (debounceTimerRef.current) clearTimeout(debounceTimerRef.current)
+    }
+  }, [
+    watchedValues,
+    isDirty,
+    getValues,
+    isInitialMountRef,
+    isApplyingHistoryRef,
+    previousSnapshotRef,
+  ])
+
+  return null
+})
+
+function BuilderMainContainer({ children }: { children: React.ReactNode }) {
+  const isInspectorOpen = useBuilderStore((s) => s.isInspectorOpen)
+  return (
+    <main
+      className={`flex flex-1 overflow-hidden relative transition-[--inspector-width] duration-225 ease-in-out ${
+        isInspectorOpen
+          ? "[--inspector-width:18rem] xl:[--inspector-width:20rem]"
+          : "[--inspector-width:0px]"
+      }`}
+    >
+      {children}
+    </main>
+  )
+}
+
 export function FormBuilder({ initialForm }: FormBuilderProps) {
   const searchParams = useSearchParams()
   const activeTab = searchParams.get("tab") || "questions"
 
-  const {
-    activeQuestionId,
-    setActiveQuestionId,
-    setIsInspectorOpen,
-    setIsSaving,
-    setLastSavedAt,
-    setIsDirty,
-    pushHistory,
-    undo,
-    redo,
-    clearHistory,
-    resetWorkspace,
-  } = useBuilderStore()
-
   // Reset workspace state on mount and unmount
   React.useEffect(() => {
-    resetWorkspace()
+    useBuilderStore.getState().resetWorkspace()
     return () => {
-      resetWorkspace()
+      useBuilderStore.getState().resetWorkspace()
     }
-  }, [resetWorkspace])
+  }, [])
 
   // Memoized initial form values
   const initialValues = React.useMemo<FormBuilderValues>(
@@ -103,121 +182,76 @@ export function FormBuilder({ initialForm }: FormBuilderProps) {
   // Reference to the latest saved (or initial) snapshot
   const savedSnapshotRef = React.useRef<FormBuilderValues>(initialValues)
 
-
-  // Synchronize form dirty state with Zustand store
-  const isFormDirty = methods.formState.isDirty
-  React.useEffect(() => {
-    setIsDirty(isFormDirty)
-  }, [isFormDirty, setIsDirty])
-
-  // Browser level beforeunload warning when form has unsaved changes
-  React.useEffect(() => {
-    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
-      if (isFormDirty) {
-        e.preventDefault()
-        e.returnValue = ""
-      }
-    }
-
-    window.addEventListener("beforeunload", handleBeforeUnload)
-    return () => window.removeEventListener("beforeunload", handleBeforeUnload)
-  }, [isFormDirty])
-
   // History tracking refs
   const isApplyingHistoryRef = React.useRef(false)
   const isInitialMountRef = React.useRef(true)
   const previousSnapshotRef = React.useRef<FormBuilderValues>(initialValues)
-  const debounceTimerRef = React.useRef<NodeJS.Timeout | null>(null)
 
   // Ensure history is clean on mount and track mount completion
   React.useEffect(() => {
-    clearHistory()
+    useBuilderStore.getState().clearHistory()
     const timer = setTimeout(() => {
       isInitialMountRef.current = false
     }, 400)
     return () => clearTimeout(timer)
-  }, [clearHistory])
-
-  // Watch values for debounced history capture - ONLY when dirty and modified
-  const watchedValues = useWatch({ control: methods.control })
-
-  React.useEffect(() => {
-    if (isInitialMountRef.current || isApplyingHistoryRef.current) return
-    if (!methods.formState.isDirty) return
-
-    const currentValues = methods.getValues()
-    if (
-      previousSnapshotRef.current &&
-      JSON.stringify(previousSnapshotRef.current) === JSON.stringify(currentValues)
-    ) {
-      return
-    }
-
-    if (debounceTimerRef.current) {
-      clearTimeout(debounceTimerRef.current)
-    }
-
-    debounceTimerRef.current = setTimeout(() => {
-      if (previousSnapshotRef.current) {
-        pushHistory(previousSnapshotRef.current)
-      }
-      previousSnapshotRef.current = methods.getValues()
-    }, 600)
-
-    return () => {
-      if (debounceTimerRef.current) clearTimeout(debounceTimerRef.current)
-    }
-  }, [watchedValues, methods, pushHistory])
+  }, [])
 
   // Undo action handler
   const handleUndo = React.useCallback(() => {
+    const store = useBuilderStore.getState()
     const current = methods.getValues()
-    const previous = undo(current)
+    const previous = store.undo(current)
     if (previous) {
       isApplyingHistoryRef.current = true
       methods.reset(previous)
       previousSnapshotRef.current = previous
       if (previous.questions.length > 0) {
-        const stillExists = previous.questions.some((q) => q.id === activeQuestionId)
+        const stillExists = previous.questions.some(
+          (q) => q.id === store.activeQuestionId
+        )
         if (!stillExists) {
-          setActiveQuestionId(previous.questions[0].id)
+          store.setActiveQuestionId(previous.questions[0].id)
         }
       } else {
-        setActiveQuestionId(null)
+        store.setActiveQuestionId(null)
       }
       toast.info("Geri alma işlemi yapıldı")
       setTimeout(() => {
         isApplyingHistoryRef.current = false
       }, 100)
     }
-  }, [methods, undo, activeQuestionId, setActiveQuestionId])
+  }, [methods])
 
   // Redo action handler
   const handleRedo = React.useCallback(() => {
+    const store = useBuilderStore.getState()
     const current = methods.getValues()
-    const next = redo(current)
+    const next = store.redo(current)
     if (next) {
       isApplyingHistoryRef.current = true
       methods.reset(next)
       previousSnapshotRef.current = next
       if (next.questions.length > 0) {
-        const stillExists = next.questions.some((q) => q.id === activeQuestionId)
+        const stillExists = next.questions.some(
+          (q) => q.id === store.activeQuestionId
+        )
         if (!stillExists) {
-          setActiveQuestionId(next.questions[0].id)
+          store.setActiveQuestionId(next.questions[0].id)
         }
       } else {
-        setActiveQuestionId(null)
+        store.setActiveQuestionId(null)
       }
       toast.info("Yineleme işlemi yapıldı")
       setTimeout(() => {
         isApplyingHistoryRef.current = false
       }, 100)
     }
-  }, [methods, redo, activeQuestionId, setActiveQuestionId])
+  }, [methods])
 
   // Save handler
   const handleSave = React.useCallback(async () => {
-    if (useBuilderStore.getState().isSaving) return
+    const store = useBuilderStore.getState()
+    if (store.isSaving) return
 
     const isValid = await methods.trigger()
     if (!isValid) {
@@ -225,18 +259,19 @@ export function FormBuilder({ initialForm }: FormBuilderProps) {
       return
     }
 
-    setIsSaving(true)
+    store.setIsSaving(true)
     try {
       const values = methods.getValues()
       const res = await saveForm(initialForm.id, values)
 
       if (res.success) {
-        setLastSavedAt(new Date())
+        const nextStore = useBuilderStore.getState()
+        nextStore.setLastSavedAt(new Date())
         methods.reset(values)
-        setIsDirty(false)
+        nextStore.setIsDirty(false)
         savedSnapshotRef.current = values
         previousSnapshotRef.current = values
-        clearHistory()
+        nextStore.clearHistory()
         toast.success("Form başarıyla kaydedildi!")
       } else {
         toast.error(res.error || "Form kaydedilemedi.")
@@ -244,9 +279,9 @@ export function FormBuilder({ initialForm }: FormBuilderProps) {
     } catch {
       toast.error("Kaydetme sırasında beklenmeyen bir hata oluştu.")
     } finally {
-      setIsSaving(false)
+      useBuilderStore.getState().setIsSaving(false)
     }
-  }, [methods, initialForm.id, setIsSaving, setLastSavedAt, setIsDirty, clearHistory])
+  }, [methods, initialForm.id])
 
   // Global keyboard shortcuts: Ctrl/Cmd + S (Save), Ctrl/Cmd + Z (Undo), Ctrl/Cmd + Shift + Z / Ctrl/Cmd + Y (Redo)
   React.useEffect(() => {
@@ -274,107 +309,134 @@ export function FormBuilder({ initialForm }: FormBuilderProps) {
 
   // Discard handler: reverts all changes back to initial or last saved state
   const handleDiscard = React.useCallback(() => {
+    const store = useBuilderStore.getState()
     const target = savedSnapshotRef.current || initialValues
     isApplyingHistoryRef.current = true
     methods.reset(target)
     previousSnapshotRef.current = target
-    clearHistory()
-    setIsDirty(false)
+    store.clearHistory()
+    store.setIsDirty(false)
     if (target.questions.length > 0) {
-      setActiveQuestionId(target.questions[0].id)
+      store.setActiveQuestionId(target.questions[0].id)
     } else {
-      setActiveQuestionId(null)
+      store.setActiveQuestionId(null)
     }
     toast.info("Kaydedilmemiş değişiklikler geri alındı")
     setTimeout(() => {
       isApplyingHistoryRef.current = false
     }, 100)
-  }, [initialValues, methods, clearHistory, setIsDirty, setActiveQuestionId])
+  }, [initialValues, methods])
 
   // Question manipulation helpers
-  const handleAddQuestion = (type: QuestionType = "SHORT_TEXT") => {
-    const currentQuestions = methods.getValues("questions") || []
-    pushHistory(methods.getValues())
-    previousSnapshotRef.current = methods.getValues()
+  const handleAddQuestion = React.useCallback(
+    (type: QuestionType = "SHORT_TEXT") => {
+      const store = useBuilderStore.getState()
+      const currentSnapshot = methods.getValues()
+      const currentQuestions = currentSnapshot.questions || []
+      store.pushHistory(currentSnapshot)
+      previousSnapshotRef.current = currentSnapshot
 
-    const newId = `q_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`
+      const newId = `q_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`
 
-    const newQuestion = {
-      id: newId,
-      orderIndex: currentQuestions.length,
-      type,
-      label: "Başlıksız Soru",
-      required: false,
-      options: ["SINGLE_CHOICE", "MULTIPLE_CHOICE", "DROPDOWN"].includes(type)
-        ? [{ id: `opt_${Date.now()}_1`, label: "Seçenek 1" }]
-        : [],
-      config: {
-        placeholder: type === "SHORT_TEXT" ? "Yanıtınızı girin..." : undefined,
-        maxFileSizeMb: type === "FILE_UPLOAD" ? 10 : undefined,
-      },
-    }
+      const newQuestion = {
+        id: newId,
+        orderIndex: currentQuestions.length,
+        type,
+        label: "Başlıksız Soru",
+        required: false,
+        options: ["SINGLE_CHOICE", "MULTIPLE_CHOICE", "DROPDOWN"].includes(type)
+          ? [{ id: `opt_${Date.now()}_1`, label: "Seçenek 1" }]
+          : [],
+        config: {
+          placeholder: type === "SHORT_TEXT" ? "Yanıtınızı girin..." : undefined,
+          maxFileSizeMb: type === "FILE_UPLOAD" ? 10 : undefined,
+        },
+      }
 
-    methods.setValue("questions", [...currentQuestions, newQuestion], {
-      shouldDirty: true,
-    })
-    setActiveQuestionId(newId)
-  }
+      methods.setValue("questions", [...currentQuestions, newQuestion], {
+        shouldDirty: true,
+      })
+      store.setActiveQuestionId(newId)
+    },
+    [methods]
+  )
 
-  const handleDuplicateQuestion = (index: number) => {
-    const currentQuestions = methods.getValues("questions") || []
-    const target = currentQuestions[index]
-    if (!target) return
+  const handleDuplicateQuestion = React.useCallback(
+    (index: number) => {
+      const store = useBuilderStore.getState()
+      const currentSnapshot = methods.getValues()
+      const currentQuestions = currentSnapshot.questions || []
+      const target = currentQuestions[index]
+      if (!target) return
 
-    pushHistory(methods.getValues())
-    previousSnapshotRef.current = methods.getValues()
+      store.pushHistory(currentSnapshot)
+      previousSnapshotRef.current = currentSnapshot
 
-    const newId = `q_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`
-    const duplicated = {
-      ...target,
-      id: newId,
-      label: `${target.label} (Kopya)`,
-      options: target.options?.map((opt, i) => ({
-        id: `opt_${Date.now()}_${i + 1}`,
-        label: opt.label,
-      })) || [],
-    }
+      const newId = `q_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`
+      const duplicated = {
+        ...target,
+        id: newId,
+        label: `${target.label} (Kopya)`,
+        options:
+          target.options?.map((opt, i) => ({
+            id: `opt_${Date.now()}_${i + 1}`,
+            label: opt.label,
+          })) || [],
+      }
 
-    const updated = [
-      ...currentQuestions.slice(0, index + 1),
-      duplicated,
-      ...currentQuestions.slice(index + 1),
-    ]
+      const updated = [
+        ...currentQuestions.slice(0, index + 1),
+        duplicated,
+        ...currentQuestions.slice(index + 1),
+      ]
 
-    methods.setValue("questions", updated, { shouldDirty: true })
-    setActiveQuestionId(newId)
-    toast.info("Soru çoğaltıldı")
-  }
+      methods.setValue("questions", updated, { shouldDirty: true })
+      store.setActiveQuestionId(newId)
+      toast.info("Soru çoğaltıldı")
+    },
+    [methods]
+  )
 
-  const handleDeleteQuestion = (index: number) => {
-    const currentQuestions = methods.getValues("questions") || []
-    const target = currentQuestions[index]
-    if (!target) return
+  const submissionCount = initialForm._count?.submissions ?? 0
 
-    pushHistory(methods.getValues())
-    previousSnapshotRef.current = methods.getValues()
+  const handleDeleteQuestion = React.useCallback(
+    (index: number) => {
+      const store = useBuilderStore.getState()
+      const currentSnapshot = methods.getValues()
+      const currentQuestions = currentSnapshot.questions || []
+      const target = currentQuestions[index]
+      if (!target) return
 
-    const updated = currentQuestions.filter((_, i) => i !== index)
+      store.pushHistory(currentSnapshot)
+      previousSnapshotRef.current = currentSnapshot
 
-    methods.setValue("questions", updated, { shouldDirty: true })
-    if (activeQuestionId === target.id) {
-      setActiveQuestionId(null)
-      setIsInspectorOpen(false)
-    }
+      const updated = currentQuestions.filter((_, i) => i !== index)
 
-    if (initialForm._count?.submissions && initialForm._count.submissions > 0) {
-      toast.info("Soru kaldırıldı. Bu soruya verilmiş eski yanıtlar yanıtlarda arşiv olarak korunacaktır.")
-    } else {
-      toast.info("Soru kaldırıldı")
-    }
-  }
+      methods.setValue("questions", updated, { shouldDirty: true })
+      if (store.activeQuestionId === target.id) {
+        store.deselectQuestion()
+      }
+
+      if (submissionCount > 0) {
+        toast.info(
+          "Soru kaldırıldı. Bu soruya verilmiş eski yanıtlar yanıtlarda arşiv olarak korunacaktır."
+        )
+      } else {
+        toast.info("Soru kaldırıldı")
+      }
+    },
+    [methods, submissionCount]
+  )
 
   return (
     <FormProvider {...methods}>
+      <FormHistoryObserver
+        control={methods.control}
+        getValues={methods.getValues}
+        isApplyingHistoryRef={isApplyingHistoryRef}
+        isInitialMountRef={isInitialMountRef}
+        previousSnapshotRef={previousSnapshotRef}
+      />
       <div className="flex h-screen flex-col bg-background overflow-hidden">
         {/* Top Header */}
         <BuilderHeader
@@ -387,7 +449,7 @@ export function FormBuilder({ initialForm }: FormBuilderProps) {
         />
 
         {/* Builder Main Work Area */}
-        <main className="flex flex-1 overflow-hidden relative">
+        <BuilderMainContainer>
           {activeTab === "questions" && (
             <>
               <BuilderCanvas
@@ -407,7 +469,7 @@ export function FormBuilder({ initialForm }: FormBuilderProps) {
           )}
 
           {activeTab === "settings" && <BuilderSettings formId={initialForm.id} />}
-        </main>
+        </BuilderMainContainer>
       </div>
     </FormProvider>
   )

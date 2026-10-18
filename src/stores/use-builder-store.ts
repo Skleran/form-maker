@@ -30,6 +30,8 @@ export interface BuilderState {
 
 export interface BuilderActions {
   setActiveQuestionId: (id: string | null) => void
+  selectQuestion: (id: string) => void
+  deselectQuestion: () => void
   setPreviewDevice: (device: PreviewDevice) => void
   setIsInspectorOpen: (isOpen: boolean) => void
   toggleInspector: () => void
@@ -65,17 +67,44 @@ export const useBuilderStore = create<BuilderStore>((set) => ({
   ...initialState,
 
   setActiveQuestionId: (id) =>
-    set({
-      activeQuestionId: id,
+    set((state) => (state.activeQuestionId === id ? state : { activeQuestionId: id })),
+
+  selectQuestion: (id) =>
+    set((state) => {
+      if (state.activeQuestionId === id && state.isInspectorOpen) {
+        return state
+      }
+      return {
+        activeQuestionId: id,
+        isInspectorOpen: true,
+      }
     }),
 
-  setPreviewDevice: (device) => set({ previewDevice: device }),
+  deselectQuestion: () =>
+    set((state) => {
+      if (state.activeQuestionId === null && !state.isInspectorOpen) {
+        return state
+      }
+      return {
+        activeQuestionId: null,
+        isInspectorOpen: false,
+      }
+    }),
+
+  setPreviewDevice: (device) =>
+    set((state) => (state.previewDevice === device ? state : { previewDevice: device })),
 
   setIsInspectorOpen: (isOpen) =>
-    set((state) => ({
-      isInspectorOpen: isOpen,
-      activeQuestionId: isOpen ? state.activeQuestionId : null,
-    })),
+    set((state) => {
+      const nextActiveId = isOpen ? state.activeQuestionId : null
+      if (state.isInspectorOpen === isOpen && state.activeQuestionId === nextActiveId) {
+        return state
+      }
+      return {
+        isInspectorOpen: isOpen,
+        activeQuestionId: nextActiveId,
+      }
+    }),
 
   toggleInspector: () =>
     set((state) => {
@@ -86,15 +115,19 @@ export const useBuilderStore = create<BuilderStore>((set) => ({
       }
     }),
 
-  setIsLivePreview: (isLive) => set({ isLivePreview: isLive }),
+  setIsLivePreview: (isLive) =>
+    set((state) => (state.isLivePreview === isLive ? state : { isLivePreview: isLive })),
 
   toggleLivePreview: () => set((state) => ({ isLivePreview: !state.isLivePreview })),
 
-  setIsSaving: (isSaving) => set({ isSaving }),
+  setIsSaving: (isSaving) =>
+    set((state) => (state.isSaving === isSaving ? state : { isSaving })),
 
-  setLastSavedAt: (date) => set({ lastSavedAt: date }),
+  setLastSavedAt: (date) =>
+    set((state) => (state.lastSavedAt === date ? state : { lastSavedAt: date })),
 
-  setIsDirty: (isDirty) => set({ isDirty }),
+  setIsDirty: (isDirty) =>
+    set((state) => (state.isDirty === isDirty ? state : { isDirty })),
 
   pushHistory: (currentState) =>
     set((state) => {
@@ -149,11 +182,21 @@ export const useBuilderStore = create<BuilderStore>((set) => ({
   },
 
   clearHistory: () =>
-    set({
-      past: [],
-      future: [],
-      canUndo: false,
-      canRedo: false,
+    set((state) => {
+      if (
+        state.past.length === 0 &&
+        state.future.length === 0 &&
+        !state.canUndo &&
+        !state.canRedo
+      ) {
+        return state
+      }
+      return {
+        past: [],
+        future: [],
+        canUndo: false,
+        canRedo: false,
+      }
     }),
 
   resetWorkspace: () => set(initialState),

@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { useFieldArray, useFormContext } from "react-hook-form";
+import { useFieldArray, useFormContext, useWatch } from "react-hook-form";
 import {
   AlignLeft,
   CheckSquare,
@@ -43,25 +43,18 @@ interface BuilderInspectorProps {
   onDeleteQuestion: (index: number) => void;
 }
 
-export function BuilderInspector({
+export const BuilderInspector = React.memo(function BuilderInspector({
   onDuplicateQuestion,
   onDeleteQuestion,
 }: BuilderInspectorProps) {
   const { dict, language } = useLanguage();
-  const {
-    activeQuestionId,
-    isInspectorOpen,
-    setIsInspectorOpen,
-    setActiveQuestionId,
-  } = useBuilderStore();
+  const activeQuestionId = useBuilderStore((s) => s.activeQuestionId);
+  const isInspectorOpen = useBuilderStore((s) => s.isInspectorOpen);
+  const setActiveQuestionId = useBuilderStore((s) => s.setActiveQuestionId);
+  const deselectQuestion = useBuilderStore((s) => s.deselectQuestion);
 
-  const { register, watch, setValue, control } =
+  const { register, getValues, setValue, control } =
     useFormContext<FormBuilderValues>();
-  const watchedQuestions = watch("questions");
-  const questions = React.useMemo(
-    () => watchedQuestions || [],
-    [watchedQuestions],
-  );
   const { fields } = useFieldArray({
     control,
     name: "questions",
@@ -134,8 +127,9 @@ export function BuilderInspector({
       return -1;
     }
 
+    const currentQuestions = getValues("questions") || [];
     // 1. Check matching persistent question.id
-    const qIndex = questions.findIndex((q) => q?.id === activeQuestionId);
+    const qIndex = currentQuestions.findIndex((q) => q?.id === activeQuestionId);
     if (qIndex !== -1) return qIndex;
 
     // 2. Check matching RHF field key in case activeQuestionId was set to field.id
@@ -143,10 +137,19 @@ export function BuilderInspector({
     if (fIndex !== -1) return fIndex;
 
     return -1;
-  }, [activeQuestionId, questions, fields]);
+  }, [activeQuestionId, fields, getValues]);
+
+  const safeWatchIndex = resolvedIndex !== -1 ? resolvedIndex : 0;
+  const watchedQuestion = useWatch({
+    control,
+    name: `questions.${safeWatchIndex}`,
+    disabled: !isInspectorOpen || resolvedIndex === -1,
+  });
 
   const resolvedQuestion: QuestionItemValues | undefined =
-    resolvedIndex !== -1 ? questions[resolvedIndex] : undefined;
+    resolvedIndex !== -1
+      ? watchedQuestion || (getValues(`questions.${resolvedIndex}`) as QuestionItemValues | undefined)
+      : undefined;
 
   // Cache last active question & index to prevent flickering during exit slide animation
   const lastActiveQuestionRef = React.useRef<QuestionItemValues | undefined>(
@@ -186,17 +189,21 @@ export function BuilderInspector({
     setActiveQuestionId,
   ]);
 
+  const totalQuestions = fields.length;
+
   const handlePrevQuestion = () => {
     if (activeIndex > 0) {
-      const prevQ = questions[activeIndex - 1];
+      const currentQuestions = getValues("questions") || [];
+      const prevQ = currentQuestions[activeIndex - 1];
       const prevId = prevQ?.id || fields[activeIndex - 1]?.id;
       if (prevId) setActiveQuestionId(prevId);
     }
   };
 
   const handleNextQuestion = () => {
-    if (activeIndex < questions.length - 1) {
-      const nextQ = questions[activeIndex + 1];
+    if (activeIndex < totalQuestions - 1) {
+      const currentQuestions = getValues("questions") || [];
+      const nextQ = currentQuestions[activeIndex + 1];
       const nextId = nextQ?.id || fields[activeIndex + 1]?.id;
       if (nextId) setActiveQuestionId(nextId);
     }
@@ -204,11 +211,12 @@ export function BuilderInspector({
 
   return (
     <aside
+      style={{ width: "var(--inspector-width, 0px)" }}
       className={cn(
-        "bg-card flex flex-col shrink-0 h-full overflow-hidden shadow-sm border-l z-20 transition-all duration-225 ease-in-out",
+        "bg-card flex flex-col shrink-0 h-full overflow-hidden shadow-sm border-l z-20 transition-[opacity,transform,border-color] duration-225 ease-in-out",
         isInspectorOpen
-          ? "w-72 xl:w-80 opacity-100 translate-x-0"
-          : "w-0 border-l-0 opacity-0 translate-x-6 pointer-events-none",
+          ? "opacity-100 translate-x-0"
+          : "border-l-0 opacity-0 translate-x-6 pointer-events-none",
       )}
       aria-hidden={!isInspectorOpen}
     >
@@ -220,15 +228,15 @@ export function BuilderInspector({
             <span className="text-xs font-semibold tracking-tight text-foreground truncate">
               {dict.builder.inspector.title}
             </span>
-            {activeQuestion && questions.length > 0 && (
+            {activeQuestion && totalQuestions > 0 && (
               <span className="text-[10px] font-mono bg-muted text-muted-foreground px-1.5 py-0.5 rounded shrink-0">
-                {activeIndex + 1}/{questions.length}
+                {activeIndex + 1}/{totalQuestions}
               </span>
             )}
           </div>
 
           <div className="flex items-center gap-1">
-            {questions.length > 1 && (
+            {totalQuestions > 1 && (
               <div className="flex items-center gap-0.5 mr-1">
                 <Button
                   variant="ghost"
@@ -245,7 +253,7 @@ export function BuilderInspector({
                 <Button
                   variant="ghost"
                   size="icon-xs"
-                  disabled={activeIndex >= questions.length - 1}
+                  disabled={activeIndex >= totalQuestions - 1}
                   onClick={handleNextQuestion}
                   className="cursor-pointer text-muted-foreground hover:text-foreground h-6 w-6"
                   title={language === "tr" ? "Sonraki soru" : "Next question"}
@@ -258,10 +266,7 @@ export function BuilderInspector({
             <Button
               variant="ghost"
               size="icon-xs"
-              onClick={() => {
-                setIsInspectorOpen(false);
-                setActiveQuestionId(null);
-              }}
+              onClick={deselectQuestion}
               className="cursor-pointer text-muted-foreground hover:text-foreground h-6 w-6"
               title={dict.builder.inspector.closeInspector}
             >
@@ -468,7 +473,6 @@ export function BuilderInspector({
                 <Textarea
                   rows={2}
                   placeholder={dict.builder.inspector.descriptionPlaceholder}
-                  defaultValue={activeQuestion.config?.description || ""}
                   {...register(`questions.${activeIndex}.config.description`)}
                   className="text-xs resize-none py-1.5 min-h-[48px]"
                 />
@@ -484,7 +488,6 @@ export function BuilderInspector({
                   </label>
                   <Input
                     placeholder={dict.builder.inspector.placeholderField}
-                    defaultValue={activeQuestion.config?.placeholder || ""}
                     {...register(`questions.${activeIndex}.config.placeholder`)}
                     className="h-8 text-xs"
                   />
@@ -688,4 +691,4 @@ export function BuilderInspector({
       </div>
     </aside>
   );
-}
+});

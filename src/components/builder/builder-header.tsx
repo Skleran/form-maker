@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { useFormContext } from "react-hook-form";
+import { useFormContext, useWatch } from "react-hook-form";
 import { toast } from "sonner";
 import {
   AlertTriangle,
@@ -49,7 +49,7 @@ interface BuilderHeaderProps {
   onDiscard: () => void;
 }
 
-export function BuilderHeader({
+export const BuilderHeader = React.memo(function BuilderHeader({
   submissionCount = 0,
   onSave,
   onUndo,
@@ -61,20 +61,19 @@ export function BuilderHeader({
   const searchParams = useSearchParams();
   const { dict, language } = useLanguage();
 
-  const { watch, setValue } = useFormContext<FormBuilderValues>();
-  const title = watch("title");
-  const slug = watch("slug");
-  const isPublished = watch("isPublished");
+  const { control, setValue } = useFormContext<FormBuilderValues>();
+  const [title, slug, isPublished] = useWatch({
+    control,
+    name: ["title", "slug", "isPublished"],
+  });
 
-  const {
-    isInspectorOpen,
-    toggleInspector,
-    isSaving,
-    lastSavedAt,
-    isDirty,
-    canUndo,
-    canRedo,
-  } = useBuilderStore();
+  const isInspectorOpen = useBuilderStore((s) => s.isInspectorOpen);
+  const toggleInspector = useBuilderStore((s) => s.toggleInspector);
+  const isSaving = useBuilderStore((s) => s.isSaving);
+  const lastSavedAt = useBuilderStore((s) => s.lastSavedAt);
+  const isDirty = useBuilderStore((s) => s.isDirty);
+  const canUndo = useBuilderStore((s) => s.canUndo);
+  const canRedo = useBuilderStore((s) => s.canRedo);
 
   const currentTab = searchParams.get("tab") || "questions";
 
@@ -486,4 +485,4 @@ export function BuilderHeader({
       </Dialog>
     </>
   );
-}
+});
