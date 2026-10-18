@@ -1,5 +1,6 @@
 import { create } from "zustand"
 import type { FormBuilderValues } from "@/lib/validations/form"
+import type { SlugConflictInfo } from "@/actions/form-actions"
 
 export type PreviewDevice = "desktop" | "tablet" | "mobile"
 
@@ -21,6 +22,9 @@ export interface BuilderState {
   lastSavedAt: Date | null
   isDirty: boolean
 
+  // URL slug collision state for inline settings feedback
+  slugConflict: SlugConflictInfo | null
+
   // Undo / Redo history state
   past: FormBuilderValues[]
   future: FormBuilderValues[]
@@ -40,6 +44,7 @@ export interface BuilderActions {
   setIsSaving: (isSaving: boolean) => void
   setLastSavedAt: (date: Date | null) => void
   setIsDirty: (isDirty: boolean) => void
+  setSlugConflict: (conflict: SlugConflictInfo | null) => void
   pushHistory: (currentState: FormBuilderValues) => void
   undo: (currentState: FormBuilderValues) => FormBuilderValues | null
   redo: (currentState: FormBuilderValues) => FormBuilderValues | null
@@ -57,6 +62,7 @@ const initialState: BuilderState = {
   isSaving: false,
   lastSavedAt: null,
   isDirty: false,
+  slugConflict: null,
   past: [],
   future: [],
   canUndo: false,
@@ -128,6 +134,17 @@ export const useBuilderStore = create<BuilderStore>((set) => ({
 
   setIsDirty: (isDirty) =>
     set((state) => (state.isDirty === isDirty ? state : { isDirty })),
+
+  setSlugConflict: (conflict) =>
+    set((state) => {
+      if (
+        state.slugConflict?.conflictingFormId === conflict?.conflictingFormId &&
+        state.slugConflict?.slug === conflict?.slug
+      ) {
+        return state
+      }
+      return { slugConflict: conflict }
+    }),
 
   pushHistory: (currentState) =>
     set((state) => {

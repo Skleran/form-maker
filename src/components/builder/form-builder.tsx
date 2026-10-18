@@ -1,7 +1,7 @@
 "use client"
 
 import * as React from "react"
-import { useSearchParams } from "next/navigation"
+import { usePathname, useRouter, useSearchParams } from "next/navigation"
 import {
   FormProvider,
   useForm,
@@ -22,6 +22,7 @@ import { BuilderCanvas } from "./builder-canvas"
 import { BuilderInspector } from "./builder-inspector"
 import { BuilderSettings } from "./builder-settings"
 import { ResponsesView } from "@/components/responses/responses-view"
+import { useLanguage } from "@/lib/i18n/language-context"
 
 interface InitialFormData {
   id: string
@@ -68,6 +69,8 @@ const FormHistoryObserver = React.memo(function FormHistoryObserver({
   const watchedValues = useWatch({ control })
   const debounceTimerRef = React.useRef<NodeJS.Timeout | null>(null)
 
+  const { language } = useLanguage()
+
   React.useEffect(() => {
     useBuilderStore.getState().setIsDirty(isDirty)
   }, [isDirty])
@@ -83,6 +86,40 @@ const FormHistoryObserver = React.memo(function FormHistoryObserver({
     window.addEventListener("beforeunload", handleBeforeUnload)
     return () => window.removeEventListener("beforeunload", handleBeforeUnload)
   }, [isDirty])
+
+  // Intercept browser back/forward buttons (popstate) when there are unsaved changes
+  React.useEffect(() => {
+    if (!isDirty) return
+
+    // Push guard entry to history stack so browser back/forward buttons trigger popstate on the current page
+    const guardState = { formMakerGuard: true }
+    window.history.pushState(guardState, "", window.location.href)
+
+    const handlePopState = () => {
+      if (useBuilderStore.getState().isDirty) {
+        const message =
+          language === "tr"
+            ? "Kaydedilmemiş değişiklikleriniz var. Sayfadan ayrılmak istediğinizden emin misiniz?\n\nYaptığınız değişiklikler kaybolacaktır."
+            : "You have unsaved changes. Are you sure you want to leave?\n\nYour changes will be lost."
+
+        const confirmLeave = window.confirm(message)
+
+        if (!confirmLeave) {
+          // User chose to stay: re-push guard state to remain on current edit page
+          window.history.pushState(guardState, "", window.location.href)
+        } else {
+          // User chose to leave: mark clean and proceed back
+          useBuilderStore.getState().setIsDirty(false)
+          window.history.back()
+        }
+      }
+    }
+
+    window.addEventListener("popstate", handlePopState)
+    return () => {
+      window.removeEventListener("popstate", handlePopState)
+    }
+  }, [isDirty, language])
 
   React.useEffect(() => {
     if (isInitialMountRef.current || isApplyingHistoryRef.current) return
@@ -138,6 +175,8 @@ function BuilderMainContainer({ children }: { children: React.ReactNode }) {
 }
 
 export function FormBuilder({ initialForm }: FormBuilderProps) {
+  const router = useRouter()
+  const pathname = usePathname()
   const searchParams = useSearchParams()
   const activeTab = searchParams.get("tab") || "questions"
 
@@ -255,7 +294,14 @@ export function FormBuilder({ initialForm }: FormBuilderProps) {
 
     const isValid = await methods.trigger()
     if (!isValid) {
-      toast.error("Lütfen kaydetmeden önce formdaki hataları giderin.")
+      const hasSlugFormatError = Boolean(methods.formState.errors.slug)
+      if (hasSlugFormatError && activeTab !== "settings") {
+        router.replace(`${pathname}?tab=settings`, { scroll: false })
+        return
+      }
+      if (!hasSlugFormatError) {
+        toast.error("Lütfen kaydetmeden önce formdaki hataları giderin.")
+      }
       return
     }
 
@@ -266,6 +312,7 @@ export function FormBuilder({ initialForm }: FormBuilderProps) {
 
       if (res.success) {
         const nextStore = useBuilderStore.getState()
+        nextStore.setSlugConflict(null)
         nextStore.setLastSavedAt(new Date())
         methods.reset(values)
         nextStore.setIsDirty(false)
@@ -273,6 +320,16 @@ export function FormBuilder({ initialForm }: FormBuilderProps) {
         previousSnapshotRef.current = values
         nextStore.clearHistory()
         toast.success("Form başarıyla kaydedildi!")
+      } else if (res.slugConflict) {
+        const nextStore = useBuilderStore.getState()
+        nextStore.setSlugConflict(res.slugConflict)
+        methods.setError("slug", {
+          type: "conflict",
+          message: res.error,
+        })
+        if (activeTab !== "settings") {
+          router.replace(`${pathname}?tab=settings`, { scroll: false })
+        }
       } else {
         toast.error(res.error || "Form kaydedilemedi.")
       }
@@ -281,7 +338,7 @@ export function FormBuilder({ initialForm }: FormBuilderProps) {
     } finally {
       useBuilderStore.getState().setIsSaving(false)
     }
-  }, [methods, initialForm.id])
+  }, [methods, initialForm.id, activeTab, pathname, router])
 
   // Global keyboard shortcuts: Ctrl/Cmd + S (Save), Ctrl/Cmd + Z (Undo), Ctrl/Cmd + Shift + Z / Ctrl/Cmd + Y (Redo)
   React.useEffect(() => {
@@ -313,7 +370,9 @@ export function FormBuilder({ initialForm }: FormBuilderProps) {
     const target = savedSnapshotRef.current || initialValues
     isApplyingHistoryRef.current = true
     methods.reset(target)
+    methods.clearErrors()
     previousSnapshotRef.current = target
+    store.setSlugConflict(null)
     store.clearHistory()
     store.setIsDirty(false)
     if (target.questions.length > 0) {

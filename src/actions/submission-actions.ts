@@ -127,14 +127,28 @@ export async function submitFormResponse(
         let valueJson: unknown = null
         let fileUrl: string | null = null
 
+        const resolveOptionLabel = (idOrLabel: string) =>
+          q.options.find((o) => o.id === idOrLabel)?.label ?? idOrLabel
+
         if (q.type === "FILE_UPLOAD" && typeof val === "object" && val !== null) {
           const fileData = val as { name: string; size: number; type: string; url?: string; dataUrl?: string }
           valueText = fileData.name
           fileUrl = fileData.url || fileData.dataUrl || null
           valueJson = fileData
         } else if (q.type === "MULTIPLE_CHOICE" && Array.isArray(val)) {
-          valueText = val.join(", ")
-          valueJson = val
+          if (val.length === 0) {
+            continue
+          }
+          const resolvedLabels = (val as string[]).map(resolveOptionLabel)
+          valueText = resolvedLabels.join(", ")
+          valueJson = resolvedLabels
+        } else if (
+          (q.type === "SINGLE_CHOICE" || q.type === "DROPDOWN") &&
+          typeof val === "string"
+        ) {
+          const resolvedLabel = resolveOptionLabel(val)
+          valueText = resolvedLabel
+          valueJson = { id: val, label: resolvedLabel }
         } else if (typeof val === "string") {
           valueText = val
         } else {

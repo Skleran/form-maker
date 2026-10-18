@@ -489,7 +489,7 @@ export function PublicFormRenderer({ form, isPreview = false }: PublicFormRender
                         >
                           <input
                             type="radio"
-                            value={opt.label}
+                            value={opt.id}
                             {...register(q.id)}
                             className="size-4 accent-primary cursor-pointer"
                           />
@@ -509,17 +509,17 @@ export function PublicFormRenderer({ form, isPreview = false }: PublicFormRender
                       render={({ field }) => {
                         const currentValues: string[] = Array.isArray(field.value) ? field.value : []
 
-                        const toggleOption = (optLabel: string) => {
-                          const updated = currentValues.includes(optLabel)
-                            ? currentValues.filter((v) => v !== optLabel)
-                            : [...currentValues, optLabel]
+                        const toggleOption = (optId: string) => {
+                          const updated = currentValues.includes(optId)
+                            ? currentValues.filter((v) => v !== optId)
+                            : [...currentValues, optId]
                           field.onChange(updated)
                         }
 
                         return (
                           <div className="space-y-2.5">
                             {q.options.map((opt) => {
-                              const isChecked = currentValues.includes(opt.label)
+                              const isChecked = currentValues.includes(opt.id)
                               return (
                                 <label
                                   key={opt.id}
@@ -528,7 +528,7 @@ export function PublicFormRenderer({ form, isPreview = false }: PublicFormRender
                                   <input
                                     type="checkbox"
                                     checked={isChecked}
-                                    onChange={() => toggleOption(opt.label)}
+                                    onChange={() => toggleOption(opt.id)}
                                     className="size-4 accent-primary rounded cursor-pointer"
                                   />
                                   <span className="group-hover:text-primary transition-colors">
@@ -560,11 +560,24 @@ export function PublicFormRenderer({ form, isPreview = false }: PublicFormRender
                               placeholder={
                                 q.config?.placeholder || dict.publicForm.selectOptionPlaceholder
                               }
-                            />
+                            >
+                              {(val: string | null) => {
+                                if (!val) {
+                                  return (
+                                    q.config?.placeholder ||
+                                    dict.publicForm.selectOptionPlaceholder
+                                  )
+                                }
+                                const matched = q.options.find(
+                                  (o) => o.id === val || o.label === val
+                                )
+                                return matched ? matched.label : val
+                              }}
+                            </SelectValue>
                           </SelectTrigger>
                           <SelectContent>
                             {q.options.map((opt) => (
-                              <SelectItem key={opt.id} value={opt.label}>
+                              <SelectItem key={opt.id} value={opt.id}>
                                 {opt.label}
                               </SelectItem>
                             ))}

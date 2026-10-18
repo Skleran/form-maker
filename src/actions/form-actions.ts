@@ -6,9 +6,70 @@ import { formBuilderSchema, type FormBuilderValues } from "@/lib/validations/for
 import { Prisma, type QuestionType } from "@prisma/client"
 import { getAdminSession } from "@/lib/auth"
 
+export interface SlugConflictInfo {
+  conflictingFormId: string
+  conflictingFormTitle: string
+  slug: string
+}
+
 export type ActionResult<T = unknown> =
-  | { success: true; data: T; error?: never }
-  | { success: false; error: string; data?: never }
+  | { success: true; data: T; error?: never; slugConflict?: never }
+  | {
+      success: false
+      error: string
+      data?: never
+      slugConflict?: SlugConflictInfo
+    }
+
+/**
+ * Checks whether a slug is available or already used by another form
+ */
+export async function checkSlugAvailability(
+  formId: string,
+  slug: string
+): Promise<
+  | { available: true; conflict?: never }
+  | { available: false; conflict: SlugConflictInfo }
+> {
+  const session = await getAdminSession()
+  if (!session) {
+    return { available: true }
+  }
+
+  const normalized = slug.trim()
+  if (!normalized) {
+    return { available: true }
+  }
+
+  try {
+    const existing = await prisma.form.findFirst({
+      where: {
+        slug: normalized,
+        id: { not: formId },
+      },
+      select: {
+        id: true,
+        title: true,
+        slug: true,
+      },
+    })
+
+    if (existing) {
+      return {
+        available: false,
+        conflict: {
+          conflictingFormId: existing.id,
+          conflictingFormTitle: existing.title,
+          slug: existing.slug,
+        },
+      }
+    }
+
+    return { available: true }
+  } catch {
+    return { available: true }
+  }
+}
 
 /**
  * Lists all forms for the admin overview dashboard with counts
@@ -51,7 +112,7 @@ export async function listForms(): Promise<
     console.error("Failed to list forms:", error)
     return {
       success: false,
-      error: error instanceof Error ? error.message : "Failed to load forms.",
+      error: error instanceof Error ? error.message : "Formlar yüklenemedi.",
     }
   }
 }
@@ -82,7 +143,7 @@ export async function getFormById(id: string) {
     })
 
     if (!form) {
-      return { success: false, error: "Form not found" } as const
+      return { success: false, error: "Form bulunamadı." } as const
     }
 
     return { success: true, data: form } as const
@@ -90,7 +151,7 @@ export async function getFormById(id: string) {
     console.error("Failed to fetch form by ID:", error)
     return {
       success: false,
-      error: error instanceof Error ? error.message : "Failed to load form.",
+      error: error instanceof Error ? error.message : "Form yüklenemedi.",
     } as const
   }
 }
@@ -138,7 +199,7 @@ export async function createForm(customTitle?: string): Promise<ActionResult<{ i
     console.error("Failed to create form:", error)
     return {
       success: false,
-      error: error instanceof Error ? error.message : "Failed to create form.",
+      error: error instanceof Error ? error.message : "Form oluşturulamadı.",
     }
   }
 }
@@ -158,7 +219,7 @@ export async function saveForm(
   try {
     const parsed = formBuilderSchema.safeParse(rawValues)
     if (!parsed.success) {
-      const issue = parsed.error.issues[0]?.message || "Validation failed"
+      const issue = parsed.error.issues[0]?.message || "Doğrulama hatası oluştu."
       return { success: false, error: issue }
     }
 
@@ -169,12 +230,22 @@ export async function saveForm(
         slug: values.slug,
         id: { not: formId },
       },
+      select: {
+        id: true,
+        title: true,
+        slug: true,
+      },
     })
 
     if (existingSlug) {
       return {
         success: false,
-        error: `The URL slug "${values.slug}" is already in use by another form. Please choose another.`,
+        error: `"${values.slug}" kısa bağlantısı (URL) başka bir form tarafından kullanılıyor.`,
+        slugConflict: {
+          conflictingFormId: existingSlug.id,
+          conflictingFormTitle: existingSlug.title,
+          slug: values.slug,
+        },
       }
     }
 
