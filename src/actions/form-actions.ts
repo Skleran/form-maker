@@ -5,6 +5,7 @@ import { prisma } from "@/lib/prisma"
 import { formBuilderSchema, type FormBuilderValues } from "@/lib/validations/form"
 import { Prisma, type QuestionType } from "@prisma/client"
 import { getAdminSession } from "@/lib/auth"
+import { deleteAttachments } from "@/lib/storage"
 
 export interface SlugConflictInfo {
   conflictingFormId: string
@@ -209,7 +210,8 @@ export async function createForm(customTitle?: string): Promise<ActionResult<{ i
  */
 export async function saveForm(
   formId: string,
-  rawValues: FormBuilderValues
+  rawValues: FormBuilderValues,
+  sessionUploadedFiles?: string[]
 ): Promise<ActionResult<{ id: string; updatedAt: Date }>> {
   const session = await getAdminSession()
   if (!session) {
@@ -306,14 +308,60 @@ export async function saveForm(
         })
       }
 
-      // 3. Update Form
+      // 3. Clean up obsolete header images if header image changed, was re-cropped, or was removed
+      const oldForm = await tx.form.findUnique({
+        where: { id: formId },
+        select: { headerImage: true, headerImageRaw: true },
+      })
+
+      const newHeader = values.headerImage || null
+      const newRaw = values.headerImage ? (values.headerImageRaw || values.headerImage) : null
+      const activeFiles = new Set([newHeader, newRaw].filter(Boolean) as string[])
+
+      const obsoleteHeaders = new Set<string>()
+
+      // A. Files previously recorded in database that are no longer in the active form
+      if (
+        oldForm?.headerImage &&
+        !activeFiles.has(oldForm.headerImage) &&
+        !oldForm.headerImage.startsWith("data:")
+      ) {
+        obsoleteHeaders.add(oldForm.headerImage)
+      }
+
+      if (
+        oldForm?.headerImageRaw &&
+        !activeFiles.has(oldForm.headerImageRaw) &&
+        !oldForm.headerImageRaw.startsWith("data:")
+      ) {
+        obsoleteHeaders.add(oldForm.headerImageRaw)
+      }
+
+      // B. Intermediate or abandoned files uploaded during this session that are not in the active form
+      if (sessionUploadedFiles && sessionUploadedFiles.length > 0) {
+        for (const fileUrl of sessionUploadedFiles) {
+          if (
+            fileUrl &&
+            !activeFiles.has(fileUrl) &&
+            !fileUrl.startsWith("data:")
+          ) {
+            obsoleteHeaders.add(fileUrl)
+          }
+        }
+      }
+
+      if (obsoleteHeaders.size > 0) {
+        await deleteAttachments(Array.from(obsoleteHeaders))
+      }
+
+      // 4. Update Form
       return tx.form.update({
         where: { id: formId },
         data: {
           title: values.title,
           description: values.description,
-          headerImage: values.headerImage || null,
-          headerImageRaw: values.headerImage ? (values.headerImageRaw || values.headerImage) : null,
+          headerImage: newHeader,
+          headerImageRaw: newRaw,
           headerImageCrop:
             values.headerImage && values.headerImageCrop
               ? (values.headerImageCrop as Prisma.InputJsonValue)
@@ -384,6 +432,49 @@ export async function deleteForm(formId: string): Promise<ActionResult<void>> {
   }
 
   try {
+    // 1. Fetch form header images and all answers with uploaded files
+    const form = await prisma.form.findUnique({
+      where: { id: formId },
+      select: {
+        headerImage: true,
+        headerImageRaw: true,
+        submissions: {
+          select: {
+            answers: {
+              where: { fileUrl: { not: null } },
+              select: { fileUrl: true },
+            },
+          },
+        },
+      },
+    })
+
+    const filesToDelete: string[] = []
+    if (form?.headerImage && !form.headerImage.startsWith("data:")) {
+      filesToDelete.push(form.headerImage)
+    }
+    if (
+      form?.headerImageRaw &&
+      form.headerImageRaw !== form.headerImage &&
+      !form.headerImageRaw.startsWith("data:")
+    ) {
+      filesToDelete.push(form.headerImageRaw)
+    }
+
+    if (form?.submissions) {
+      for (const sub of form.submissions) {
+        for (const ans of sub.answers) {
+          if (ans.fileUrl && !ans.fileUrl.startsWith("data:")) {
+            filesToDelete.push(ans.fileUrl)
+          }
+        }
+      }
+    }
+
+    if (filesToDelete.length > 0) {
+      await deleteAttachments(filesToDelete)
+    }
+
     await prisma.form.delete({
       where: { id: formId },
     })

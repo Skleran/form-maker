@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache"
 import { headers } from "next/headers"
 import { prisma } from "@/lib/prisma"
 import { getAdminSession } from "@/lib/auth"
+import { deleteAttachments } from "@/lib/storage"
 
 export interface ResponseAnswerItem {
   id: string
@@ -186,6 +187,23 @@ export async function deleteSubmission(
   }
 
   try {
+    // 1. Find all answers with uploaded files for this submission
+    const answersWithFiles = await prisma.answer.findMany({
+      where: {
+        submissionId,
+        fileUrl: { not: null },
+      },
+      select: { fileUrl: true },
+    })
+
+    const filesToDelete = answersWithFiles
+      .map((a) => a.fileUrl)
+      .filter((u): u is string => Boolean(u && !u.startsWith("data:")))
+
+    if (filesToDelete.length > 0) {
+      await deleteAttachments(filesToDelete)
+    }
+
     await prisma.submission.delete({
       where: { id: submissionId },
     })

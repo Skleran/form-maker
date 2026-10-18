@@ -52,32 +52,58 @@ interface FormBuilderProps {
   initialForm: InitialFormData
 }
 
+function isFormValuesEqual(
+  a: FormBuilderValues | null | undefined,
+  b: FormBuilderValues | null | undefined
+): boolean {
+  if (!a || !b) return a === b
+  try {
+    return JSON.stringify(a) === JSON.stringify(b)
+  } catch {
+    return false
+  }
+}
+
 const FormHistoryObserver = React.memo(function FormHistoryObserver({
   control,
   getValues,
   isApplyingHistoryRef,
   isInitialMountRef,
   previousSnapshotRef,
+  savedSnapshotRef,
 }: {
   control: Control<FormBuilderValues>
   getValues: UseFormGetValues<FormBuilderValues>
   isApplyingHistoryRef: React.MutableRefObject<boolean>
   isInitialMountRef: React.MutableRefObject<boolean>
   previousSnapshotRef: React.MutableRefObject<FormBuilderValues>
+  savedSnapshotRef: React.MutableRefObject<FormBuilderValues>
 }) {
-  const { isDirty } = useFormState({ control })
+  const { isDirty: rhfIsDirty } = useFormState({ control })
   const watchedValues = useWatch({ control })
   const debounceTimerRef = React.useRef<NodeJS.Timeout | null>(null)
 
   const { language } = useLanguage()
 
+  const isDirty = useBuilderStore((s) => s.isDirty)
+
+  // Reconcile dirty state with the saved snapshot in effect (outside of render)
   React.useEffect(() => {
-    useBuilderStore.getState().setIsDirty(isDirty)
-  }, [isDirty])
+    let dirty = rhfIsDirty
+    if (savedSnapshotRef.current) {
+      try {
+        const current = getValues()
+        dirty = !isFormValuesEqual(current, savedSnapshotRef.current)
+      } catch {
+        dirty = rhfIsDirty
+      }
+    }
+    useBuilderStore.getState().setIsDirty(dirty)
+  }, [watchedValues, rhfIsDirty, getValues, savedSnapshotRef])
 
   React.useEffect(() => {
     const handleBeforeUnload = (e: BeforeUnloadEvent) => {
-      if (isDirty) {
+      if (useBuilderStore.getState().isDirty) {
         e.preventDefault()
         e.returnValue = ""
       }
@@ -85,7 +111,7 @@ const FormHistoryObserver = React.memo(function FormHistoryObserver({
 
     window.addEventListener("beforeunload", handleBeforeUnload)
     return () => window.removeEventListener("beforeunload", handleBeforeUnload)
-  }, [isDirty])
+  }, [])
 
   // Intercept browser back/forward buttons (popstate) when there are unsaved changes
   React.useEffect(() => {
@@ -242,8 +268,10 @@ export function FormBuilder({ initialForm }: FormBuilderProps) {
     const previous = store.undo(current)
     if (previous) {
       isApplyingHistoryRef.current = true
-      methods.reset(previous)
+      methods.reset(previous, { keepDefaultValues: true })
       previousSnapshotRef.current = previous
+      const isNowDirty = !isFormValuesEqual(previous, savedSnapshotRef.current)
+      store.setIsDirty(isNowDirty)
       if (previous.questions.length > 0) {
         const stillExists = previous.questions.some(
           (q) => q.id === store.activeQuestionId
@@ -268,8 +296,10 @@ export function FormBuilder({ initialForm }: FormBuilderProps) {
     const next = store.redo(current)
     if (next) {
       isApplyingHistoryRef.current = true
-      methods.reset(next)
+      methods.reset(next, { keepDefaultValues: true })
       previousSnapshotRef.current = next
+      const isNowDirty = !isFormValuesEqual(next, savedSnapshotRef.current)
+      store.setIsDirty(isNowDirty)
       if (next.questions.length > 0) {
         const stillExists = next.questions.some(
           (q) => q.id === store.activeQuestionId
@@ -308,7 +338,8 @@ export function FormBuilder({ initialForm }: FormBuilderProps) {
     store.setIsSaving(true)
     try {
       const values = methods.getValues()
-      const res = await saveForm(initialForm.id, values)
+      const sessionFiles = store.sessionUploadedFiles
+      const res = await saveForm(initialForm.id, values, sessionFiles)
 
       if (res.success) {
         const nextStore = useBuilderStore.getState()
@@ -319,6 +350,7 @@ export function FormBuilder({ initialForm }: FormBuilderProps) {
         savedSnapshotRef.current = values
         previousSnapshotRef.current = values
         nextStore.clearHistory()
+        nextStore.clearSessionUploadedFiles()
         toast.success("Form başarıyla kaydedildi!")
       } else if (res.slugConflict) {
         const nextStore = useBuilderStore.getState()
@@ -368,12 +400,27 @@ export function FormBuilder({ initialForm }: FormBuilderProps) {
   const handleDiscard = React.useCallback(() => {
     const store = useBuilderStore.getState()
     const target = savedSnapshotRef.current || initialValues
+
+    // Clean up any session uploaded files that were abandoned upon discard
+    const targetFiles = new Set(
+      [target.headerImage, target.headerImageRaw].filter(Boolean) as string[]
+    )
+    const abandonedFiles = store.sessionUploadedFiles.filter((f) => !targetFiles.has(f))
+    if (abandonedFiles.length > 0) {
+      fetch("/api/upload", {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ paths: abandonedFiles }),
+      }).catch(console.error)
+    }
+
     isApplyingHistoryRef.current = true
     methods.reset(target)
     methods.clearErrors()
     previousSnapshotRef.current = target
     store.setSlugConflict(null)
     store.clearHistory()
+    store.clearSessionUploadedFiles()
     store.setIsDirty(false)
     if (target.questions.length > 0) {
       store.setActiveQuestionId(target.questions[0].id)
@@ -495,6 +542,7 @@ export function FormBuilder({ initialForm }: FormBuilderProps) {
         isApplyingHistoryRef={isApplyingHistoryRef}
         isInitialMountRef={isInitialMountRef}
         previousSnapshotRef={previousSnapshotRef}
+        savedSnapshotRef={savedSnapshotRef}
       />
       <div className="flex h-screen flex-col bg-background overflow-hidden">
         {/* Top Header */}

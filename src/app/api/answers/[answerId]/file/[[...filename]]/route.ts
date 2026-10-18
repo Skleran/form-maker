@@ -58,6 +58,10 @@ export async function GET(request: Request, context: RouteContext) {
       return NextResponse.redirect(fileUrl, 302)
     }
 
+    if (fileUrl.startsWith("/")) {
+      return NextResponse.redirect(new URL(fileUrl, request.url), 302)
+    }
+
     if (fileUrl.startsWith("data:")) {
       const match = fileUrl.match(/^data:([^;]+);base64,(.+)$/)
       if (!match) {

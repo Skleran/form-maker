@@ -37,20 +37,26 @@ interface FileUploadValue {
   name: string
   size: number
   type: string
-  dataUrl: string
+  url?: string
+  dataUrl?: string
+  path?: string
 }
 
 function PublicFileInput({
   config,
   value,
   onChange,
+  onUploadStateChange,
 }: {
   config?: QuestionConfig
   value: FileUploadValue | null
   onChange: (val: FileUploadValue | null) => void
+  onUploadStateChange?: (isUploading: boolean) => void
 }) {
   const { dict, language } = useLanguage()
   const [isDragging, setIsDragging] = React.useState(false)
+  const [isUploading, setIsUploading] = React.useState(false)
+  const [uploadProgress, setUploadProgress] = React.useState<number | null>(null)
   const inputRef = React.useRef<HTMLInputElement>(null)
 
   const processFile = (file: File) => {
@@ -86,29 +92,87 @@ function PublicFileInput({
       }
     }
 
-    const reader = new FileReader()
-    reader.onload = () => {
-      onChange({
-        name: file.name,
-        size: file.size,
-        type: file.type || "application/octet-stream",
-        dataUrl: reader.result as string,
-      })
-      toast.success(dict.publicForm.attachedSuccess.replace("{name}", file.name))
+    // If user replaces an already uploaded file, delete the old one from storage
+    if (value) {
+      const oldTarget = value.path || value.url
+      if (oldTarget && !oldTarget.startsWith("data:")) {
+        fetch(`/api/upload?path=${encodeURIComponent(oldTarget)}`, {
+          method: "DELETE",
+        }).catch((err) => console.warn("Failed to delete replaced attachment:", err))
+      }
     }
-    reader.readAsDataURL(file)
+
+    setIsUploading(true)
+    setUploadProgress(0)
+    onUploadStateChange?.(true)
+
+    const formData = new FormData()
+    formData.append("file", file)
+    formData.append("folder", "submissions")
+
+    const xhr = new XMLHttpRequest()
+    xhr.open("POST", "/api/upload")
+
+    xhr.upload.onprogress = (event) => {
+      if (event.lengthComputable) {
+        const percent = Math.round((event.loaded / event.total) * 100)
+        setUploadProgress(percent)
+      }
+    }
+
+    xhr.onload = () => {
+      setIsUploading(false)
+      setUploadProgress(null)
+      onUploadStateChange?.(false)
+
+      if (xhr.status >= 200 && xhr.status < 300) {
+        try {
+          const res = JSON.parse(xhr.responseText)
+          if (res.success && res.data) {
+            onChange({
+              name: res.data.name,
+              size: res.data.size || file.size,
+              type: res.data.type || file.type,
+              url: res.data.url,
+              path: res.data.path,
+            })
+            toast.success(dict.publicForm.attachedSuccess.replace("{name}", file.name))
+          } else {
+            toast.error(res.error || dict.publicForm.uploadFailed)
+          }
+        } catch {
+          toast.error(dict.publicForm.uploadFailed)
+        }
+      } else {
+        let errMsg = dict.publicForm.uploadFailed
+        try {
+          const res = JSON.parse(xhr.responseText)
+          if (res.error) errMsg = res.error
+        } catch {}
+        toast.error(errMsg)
+      }
+    }
+
+    xhr.onerror = () => {
+      setIsUploading(false)
+      setUploadProgress(null)
+      onUploadStateChange?.(false)
+      toast.error(dict.publicForm.uploadFailed)
+    }
+
+    xhr.send(formData)
   }
 
   const handleDragOver = (e: React.DragEvent) => {
     e.preventDefault()
     e.stopPropagation()
-    setIsDragging(true)
+    if (!isUploading) setIsDragging(true)
   }
 
   const handleDragEnter = (e: React.DragEvent) => {
     e.preventDefault()
     e.stopPropagation()
-    setIsDragging(true)
+    if (!isUploading) setIsDragging(true)
   }
 
   const handleDragLeave = (e: React.DragEvent) => {
@@ -121,14 +185,42 @@ function PublicFileInput({
     e.preventDefault()
     e.stopPropagation()
     setIsDragging(false)
+    if (isUploading) return
     const file = e.dataTransfer.files?.[0]
     if (file) {
       processFile(file)
     }
   }
 
+  if (isUploading) {
+    return (
+      <div className="flex flex-col items-center justify-center rounded-lg border-2 border-dashed border-primary/40 bg-primary/5 p-6 text-center space-y-3">
+        <Loader2 className="size-8 text-primary animate-spin" />
+        <div className="space-y-1.5 w-full max-w-xs">
+          <span className="text-xs font-semibold text-foreground">
+            {dict.publicForm.uploadProgress.replace(
+              "{percent}",
+              String(uploadProgress ?? 0)
+            )}
+          </span>
+          <div className="w-full bg-muted rounded-full h-1.5 overflow-hidden">
+            <div
+              className="bg-primary h-full transition-all duration-150"
+              style={{ width: `${uploadProgress ?? 0}%` }}
+            />
+          </div>
+        </div>
+      </div>
+    )
+  }
+
   if (value) {
-    const isImage = value.type.startsWith("image/") || value.dataUrl?.startsWith("data:image/")
+    const isImage =
+      value.type.startsWith("image/") ||
+      Boolean(value.url?.match(/\.(png|jpe?g|webp|gif|svg)(\?.*)?$/i)) ||
+      Boolean(value.dataUrl?.startsWith("data:image/"))
+
+    const previewSrc = value.url || value.dataUrl
 
     return (
       <div className="space-y-3">
@@ -146,7 +238,17 @@ function PublicFileInput({
             type="button"
             variant="ghost"
             size="icon-xs"
-            onClick={() => onChange(null)}
+            onClick={() => {
+              if (value) {
+                const target = value.path || value.url
+                if (target && !target.startsWith("data:")) {
+                  fetch(`/api/upload?path=${encodeURIComponent(target)}`, {
+                    method: "DELETE",
+                  }).catch((err) => console.warn("Failed to delete removed attachment:", err))
+                }
+                onChange(null)
+              }
+            }}
             className="cursor-pointer text-muted-foreground hover:text-destructive"
             title={dict.publicForm.removeAttachment}
           >
@@ -154,11 +256,11 @@ function PublicFileInput({
           </Button>
         </div>
 
-        {isImage && (
+        {isImage && previewSrc && (
           <div className="overflow-hidden rounded-md border bg-muted/10 p-2 flex items-center justify-center max-h-48">
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
-              src={value.dataUrl}
+              src={previewSrc}
               alt={value.name}
               className="max-h-44 w-auto rounded object-contain shadow-sm"
             />
@@ -205,6 +307,7 @@ function PublicFileInput({
         onChange={(e) => {
           const file = e.target.files?.[0]
           if (file) processFile(file)
+          e.target.value = ""
         }}
         accept={config?.allowedMimeTypes?.join(",")}
         className="hidden"
@@ -230,6 +333,11 @@ export function PublicFormRenderer({ form, isPreview = false }: PublicFormRender
   const { dict, language } = useLanguage()
   const [isSubmitted, setIsSubmitted] = React.useState(false)
   const [isSubmitting, setIsSubmitting] = React.useState(false)
+  const [uploadingCount, setUploadingCount] = React.useState(0)
+
+  const handleUploadStateChange = React.useCallback((isUploading: boolean) => {
+    setUploadingCount((prev) => Math.max(0, prev + (isUploading ? 1 : -1)))
+  }, [])
 
   // Build the dynamic Zod schema for this form's specific questions
   const dynamicSchema = React.useMemo(() => {
@@ -258,6 +366,15 @@ export function PublicFormRenderer({ form, isPreview = false }: PublicFormRender
   })
 
   const onSubmit = async (values: Record<string, unknown>) => {
+    if (uploadingCount > 0) {
+      toast.warning(
+        language === "tr"
+          ? "Lütfen dosya yüklemesinin tamamlanmasını bekleyin."
+          : "Please wait for file upload to complete."
+      )
+      return
+    }
+
     setIsSubmitting(true)
     try {
       if (isPreview) {
@@ -597,6 +714,7 @@ export function PublicFormRenderer({ form, isPreview = false }: PublicFormRender
                           config={q.config}
                           value={field.value as FileUploadValue | null}
                           onChange={(val) => field.onChange(val)}
+                          onUploadStateChange={handleUploadStateChange}
                         />
                       )}
                     />
@@ -615,16 +733,20 @@ export function PublicFormRenderer({ form, isPreview = false }: PublicFormRender
           <div className="flex items-center justify-between pt-2">
             <Button
               type="submit"
-              disabled={isSubmitting}
+              disabled={isSubmitting || uploadingCount > 0}
               className="cursor-pointer gap-2 shadow-sm font-medium px-6"
             >
-              {isSubmitting ? (
+              {isSubmitting || uploadingCount > 0 ? (
                 <Loader2 className="size-4 animate-spin" />
               ) : (
                 <Send className="size-4" />
               )}
               <span>
-                {isSubmitting ? dict.publicForm.submitting : dict.publicForm.submit}
+                {uploadingCount > 0
+                  ? dict.publicForm.uploading
+                  : isSubmitting
+                  ? dict.publicForm.submitting
+                  : dict.publicForm.submit}
               </span>
             </Button>
 

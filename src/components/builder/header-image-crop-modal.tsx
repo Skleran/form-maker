@@ -1,7 +1,8 @@
 "use client"
 
 import * as React from "react"
-import { Check, RotateCcw, X } from "lucide-react"
+import { Check, Loader2, RotateCcw, X } from "lucide-react"
+import { toast } from "sonner"
 
 import { Button } from "@/components/ui/button"
 import { useLanguage } from "@/lib/i18n/language-context"
@@ -13,12 +14,20 @@ export interface CropBox {
   height: number
 }
 
+export interface HeaderCropResult {
+  headerImage: string
+  headerImageRaw: string
+  headerImageCrop: CropBox
+}
+
 interface HeaderImageCropModalProps {
   isOpen: boolean
   imageSrc: string
+  rawFile?: File | null
+  existingRawUrl?: string | null
   initialCrop?: CropBox | null
   onClose: () => void
-  onSave: (croppedDataUrl: string, cropBox: CropBox) => void
+  onSave: (result: HeaderCropResult) => void
 }
 
 const BANNER_ASPECT_RATIO = 4 // 4:1 width to height banner (e.g. 1200x300)
@@ -26,6 +35,8 @@ const BANNER_ASPECT_RATIO = 4 // 4:1 width to height banner (e.g. 1200x300)
 export function HeaderImageCropModal({
   isOpen,
   imageSrc,
+  rawFile,
+  existingRawUrl,
   initialCrop,
   onClose,
   onSave,
@@ -35,6 +46,8 @@ export function HeaderImageCropModal({
   const containerRef = React.useRef<HTMLDivElement>(null)
 
   const [imageLoaded, setImageLoaded] = React.useState(false)
+  const [imageError, setImageError] = React.useState(false)
+  const [isUploading, setIsUploading] = React.useState(false)
   const [displaySize, setDisplaySize] = React.useState<{ width: number; height: number }>({
     width: 0,
     height: 0,
@@ -233,9 +246,9 @@ export function HeaderImageCropModal({
     }
   }
 
-  const handleSaveCrop = () => {
+  const handleSaveCrop = async () => {
     const img = imageRef.current
-    if (!img || !imageLoaded || displaySize.width === 0 || displaySize.height === 0) return
+    if (!img || !imageLoaded || displaySize.width === 0 || displaySize.height === 0 || isUploading) return
 
     const canvas = document.createElement("canvas")
     const targetWidth = 1200
@@ -258,15 +271,82 @@ export function HeaderImageCropModal({
     ctx.imageSmoothingQuality = "high"
     ctx.drawImage(img, sx, sy, sWidth, sHeight, 0, 0, targetWidth, targetHeight)
 
-    const croppedDataUrl = canvas.toDataURL("image/jpeg", 0.92)
     const normalizedCrop: CropBox = {
       x: crop.x / displaySize.width,
       y: crop.y / displaySize.height,
       width: crop.width / displaySize.width,
       height: crop.height / displaySize.height,
     }
-    onSave(croppedDataUrl, normalizedCrop)
-    onClose()
+
+    setIsUploading(true)
+
+    try {
+      const blob = await new Promise<Blob | null>((resolve) => {
+        canvas.toBlob((b) => resolve(b), "image/jpeg", 0.92)
+      })
+
+      if (!blob) {
+        throw new Error("Canvas crop generation failed")
+      }
+
+      // 1. Upload cropped banner blob
+      const cropFormData = new FormData()
+      cropFormData.append("file", blob, "header-banner.jpg")
+      cropFormData.append("folder", "headers")
+
+      const cropUploadPromise = fetch("/api/upload", {
+        method: "POST",
+        body: cropFormData,
+      }).then(async (res) => {
+        const json = await res.json()
+        if (!res.ok || !json.success || !json.data?.url) {
+          throw new Error(json.error || "Cropped banner upload failed")
+        }
+        return json.data.url as string
+      })
+
+      // 2. If a new raw file was provided (brand new image selection), upload it in parallel
+      let rawUploadPromise: Promise<string>
+      if (rawFile) {
+        const rawFormData = new FormData()
+        rawFormData.append("file", rawFile)
+        rawFormData.append("folder", "headers")
+        rawUploadPromise = fetch("/api/upload", {
+          method: "POST",
+          body: rawFormData,
+        }).then(async (res) => {
+          const json = await res.json()
+          if (!res.ok || !json.success || !json.data?.url) {
+            throw new Error(json.error || "Raw image upload failed")
+          }
+          return json.data.url as string
+        })
+      } else {
+        // Re-cropping existing image; preserve existing raw URL
+        rawUploadPromise = Promise.resolve(existingRawUrl || imageSrc)
+      }
+
+      const [uploadedCroppedUrl, uploadedRawUrl] = await Promise.all([
+        cropUploadPromise,
+        rawUploadPromise,
+      ])
+
+      onSave({
+        headerImage: uploadedCroppedUrl,
+        headerImageRaw: uploadedRawUrl,
+        headerImageCrop: normalizedCrop,
+      })
+      onClose()
+    } catch (err) {
+      console.error("Failed to upload header images:", err)
+      toast.error(
+        language === "tr"
+          ? "Kapak görseli yüklenirken hata oluştu. Lütfen tekrar deneyin."
+          : "Failed to upload cover image. Please try again."
+      )
+    } finally {
+      setIsUploading(false)
+    }
   }
 
   if (!isOpen) return null
@@ -303,11 +383,27 @@ export function HeaderImageCropModal({
             <img
               ref={imageRef}
               src={imageSrc}
-              alt="Kırpılacak Görsel"
+              crossOrigin={
+                imageSrc.startsWith("blob:") || imageSrc.startsWith("data:")
+                  ? undefined
+                  : "anonymous"
+              }
+              alt={language === "tr" ? "Kırpılacak Görsel" : "Image to Crop"}
               onLoad={handleImageLoad}
+              onError={() => setImageError(true)}
               className="max-h-[55vh] max-w-full w-auto h-auto block select-none pointer-events-none"
               draggable={false}
             />
+
+            {imageError && (
+              <div className="p-8 text-center bg-card/90 flex flex-col items-center justify-center gap-2 min-h-[200px]">
+                <p className="text-sm font-medium text-destructive">
+                  {language === "tr"
+                    ? "Görsel yüklenemedi. Lütfen 'Görseli Değiştir' ile tekrar yükleyin."
+                    : "Image could not be loaded. Please re-upload using 'Change Image'."}
+                </p>
+              </div>
+            )}
 
             {/* Dark Mask Overlays Outside Crop Box */}
             {imageLoaded && (
@@ -435,10 +531,21 @@ export function HeaderImageCropModal({
               type="button"
               size="sm"
               onClick={handleSaveCrop}
+              disabled={isUploading}
               className="cursor-pointer gap-1.5 text-xs font-semibold shadow-xs"
             >
-              <Check className="size-3.5" />
-              {language === "tr" ? "Kaydet" : "Save"}
+              {isUploading ? (
+                <Loader2 className="size-3.5 animate-spin" />
+              ) : (
+                <Check className="size-3.5" />
+              )}
+              {isUploading
+                ? language === "tr"
+                  ? "Yükleniyor..."
+                  : "Uploading..."
+                : language === "tr"
+                ? "Kaydet"
+                : "Save"}
             </Button>
           </div>
         </div>

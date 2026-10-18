@@ -171,7 +171,7 @@ export function BuilderSettings({ formId }: BuilderSettingsProps) {
 
   return (
     <div className="flex-1 overflow-y-auto px-4 py-8 sm:px-8 bg-muted/15 min-h-[calc(100vh-3.5rem)]">
-      <div className="mx-auto max-w-2xl space-y-6">
+      <div className="mx-auto max-w-2xl space-y-6 pb-6">
         {/* General Form Settings */}
         <Card className="p-6 bg-card border shadow-sm space-y-5">
           <div>
@@ -340,7 +340,7 @@ export function BuilderSettings({ formId }: BuilderSettingsProps) {
                   {dict.builder.settings.deleteModalDesc}
                 </DialogDescription>
               </DialogHeader>
-              <DialogFooter className="gap-2 sm:gap-0">
+              <DialogFooter className="gap-2 sm:gap-3">
                 <Button
                   variant="outline"
                   onClick={() => setDeleteDialogOpen(false)}

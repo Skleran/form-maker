@@ -30,6 +30,9 @@ export interface BuilderState {
   future: FormBuilderValues[]
   canUndo: boolean
   canRedo: boolean
+
+  // Session uploaded files (for reconciliation and cleanup on save / discard)
+  sessionUploadedFiles: string[]
 }
 
 export interface BuilderActions {
@@ -49,6 +52,8 @@ export interface BuilderActions {
   undo: (currentState: FormBuilderValues) => FormBuilderValues | null
   redo: (currentState: FormBuilderValues) => FormBuilderValues | null
   clearHistory: () => void
+  addSessionUploadedFile: (url: string) => void
+  clearSessionUploadedFiles: () => void
   resetWorkspace: () => void
 }
 
@@ -67,6 +72,7 @@ const initialState: BuilderState = {
   future: [],
   canUndo: false,
   canRedo: false,
+  sessionUploadedFiles: [],
 }
 
 export const useBuilderStore = create<BuilderStore>((set) => ({
@@ -214,6 +220,22 @@ export const useBuilderStore = create<BuilderStore>((set) => ({
         canUndo: false,
         canRedo: false,
       }
+    }),
+
+  addSessionUploadedFile: (url) =>
+    set((state) => {
+      if (!url || state.sessionUploadedFiles.includes(url)) {
+        return state
+      }
+      return {
+        sessionUploadedFiles: [...state.sessionUploadedFiles, url],
+      }
+    }),
+
+  clearSessionUploadedFiles: () =>
+    set((state) => {
+      if (state.sessionUploadedFiles.length === 0) return state
+      return { sessionUploadedFiles: [] }
     }),
 
   resetWorkspace: () => set(initialState),

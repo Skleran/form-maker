@@ -1,7 +1,7 @@
-"use client";
+'use client';
 
-import * as React from "react";
-import { useFieldArray, useFormContext, useWatch } from "react-hook-form";
+import * as React from 'react';
+import { useFieldArray, useFormContext, useWatch } from 'react-hook-form';
 import {
   AlignLeft,
   ArrowDown,
@@ -19,29 +19,29 @@ import {
   Type,
   Upload,
   X,
-} from "lucide-react";
-import { toast } from "sonner";
+} from 'lucide-react';
+import { toast } from 'sonner';
 
-import { Button } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Switch } from "@/components/ui/switch";
-import { Textarea } from "@/components/ui/textarea";
+import { Button } from '@/components/ui/button';
+import { Card } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
+import { Switch } from '@/components/ui/switch';
+import { Textarea } from '@/components/ui/textarea';
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/ui/select";
-import { Separator } from "@/components/ui/separator";
-import { useBuilderStore } from "@/stores/use-builder-store";
-import type { FormBuilderValues } from "@/lib/validations/form";
-import type { QuestionType } from "@/types/form";
-import { cn } from "@/lib/utils";
-import { useLanguage } from "@/lib/i18n/language-context";
-import { QuestionIcon } from "@/components/form/question-icon";
-import { HeaderImageCropModal } from "./header-image-crop-modal";
+} from '@/components/ui/select';
+import { Separator } from '@/components/ui/separator';
+import { useBuilderStore } from '@/stores/use-builder-store';
+import type { FormBuilderValues } from '@/lib/validations/form';
+import type { QuestionType } from '@/types/form';
+import { cn } from '@/lib/utils';
+import { useLanguage } from '@/lib/i18n/language-context';
+import { QuestionIcon } from '@/components/form/question-icon';
+import { HeaderImageCropModal } from './header-image-crop-modal';
 
 interface BuilderCanvasProps {
   onDuplicateQuestion: (index: number) => void;
@@ -73,75 +73,41 @@ const FormHeaderSection = React.memo(function FormHeaderSection() {
     useFormContext<FormBuilderValues>();
   const [headerImage, headerImageRaw, headerImageCrop] = useWatch({
     control,
-    name: ["headerImage", "headerImageRaw", "headerImageCrop"],
+    name: ['headerImage', 'headerImageRaw', 'headerImageCrop'],
   });
 
   const headerImageInputRef = React.useRef<HTMLInputElement>(null);
+  const [selectedRawFile, setSelectedRawFile] = React.useState<File | null>(null);
   const [rawImageForCrop, setRawImageForCrop] = React.useState<string | null>(
     null,
   );
   const [activeCropForModal, setActiveCropForModal] =
-    React.useState<FormBuilderValues["headerImageCrop"]>(null);
+    React.useState<FormBuilderValues['headerImageCrop']>(null);
   const [isCropModalOpen, setIsCropModalOpen] = React.useState(false);
 
   const handleHeaderImageFileSelect = (file: File) => {
     if (file.size > 10 * 1024 * 1024) {
       toast.error(
-        language === "tr"
-          ? "Kapak görseli boyutu en fazla 10 MB olabilir."
-          : "Cover image must be 10 MB or less.",
+        language === 'tr'
+          ? 'Kapak görseli boyutu en fazla 10 MB olabilir.'
+          : 'Cover image must be 10 MB or less.',
       );
       return;
     }
-    if (!file.type.startsWith("image/")) {
+    if (!file.type.startsWith('image/')) {
       toast.error(
-        language === "tr"
-          ? "Lütfen geçerli bir görsel dosyası seçin (PNG, JPG, WebP)."
-          : "Please select a valid image file (PNG, JPG, WebP).",
+        language === 'tr'
+          ? 'Lütfen geçerli bir görsel dosyası seçin (PNG, JPG, WebP).'
+          : 'Please select a valid image file (PNG, JPG, WebP).',
       );
       return;
     }
 
-    const reader = new FileReader();
-    reader.onload = () => {
-      const dataUrl = reader.result as string;
-      const img = new Image();
-      img.onload = () => {
-        const maxDim = 2000;
-        let { width, height } = img;
-        if (width > maxDim || height > maxDim) {
-          if (width > height) {
-            height = Math.round((height * maxDim) / width);
-            width = maxDim;
-          } else {
-            width = Math.round((width * maxDim) / height);
-            height = maxDim;
-          }
-          const canvas = document.createElement("canvas");
-          canvas.width = width;
-          canvas.height = height;
-          const ctx = canvas.getContext("2d");
-          if (ctx) {
-            ctx.drawImage(img, 0, 0, width, height);
-            const optimized = canvas.toDataURL("image/jpeg", 0.9);
-            setRawImageForCrop(optimized);
-            setActiveCropForModal(null);
-            setIsCropModalOpen(true);
-            return;
-          }
-        }
-        setRawImageForCrop(dataUrl);
-        setActiveCropForModal(null);
-        setIsCropModalOpen(true);
-      };
-      img.onerror = () => {
-        setRawImageForCrop(dataUrl);
-        setActiveCropForModal(null);
-        setIsCropModalOpen(true);
-      };
-      img.src = dataUrl;
-    };
-    reader.readAsDataURL(file);
+    const previewUrl = URL.createObjectURL(file);
+    setSelectedRawFile(file);
+    setRawImageForCrop(previewUrl);
+    setActiveCropForModal(null);
+    setIsCropModalOpen(true);
   };
 
   return (
@@ -154,7 +120,7 @@ const FormHeaderSection = React.memo(function FormHeaderSection() {
         onChange={(e) => {
           const file = e.target.files?.[0];
           if (file) handleHeaderImageFileSelect(file);
-          e.target.value = "";
+          e.target.value = '';
         }}
       />
 
@@ -163,6 +129,11 @@ const FormHeaderSection = React.memo(function FormHeaderSection() {
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
             src={headerImage}
+            crossOrigin={
+              headerImage.startsWith('blob:') || headerImage.startsWith('data:')
+                ? undefined
+                : 'anonymous'
+            }
             alt="Form Kapak Görseli"
             className="w-full aspect-[4/1] object-cover block"
           />
@@ -175,6 +146,7 @@ const FormHeaderSection = React.memo(function FormHeaderSection() {
                 const sourceImage =
                   headerImageRaw || rawImageForCrop || headerImage;
                 if (sourceImage) {
+                  setSelectedRawFile(null);
                   setRawImageForCrop(sourceImage);
                   setActiveCropForModal(headerImageCrop || null);
                   setIsCropModalOpen(true);
@@ -183,7 +155,7 @@ const FormHeaderSection = React.memo(function FormHeaderSection() {
               className="cursor-pointer gap-1.5 shadow-sm bg-background/85 hover:bg-background backdrop-blur-xs text-xs font-medium"
             >
               <Crop className="size-3.5 text-primary" />
-              {language === "tr" ? "Pozisyonu Ayarla" : "Adjust Crop"}
+              {language === 'tr' ? 'Pozisyonu Ayarla' : 'Adjust Crop'}
             </Button>
             <Button
               type="button"
@@ -193,7 +165,7 @@ const FormHeaderSection = React.memo(function FormHeaderSection() {
               className="cursor-pointer gap-1.5 shadow-sm bg-background/85 hover:bg-background backdrop-blur-xs text-xs font-medium"
             >
               <ImagePlus className="size-3.5 text-primary" />
-              {language === "tr" ? "Görseli Değiştir" : "Change Image"}
+              {language === 'tr' ? 'Görseli Değiştir' : 'Change Image'}
             </Button>
             <Button
               type="button"
@@ -201,17 +173,18 @@ const FormHeaderSection = React.memo(function FormHeaderSection() {
               size="icon-xs"
               onClick={() => {
                 useBuilderStore.getState().pushHistory(getValues());
-                setValue("headerImage", null, { shouldDirty: true });
-                setValue("headerImageRaw", null, { shouldDirty: true });
-                setValue("headerImageCrop", null, { shouldDirty: true });
+                setValue('headerImage', null, { shouldDirty: true });
+                setValue('headerImageRaw', null, { shouldDirty: true });
+                setValue('headerImageCrop', null, { shouldDirty: true });
+                setSelectedRawFile(null);
                 setRawImageForCrop(null);
                 setActiveCropForModal(null);
               }}
-              className="cursor-pointer shadow-sm"
+              className="cursor-pointer shadow-sm bg-destructive/40 hover:bg-destructive/70"
               title={
-                language === "tr"
-                  ? "Kapak Görselini Kaldır"
-                  : "Remove Cover Image"
+                language === 'tr'
+                  ? 'Kapak Görselini Kaldır'
+                  : 'Remove Cover Image'
               }
             >
               <Trash2 className="size-3.5" />
@@ -228,17 +201,17 @@ const FormHeaderSection = React.memo(function FormHeaderSection() {
             className="cursor-pointer gap-1.5 text-xs text-muted-foreground hover:text-foreground shadow-xs bg-card hover:bg-muted/50"
           >
             <ImagePlus className="size-3.5 text-primary" />
-            {language === "tr" ? "Kapak Görseli Ekle" : "Add Cover Image"}
+            {language === 'tr' ? 'Kapak Görseli Ekle' : 'Add Cover Image'}
           </Button>
         </div>
       )}
 
       <Card
         className={cn(
-          "p-6 shadow-sm bg-card transition-all",
+          'p-6 shadow-sm bg-card transition-all',
           headerImage
-            ? "rounded-t-none border-t-0"
-            : "border-t-4 border-t-primary",
+            ? 'rounded-t-none border-t-0'
+            : 'border-t-4 border-t-primary',
         )}
       >
         <div className="space-y-4">
@@ -250,19 +223,17 @@ const FormHeaderSection = React.memo(function FormHeaderSection() {
                 className="text-xs font-semibold text-muted-foreground flex items-center gap-1.5 select-none"
               >
                 <Type className="size-3.5 text-primary" />
-                <span>
-                  {language === "tr" ? "Form Başlığı" : "Form Title"}
-                </span>
+                <span>{language === 'tr' ? 'Form Başlığı' : 'Form Title'}</span>
               </label>
               <span className="text-[11px] text-muted-foreground/60 select-none">
-                {language === "tr" ? "Zorunlu" : "Required"}
+                {language === 'tr' ? 'Zorunlu' : 'Required'}
               </span>
             </div>
             <div className="group rounded-lg border border-border/90 bg-muted/70 hover:bg-muted/90 hover:border-foreground/25 focus-within:ring-2 focus-within:ring-primary/20 transition-all duration-200 shadow-xs">
               <Input
                 id="form-builder-title"
                 placeholder={dict.builder.canvas.titlePlaceholder}
-                {...register("title")}
+                {...register('title')}
                 className="border-0 bg-transparent px-3.5 py-2 text-xl sm:text-2xl font-bold tracking-tight shadow-none focus-visible:ring-0 focus-visible:border-0 placeholder:text-muted-foreground/50 h-auto w-full dark:bg-transparent"
               />
             </div>
@@ -277,13 +248,11 @@ const FormHeaderSection = React.memo(function FormHeaderSection() {
               >
                 <AlignLeft className="size-3.5 text-primary" />
                 <span>
-                  {language === "tr"
-                    ? "Form Açıklaması"
-                    : "Form Description"}
+                  {language === 'tr' ? 'Form Açıklaması' : 'Form Description'}
                 </span>
               </label>
               <span className="text-[11px] text-muted-foreground/60 select-none">
-                {language === "tr" ? "İsteğe bağlı" : "Optional"}
+                {language === 'tr' ? 'İsteğe bağlı' : 'Optional'}
               </span>
             </div>
             <div className="group rounded-lg border border-border/90 bg-muted/70 hover:bg-muted/90 hover:border-foreground/25 focus-within:ring-2 focus-within:ring-primary/20 transition-all duration-200 shadow-xs">
@@ -291,7 +260,7 @@ const FormHeaderSection = React.memo(function FormHeaderSection() {
                 id="form-builder-description"
                 placeholder={dict.builder.canvas.descPlaceholder}
                 rows={2}
-                {...register("description")}
+                {...register('description')}
                 className="border-0 bg-transparent px-3.5 py-2.5 text-sm shadow-none focus-visible:ring-0 focus-visible:border-0 placeholder:text-muted-foreground/50 resize-none min-h-[56px] w-full dark:bg-transparent"
               />
             </div>
@@ -302,20 +271,44 @@ const FormHeaderSection = React.memo(function FormHeaderSection() {
       {/* Google Forms Style Header Image Crop Modal */}
       {rawImageForCrop && (
         <HeaderImageCropModal
+          key={rawImageForCrop}
           isOpen={isCropModalOpen}
           imageSrc={rawImageForCrop}
+          rawFile={selectedRawFile}
+          existingRawUrl={headerImageRaw || headerImage}
           initialCrop={activeCropForModal}
-          onClose={() => setIsCropModalOpen(false)}
-          onSave={(croppedDataUrl, normalizedCrop) => {
+          onClose={() => {
+            setIsCropModalOpen(false);
+            if (rawImageForCrop.startsWith('blob:')) {
+              URL.revokeObjectURL(rawImageForCrop);
+            }
+            setSelectedRawFile(null);
+          }}
+          onSave={(result) => {
             useBuilderStore.getState().pushHistory(getValues());
-            setValue("headerImage", croppedDataUrl, { shouldDirty: true });
-            setValue("headerImageRaw", rawImageForCrop, { shouldDirty: true });
-            setValue("headerImageCrop", normalizedCrop, { shouldDirty: true });
-            setActiveCropForModal(normalizedCrop);
+
+            // Track uploaded files in builder session for atomic reconciliation
+            if (result.headerImage) {
+              useBuilderStore.getState().addSessionUploadedFile(result.headerImage);
+            }
+            if (result.headerImageRaw) {
+              useBuilderStore.getState().addSessionUploadedFile(result.headerImageRaw);
+            }
+
+            setValue('headerImage', result.headerImage, { shouldDirty: true });
+            setValue('headerImageRaw', result.headerImageRaw, { shouldDirty: true });
+            setValue('headerImageCrop', result.headerImageCrop, { shouldDirty: true });
+            setActiveCropForModal(result.headerImageCrop);
+            setSelectedRawFile(null);
+
+            if (rawImageForCrop.startsWith('blob:')) {
+              URL.revokeObjectURL(rawImageForCrop);
+            }
+
             toast.success(
-              language === "tr"
-                ? "Kapak görseli başarıyla ayarlandı."
-                : "Cover image set successfully.",
+              language === 'tr'
+                ? 'Kapak görseli başarıyla ayarlandı.'
+                : 'Cover image set successfully.',
             );
           }}
         />
@@ -338,7 +331,7 @@ const QuestionTypeSelect = React.memo(function QuestionTypeSelect({
   const renderSelectedValue = React.useCallback(
     (val: string | null) => {
       const selected = questionTypesList.find((t) => t.value === val);
-      if (!selected) return language === "tr" ? "Tür seçin" : "Select type";
+      if (!selected) return language === 'tr' ? 'Tür seçin' : 'Select type';
       const Icon = selected.icon;
       return (
         <span className="flex items-center gap-1.5 truncate">
@@ -446,9 +439,9 @@ const QuestionCard = React.memo(function QuestionCard({
   );
 
   const isChoiceType =
-    currentQuestion?.type === "SINGLE_CHOICE" ||
-    currentQuestion?.type === "MULTIPLE_CHOICE" ||
-    currentQuestion?.type === "DROPDOWN";
+    currentQuestion?.type === 'SINGLE_CHOICE' ||
+    currentQuestion?.type === 'MULTIPLE_CHOICE' ||
+    currentQuestion?.type === 'DROPDOWN';
 
   const handleCardRef = React.useCallback(
     (el: HTMLDivElement | null) => {
@@ -476,13 +469,13 @@ const QuestionCard = React.memo(function QuestionCard({
         shouldDirty: true,
       });
       if (
-        ["SINGLE_CHOICE", "MULTIPLE_CHOICE", "DROPDOWN"].includes(typedVal) &&
+        ['SINGLE_CHOICE', 'MULTIPLE_CHOICE', 'DROPDOWN'].includes(typedVal) &&
         (!currentQuestion?.options || currentQuestion.options.length === 0)
       ) {
         setValue(`questions.${index}.options`, [
           {
             id: `opt_${Date.now()}_1`,
-            label: language === "tr" ? "Seçenek 1" : "Option 1",
+            label: language === 'tr' ? 'Seçenek 1' : 'Option 1',
           },
         ]);
       }
@@ -497,7 +490,7 @@ const QuestionCard = React.memo(function QuestionCard({
         <div className="h-12 rounded-xl border-2 border-dashed border-primary bg-primary/10 flex items-center justify-center gap-2 text-xs font-semibold text-primary animate-pulse transition-all shadow-xs my-1 select-none">
           <ArrowUp className="size-4 animate-bounce" />
           <span>
-            {language === "tr"
+            {language === 'tr'
               ? `Buraya Taşı (#${activeDragIndex + 1} → #${index + 1})`
               : `Drop Here (#${activeDragIndex + 1} → #${index + 1})`}
           </span>
@@ -509,12 +502,12 @@ const QuestionCard = React.memo(function QuestionCard({
         onClick={handleCardClick}
         onFocusCapture={handleCardFocusCapture}
         className={cn(
-          "relative p-6 shadow-sm transition-all duration-150 cursor-pointer border bg-card overflow-visible",
+          'relative p-6 shadow-sm transition-all duration-150 cursor-pointer border bg-card overflow-visible',
           isHeld &&
-            "opacity-25 border-dashed border-primary/60 scale-[0.99] bg-muted/30",
+            'opacity-25 border-dashed border-primary/60 scale-[0.99] bg-muted/30',
           !isHeld && isActive
-            ? "border-primary ring-2 ring-primary/20 shadow-md"
-            : !isHeld && "hover:border-border/80 hover:shadow",
+            ? 'border-primary ring-2 ring-primary/20 shadow-md'
+            : !isHeld && 'hover:border-border/80 hover:shadow',
         )}
       >
         {/* Top Center Drag Grip Handle (Google Forms Style) */}
@@ -522,9 +515,9 @@ const QuestionCard = React.memo(function QuestionCard({
           onPointerDown={(e) => onGripPointerDown(e, index)}
           className="absolute -top-3 left-1/2 -translate-x-1/2 z-20 flex h-6 w-12 cursor-grab active:cursor-grabbing items-center justify-center rounded-md border bg-card text-muted-foreground shadow-xs hover:bg-muted hover:text-foreground hover:scale-105 active:scale-95 transition-all select-none touch-none group"
           title={
-            language === "tr"
-              ? "Soruyu taşımak için basılı tutun ve sürükleyin"
-              : "Drag to reorder question"
+            language === 'tr'
+              ? 'Soruyu taşımak için basılı tutun ve sürükleyin'
+              : 'Drag to reorder question'
           }
         >
           <GripHorizontal className="size-4 text-muted-foreground/70 group-hover:text-foreground transition-colors" />
@@ -540,7 +533,7 @@ const QuestionCard = React.memo(function QuestionCard({
               <div
                 className="p-1.5 rounded-md bg-primary/10 text-primary shrink-0"
                 title={
-                  language === "tr"
+                  language === 'tr'
                     ? `İkon: ${currentQuestion.config.icon}`
                     : `Icon: ${currentQuestion.config.icon}`
                 }
@@ -559,7 +552,7 @@ const QuestionCard = React.memo(function QuestionCard({
           </div>
 
           <QuestionTypeSelect
-            value={currentQuestion?.type || "SHORT_TEXT"}
+            value={currentQuestion?.type || 'SHORT_TEXT'}
             language={language}
             questionTypesList={questionTypesList}
             onChange={handleTypeChange}
@@ -575,7 +568,7 @@ const QuestionCard = React.memo(function QuestionCard({
 
         {/* Field Interactive Body Preview */}
         <div className="py-2 px-1">
-          {currentQuestion?.type === "SHORT_TEXT" && (
+          {currentQuestion?.type === 'SHORT_TEXT' && (
             <Input
               disabled
               placeholder={
@@ -586,7 +579,7 @@ const QuestionCard = React.memo(function QuestionCard({
             />
           )}
 
-          {currentQuestion?.type === "LONG_TEXT" && (
+          {currentQuestion?.type === 'LONG_TEXT' && (
             <Textarea
               disabled
               rows={3}
@@ -605,13 +598,13 @@ const QuestionCard = React.memo(function QuestionCard({
                   key={opt.id || optIndex}
                   className="flex items-center gap-2.5"
                 >
-                  {currentQuestion.type === "SINGLE_CHOICE" && (
+                  {currentQuestion.type === 'SINGLE_CHOICE' && (
                     <div className="size-4 rounded-full border border-muted-foreground/50 shrink-0" />
                   )}
-                  {currentQuestion.type === "MULTIPLE_CHOICE" && (
+                  {currentQuestion.type === 'MULTIPLE_CHOICE' && (
                     <div className="size-4 rounded border border-muted-foreground/50 shrink-0" />
                   )}
-                  {currentQuestion.type === "DROPDOWN" && (
+                  {currentQuestion.type === 'DROPDOWN' && (
                     <span className="text-xs text-muted-foreground shrink-0 w-4 font-mono">
                       {optIndex + 1}.
                     </span>
@@ -619,7 +612,7 @@ const QuestionCard = React.memo(function QuestionCard({
 
                   <Input
                     placeholder={dict.builder.canvas.optionPlaceholder.replace(
-                      "{index}",
+                      '{index}',
                       String(optIndex + 1),
                     )}
                     {...register(
@@ -660,7 +653,7 @@ const QuestionCard = React.memo(function QuestionCard({
                   const newOption = {
                     id: `opt_${Date.now()}_${current.length + 1}`,
                     label: dict.builder.canvas.optionPlaceholder.replace(
-                      "{index}",
+                      '{index}',
                       String(current.length + 1),
                     ),
                   };
@@ -680,7 +673,7 @@ const QuestionCard = React.memo(function QuestionCard({
             </div>
           )}
 
-          {currentQuestion?.type === "FILE_UPLOAD" && (
+          {currentQuestion?.type === 'FILE_UPLOAD' && (
             <div className="flex flex-col items-center justify-center rounded-lg border-2 border-dashed border-muted-foreground/30 p-6 text-center bg-muted/10">
               <Upload className="size-8 text-muted-foreground mb-2" />
               <p className="text-xs font-medium text-foreground">
@@ -689,14 +682,14 @@ const QuestionCard = React.memo(function QuestionCard({
               <p className="text-[11px] text-muted-foreground mt-0.5">
                 {dict.builder.canvas.fileZoneDesc
                   .replace(
-                    "{max}",
+                    '{max}',
                     String(currentQuestion.config?.maxFileSizeMb || 10),
                   )
                   .replace(
-                    "{types}",
+                    '{types}',
                     currentQuestion.config?.allowedMimeTypes?.length
                       ? dict.builder.canvas.customTypesAccepted.replace(
-                          "{count}",
+                          '{count}',
                           String(
                             currentQuestion.config.allowedMimeTypes.length,
                           ),
@@ -794,7 +787,7 @@ const QuestionCard = React.memo(function QuestionCard({
         <div className="h-12 rounded-xl border-2 border-dashed border-primary bg-primary/10 flex items-center justify-center gap-2 text-xs font-semibold text-primary animate-pulse transition-all shadow-xs my-1 select-none">
           <ArrowDown className="size-4 animate-bounce" />
           <span>
-            {language === "tr"
+            {language === 'tr'
               ? `Buraya Taşı (#${activeDragIndex + 1} → #${index + 1})`
               : `Drop Here (#${activeDragIndex + 1} → #${index + 1})`}
           </span>
@@ -813,7 +806,7 @@ const AddQuestionFooter = React.memo(function AddQuestionFooter({
   return (
     <div className="flex flex-col sm:flex-row items-center justify-center gap-2 py-4">
       <Button
-        onClick={() => onAddQuestion("SHORT_TEXT")}
+        onClick={() => onAddQuestion('SHORT_TEXT')}
         size="sm"
         className="cursor-pointer gap-2 shadow-sm font-medium w-full sm:w-auto"
       >
@@ -825,7 +818,7 @@ const AddQuestionFooter = React.memo(function AddQuestionFooter({
         <Button
           variant="outline"
           size="xs"
-          onClick={() => onAddQuestion("SHORT_TEXT")}
+          onClick={() => onAddQuestion('SHORT_TEXT')}
           className="cursor-pointer"
         >
           {dict.builder.canvas.quickText}
@@ -833,7 +826,7 @@ const AddQuestionFooter = React.memo(function AddQuestionFooter({
         <Button
           variant="outline"
           size="xs"
-          onClick={() => onAddQuestion("SINGLE_CHOICE")}
+          onClick={() => onAddQuestion('SINGLE_CHOICE')}
           className="cursor-pointer"
         >
           {dict.builder.canvas.quickRadio}
@@ -841,7 +834,7 @@ const AddQuestionFooter = React.memo(function AddQuestionFooter({
         <Button
           variant="outline"
           size="xs"
-          onClick={() => onAddQuestion("MULTIPLE_CHOICE")}
+          onClick={() => onAddQuestion('MULTIPLE_CHOICE')}
           className="cursor-pointer"
         >
           {dict.builder.canvas.quickCheckbox}
@@ -849,7 +842,7 @@ const AddQuestionFooter = React.memo(function AddQuestionFooter({
         <Button
           variant="outline"
           size="xs"
-          onClick={() => onAddQuestion("DROPDOWN")}
+          onClick={() => onAddQuestion('DROPDOWN')}
           className="cursor-pointer"
         >
           {dict.builder.canvas.quickDropdown}
@@ -857,7 +850,7 @@ const AddQuestionFooter = React.memo(function AddQuestionFooter({
         <Button
           variant="outline"
           size="xs"
-          onClick={() => onAddQuestion("FILE_UPLOAD")}
+          onClick={() => onAddQuestion('FILE_UPLOAD')}
           className="cursor-pointer"
         >
           {dict.builder.canvas.quickFile}
@@ -877,7 +870,7 @@ export const BuilderCanvas = React.memo(function BuilderCanvas({
 
   const { fields, move } = useFieldArray({
     control,
-    name: "questions",
+    name: 'questions',
   });
 
   const scrollContainerRef = React.useRef<HTMLDivElement>(null);
@@ -957,8 +950,8 @@ export const BuilderCanvas = React.memo(function BuilderCanvas({
         cardRect: rect,
         overIndex: index,
         questionLabel:
-          q?.label || (language === "tr" ? "Başlıksız Soru" : "Untitled"),
-        questionType: q?.type || "SHORT_TEXT",
+          q?.label || (language === 'tr' ? 'Başlıksız Soru' : 'Untitled'),
+        questionType: q?.type || 'SHORT_TEXT',
       });
     },
     [fields, getValues, language],
@@ -1024,47 +1017,47 @@ export const BuilderCanvas = React.memo(function BuilderCanvas({
       });
     };
 
-    window.addEventListener("pointermove", handleWindowPointerMove);
-    window.addEventListener("pointerup", handleWindowPointerUp);
-    window.addEventListener("pointercancel", handleWindowPointerUp);
+    window.addEventListener('pointermove', handleWindowPointerMove);
+    window.addEventListener('pointerup', handleWindowPointerUp);
+    window.addEventListener('pointercancel', handleWindowPointerUp);
 
     return () => {
       if (animFrameId) cancelAnimationFrame(animFrameId);
-      window.removeEventListener("pointermove", handleWindowPointerMove);
-      window.removeEventListener("pointerup", handleWindowPointerUp);
-      window.removeEventListener("pointercancel", handleWindowPointerUp);
+      window.removeEventListener('pointermove', handleWindowPointerMove);
+      window.removeEventListener('pointerup', handleWindowPointerUp);
+      window.removeEventListener('pointercancel', handleWindowPointerUp);
     };
   }, [isDragging, calculateOverIndex, getValues, move]);
 
   const questionTypesList = React.useMemo<QuestionTypeOption[]>(
     () => [
       {
-        value: "SHORT_TEXT",
+        value: 'SHORT_TEXT',
         label: dict.builder.canvas.questionTypes.SHORT_TEXT,
         icon: Type,
       },
       {
-        value: "LONG_TEXT",
+        value: 'LONG_TEXT',
         label: dict.builder.canvas.questionTypes.LONG_TEXT,
         icon: AlignLeft,
       },
       {
-        value: "SINGLE_CHOICE",
+        value: 'SINGLE_CHOICE',
         label: dict.builder.canvas.questionTypes.SINGLE_CHOICE,
         icon: Radio,
       },
       {
-        value: "MULTIPLE_CHOICE",
+        value: 'MULTIPLE_CHOICE',
         label: dict.builder.canvas.questionTypes.MULTIPLE_CHOICE,
         icon: CheckSquare,
       },
       {
-        value: "DROPDOWN",
+        value: 'DROPDOWN',
         label: dict.builder.canvas.questionTypes.DROPDOWN,
         icon: ChevronDown,
       },
       {
-        value: "FILE_UPLOAD",
+        value: 'FILE_UPLOAD',
         label: dict.builder.canvas.questionTypes.FILE_UPLOAD,
         icon: FileUp,
       },
@@ -1091,7 +1084,7 @@ export const BuilderCanvas = React.memo(function BuilderCanvas({
         className="w-full max-w-3xl space-y-4 pb-20"
         style={{
           marginLeft:
-            "clamp(0px, calc((100% - 48rem + var(--inspector-width, 0px)) / 2), calc(100% - 48rem))",
+            'clamp(0px, calc((100% - 48rem + var(--inspector-width, 0px)) / 2), calc(100% - 48rem))',
         }}
         onClick={handleBackgroundClick}
       >
@@ -1141,13 +1134,13 @@ export const BuilderCanvas = React.memo(function BuilderCanvas({
       {activeDrag && (
         <div
           style={{
-            position: "fixed",
+            position: 'fixed',
             top:
               activeDrag.pointerY -
               (activeDrag.initialPointerY - activeDrag.cardRect.top),
             left: activeDrag.cardRect.left,
             width: activeDrag.cardRect.width,
-            pointerEvents: "none",
+            pointerEvents: 'none',
             zIndex: 9999,
           }}
           className="pointer-events-none select-none rounded-xl border-2 border-primary/80 bg-card/95 shadow-2xl p-6 opacity-85 scale-[1.01] rotate-[0.5deg] transition-transform duration-75 backdrop-blur-xs"
@@ -1158,7 +1151,7 @@ export const BuilderCanvas = React.memo(function BuilderCanvas({
                 #{activeDrag.index + 1}
               </span>
               <span className="font-semibold text-base truncate text-foreground">
-                {activeDrag.questionLabel || "Başlıksız Soru"}
+                {activeDrag.questionLabel || 'Başlıksız Soru'}
               </span>
             </div>
             <span className="text-xs font-medium text-muted-foreground bg-muted px-2 py-0.5 rounded shrink-0">
@@ -1170,10 +1163,10 @@ export const BuilderCanvas = React.memo(function BuilderCanvas({
           <div className="flex items-center justify-between text-xs text-muted-foreground border-t pt-2 mt-2">
             <span className="flex items-center gap-1.5 text-primary font-medium">
               <GripHorizontal className="size-4 animate-pulse" />
-              {language === "tr" ? "Sürükleniyor..." : "Dragging..."}
+              {language === 'tr' ? 'Sürükleniyor...' : 'Dragging...'}
             </span>
             <span className="text-primary font-semibold">
-              {language === "tr"
+              {language === 'tr'
                 ? `Hedef Konum: #${activeDrag.overIndex + 1}`
                 : `Target Position: #${activeDrag.overIndex + 1}`}
             </span>
@@ -1183,4 +1176,3 @@ export const BuilderCanvas = React.memo(function BuilderCanvas({
     </div>
   );
 });
-

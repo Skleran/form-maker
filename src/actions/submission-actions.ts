@@ -107,74 +107,99 @@ export async function submitFormResponse(
 
     const validatedAnswers = parseResult.data
 
-    const submission = await prisma.$transaction(async (tx) => {
-      const sub = await tx.submission.create({
-        data: {
-          formId,
-          respondentMetadata: metadata || {},
-        },
-      })
+    const submission = await prisma.$transaction(
+      async (tx) => {
+        const sub = await tx.submission.create({
+          data: {
+            formId,
+            respondentMetadata: metadata || {},
+          },
+        })
 
-      const answerRecords = []
+        const answerRecords = []
 
-      for (const q of questionItems) {
-        const val = validatedAnswers[q.id]
-        if (val === undefined || val === null || val === "") {
-          continue
-        }
-
-        let valueText: string | null = null
-        let valueJson: unknown = null
-        let fileUrl: string | null = null
-
-        const resolveOptionLabel = (idOrLabel: string) =>
-          q.options.find((o) => o.id === idOrLabel)?.label ?? idOrLabel
-
-        if (q.type === "FILE_UPLOAD" && typeof val === "object" && val !== null) {
-          const fileData = val as { name: string; size: number; type: string; url?: string; dataUrl?: string }
-          valueText = fileData.name
-          fileUrl = fileData.url || fileData.dataUrl || null
-          valueJson = fileData
-        } else if (q.type === "MULTIPLE_CHOICE" && Array.isArray(val)) {
-          if (val.length === 0) {
+        for (const q of questionItems) {
+          const val = validatedAnswers[q.id]
+          if (val === undefined || val === null || val === "") {
             continue
           }
-          const resolvedLabels = (val as string[]).map(resolveOptionLabel)
-          valueText = resolvedLabels.join(", ")
-          valueJson = resolvedLabels
-        } else if (
-          (q.type === "SINGLE_CHOICE" || q.type === "DROPDOWN") &&
-          typeof val === "string"
-        ) {
-          const resolvedLabel = resolveOptionLabel(val)
-          valueText = resolvedLabel
-          valueJson = { id: val, label: resolvedLabel }
-        } else if (typeof val === "string") {
-          valueText = val
-        } else {
-          valueText = String(val)
-          valueJson = val
+
+          let valueText: string | null = null
+          let valueJson: unknown = null
+          let fileUrl: string | null = null
+
+          const resolveOptionLabel = (idOrLabel: string) =>
+            q.options.find((o) => o.id === idOrLabel)?.label ?? idOrLabel
+
+          if (q.type === "FILE_UPLOAD" && typeof val === "object" && val !== null) {
+            const fileData = val as {
+              name: string
+              size: number
+              type: string
+              url?: string
+              dataUrl?: string
+              path?: string
+            }
+            valueText = fileData.name
+            fileUrl = fileData.url || fileData.dataUrl || null
+
+            // Avoid database bloat: if clean URL is present, strip out any giant dataUrl string
+            if (fileData.url) {
+              valueJson = {
+                name: fileData.name,
+                size: fileData.size,
+                type: fileData.type,
+                url: fileData.url,
+                path: fileData.path,
+              }
+            } else {
+              valueJson = fileData
+            }
+          } else if (q.type === "MULTIPLE_CHOICE" && Array.isArray(val)) {
+            if (val.length === 0) {
+              continue
+            }
+            const resolvedLabels = (val as string[]).map(resolveOptionLabel)
+            valueText = resolvedLabels.join(", ")
+            valueJson = resolvedLabels
+          } else if (
+            (q.type === "SINGLE_CHOICE" || q.type === "DROPDOWN") &&
+            typeof val === "string"
+          ) {
+            const resolvedLabel = resolveOptionLabel(val)
+            valueText = resolvedLabel
+            valueJson = { id: val, label: resolvedLabel }
+          } else if (typeof val === "string") {
+            valueText = val
+          } else {
+            valueText = String(val)
+            valueJson = val
+          }
+
+          answerRecords.push({
+            submissionId: sub.id,
+            questionId: q.id,
+            questionLabel: q.label,
+            questionType: q.type,
+            valueText,
+            valueJson: valueJson ? JSON.parse(JSON.stringify(valueJson)) : null,
+            fileUrl,
+          })
         }
 
-        answerRecords.push({
-          submissionId: sub.id,
-          questionId: q.id,
-          questionLabel: q.label,
-          questionType: q.type,
-          valueText,
-          valueJson: valueJson ? JSON.parse(JSON.stringify(valueJson)) : null,
-          fileUrl,
-        })
-      }
+        if (answerRecords.length > 0) {
+          await tx.answer.createMany({
+            data: answerRecords,
+          })
+        }
 
-      if (answerRecords.length > 0) {
-        await tx.answer.createMany({
-          data: answerRecords,
-        })
+        return sub
+      },
+      {
+        timeout: 15000,
+        maxWait: 5000,
       }
-
-      return sub
-    })
+    )
 
     try {
       revalidatePath("/admin/forms")

@@ -1,98 +1,145 @@
-"use client"
+'use client';
 
-import * as React from "react"
-import { toast } from "sonner"
+import * as React from 'react';
+import { toast } from 'sonner';
 import {
   Calendar,
   Layers,
   Loader2,
   MessageSquare,
   RefreshCw,
-} from "lucide-react"
+} from 'lucide-react';
 
-import { Card } from "@/components/ui/card"
-import { Button } from "@/components/ui/button"
+import { Card } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
 import {
   getFormResponses,
   deleteSubmission,
   type FormSubmissionRow,
   type PaginatedResponsesResult,
-} from "@/actions/response-actions"
-import { ResponsesTable } from "./responses-table"
-import { ResponseDetailSheet } from "./response-detail-sheet"
-import { ExportCsvButton } from "./export-csv-button"
-import { useLanguage } from "@/lib/i18n/language-context"
+} from '@/actions/response-actions';
+import { ResponsesTable } from './responses-table';
+import { ResponseDetailSheet } from './response-detail-sheet';
+import { ExportCsvButton } from './export-csv-button';
+import { useLanguage } from '@/lib/i18n/language-context';
 
 interface ResponsesViewProps {
-  formId: string
+  formId: string;
 }
 
 export function ResponsesView({ formId }: ResponsesViewProps) {
-  const { dict, language } = useLanguage()
-  const [data, setData] = React.useState<PaginatedResponsesResult | null>(null)
-  const [isLoading, setIsLoading] = React.useState(true)
-  const [currentPage, setCurrentPage] = React.useState(1)
+  const { dict, language } = useLanguage();
+  const [data, setData] = React.useState<PaginatedResponsesResult | null>(null);
+  const [isLoading, setIsLoading] = React.useState(true);
+  const [currentPage, setCurrentPage] = React.useState(1);
   const [selectedSubmission, setSelectedSubmission] =
-    React.useState<FormSubmissionRow | null>(null)
-  const [isSheetOpen, setIsSheetOpen] = React.useState(false)
+    React.useState<FormSubmissionRow | null>(null);
+  const [isSheetOpen, setIsSheetOpen] = React.useState(false);
+  const [submissionToDelete, setSubmissionToDelete] = React.useState<
+    string | null
+  >(null);
+  const [isDeleting, setIsDeleting] = React.useState(false);
 
   const loadResponses = React.useCallback(
     async (page: number = 1) => {
-      setIsLoading(true)
+      setIsLoading(true);
       try {
-        const res = await getFormResponses(formId, page, 10)
+        const res = await getFormResponses(formId, page, 10);
         if (res.success) {
-          setData(res.data)
-          setCurrentPage(page)
+          setData(res.data);
+          setCurrentPage(page);
         } else {
-          toast.error(res.error || "Yanıtlar yüklenemedi")
+          toast.error(res.error || 'Yanıtlar yüklenemedi');
         }
       } catch {
-        toast.error("Yanıtlar yüklenemedi")
+        toast.error('Yanıtlar yüklenemedi');
       } finally {
-        setIsLoading(false)
+        setIsLoading(false);
       }
     },
-    [formId]
-  )
+    [formId],
+  );
 
   React.useEffect(() => {
-    let ignore = false
+    let ignore = false;
     getFormResponses(formId, 1, 10).then((res) => {
       if (!ignore) {
         if (res.success && res.data) {
-          setData(res.data)
+          setData(res.data);
         }
-        setIsLoading(false)
+        setIsLoading(false);
       }
-    })
+    });
     return () => {
-      ignore = true
+      ignore = true;
+    };
+  }, [formId]);
+
+  const handleDelete = (submissionId: string) => {
+    setSubmissionToDelete(submissionId);
+  };
+
+  const confirmDeleteSubmission = async () => {
+    if (!submissionToDelete) return;
+    const idToDelete = submissionToDelete;
+    setSubmissionToDelete(null);
+
+    // 1. Optimistic Update: immediately remove from UI!
+    const previousData = data;
+    setData((prev) => {
+      if (!prev) return prev;
+      return {
+        ...prev,
+        submissions: prev.submissions.filter((item) => item.id !== idToDelete),
+        totalCount: Math.max(0, prev.totalCount - 1),
+      };
+    });
+
+    // If currently inspecting this submission, close the sheet
+    if (selectedSubmission?.id === idToDelete) {
+      setIsSheetOpen(false);
+      setSelectedSubmission(null);
     }
-  }, [formId])
 
-  const handleDelete = async (submissionId: string) => {
-    if (!confirm(dict.responses.deleteConfirm)) return
-
+    setIsDeleting(true);
     try {
-      const res = await deleteSubmission(submissionId, formId)
+      const res = await deleteSubmission(idToDelete, formId);
       if (res.success) {
-        toast.success(dict.responses.deleteSuccess)
-        loadResponses(currentPage)
+        toast.success(dict.responses.deleteSuccess);
+        // Background sync to keep pagination totals fresh
+        getFormResponses(formId, currentPage, 10).then((refreshRes) => {
+          if (refreshRes.success && refreshRes.data) {
+            setData(refreshRes.data);
+          }
+        });
       } else {
-        toast.error(res.error || dict.responses.deleteFailed)
+        // Rollback on failure
+        setData(previousData);
+        toast.error(res.error || dict.responses.deleteFailed);
       }
     } catch {
-      toast.error(dict.responses.deleteFailed)
+      // Rollback on network error
+      setData(previousData);
+      toast.error(dict.responses.deleteFailed);
+    } finally {
+      setIsDeleting(false);
     }
-  }
+  };
 
   const handleInspect = (sub: FormSubmissionRow) => {
-    setSelectedSubmission(sub)
-    setIsSheetOpen(true)
-  }
+    setSelectedSubmission(sub);
+    setIsSheetOpen(true);
+  };
 
-  const locale = language === "tr" ? "tr-TR" : "en-US"
+  const locale = language === 'tr' ? 'tr-TR' : 'en-US';
 
   return (
     <div className="flex-1 overflow-y-auto px-4 py-8 sm:px-8 bg-muted/15 min-h-[calc(100vh-3.5rem)]">
@@ -117,7 +164,9 @@ export function ResponsesView({ formId }: ResponsesViewProps) {
               className="cursor-pointer gap-1.5 text-xs font-medium"
               title={dict.responses.refresh}
             >
-              <RefreshCw className={`size-3.5 ${isLoading ? "animate-spin" : ""}`} />
+              <RefreshCw
+                className={`size-3.5 ${isLoading ? 'animate-spin' : ''}`}
+              />
               <span>{dict.responses.refresh}</span>
             </Button>
 
@@ -157,12 +206,15 @@ export function ResponsesView({ formId }: ResponsesViewProps) {
             </div>
             <p className="text-xs font-medium text-foreground mt-2 truncate">
               {data?.submissions[0]
-                ? new Date(data.submissions[0].submittedAt).toLocaleString(locale, {
-                    month: "short",
-                    day: "numeric",
-                    hour: "2-digit",
-                    minute: "2-digit",
-                  })
+                ? new Date(data.submissions[0].submittedAt).toLocaleString(
+                    locale,
+                    {
+                      month: 'short',
+                      day: 'numeric',
+                      hour: '2-digit',
+                      minute: '2-digit',
+                    },
+                  )
                 : dict.responses.noSubmissionsYet}
             </p>
           </Card>
@@ -195,12 +247,48 @@ export function ResponsesView({ formId }: ResponsesViewProps) {
           submission={selectedSubmission}
           isOpen={isSheetOpen}
           onClose={() => {
-            setIsSheetOpen(false)
-            setSelectedSubmission(null)
+            setIsSheetOpen(false);
+            setSelectedSubmission(null);
           }}
           onDeleted={() => loadResponses(currentPage)}
+          onDeleteRequest={(id) => setSubmissionToDelete(id)}
         />
+
+        {/* Shadcn Confirmation Dialog for Submission Deletion */}
+        <Dialog
+          open={Boolean(submissionToDelete)}
+          onOpenChange={(open) => !open && setSubmissionToDelete(null)}
+        >
+          <DialogContent className="sm:max-w-md">
+            <DialogHeader>
+              <DialogTitle>{dict.responses.deleteSubmission}</DialogTitle>
+              <DialogDescription>
+                {dict.responses.deleteConfirm}
+              </DialogDescription>
+            </DialogHeader>
+            <DialogFooter className="gap-2 sm:gap-3">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setSubmissionToDelete(null)}
+                disabled={isDeleting}
+              >
+                {language === 'tr' ? 'İptal' : 'Cancel'}
+              </Button>
+              <Button
+                type="button"
+                variant="destructive"
+                onClick={confirmDeleteSubmission}
+                disabled={isDeleting}
+                className="gap-1.5"
+              >
+                {isDeleting && <Loader2 className="size-3.5 animate-spin" />}
+                <span>{language === 'tr' ? 'Sil' : 'Delete'}</span>
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </div>
     </div>
-  )
+  );
 }
