@@ -32,6 +32,12 @@ import type { QuestionFormItem, QuestionConfig } from "@/types/form"
 import { useLanguage } from "@/lib/i18n/language-context"
 import { cn } from "@/lib/utils"
 import { QuestionIcon } from "@/components/form/question-icon"
+import {
+  formatAllowedFileTypes,
+  formatFileLimitsDescription,
+  getAcceptAttribute,
+  isFileTypeAllowed,
+} from "@/lib/file-types"
 
 interface FileUploadValue {
   name: string
@@ -71,21 +77,11 @@ function PublicFileInput({
     }
 
     if (config?.allowedMimeTypes && config.allowedMimeTypes.length > 0) {
-      const isAllowed = config.allowedMimeTypes.some((mime) => {
-        if (mime.endsWith("/*")) {
-          const prefix = mime.replace("/*", "")
-          return file.type.startsWith(prefix)
-        }
-        return (
-          file.type === mime ||
-          file.name.toLowerCase().endsWith(mime.toLowerCase().replace(".", ""))
-        )
-      })
-      if (!isAllowed) {
+      if (!isFileTypeAllowed(file, config.allowedMimeTypes)) {
         toast.error(
           dict.publicForm.fileTypeNotAllowed.replace(
             "{types}",
-            config.allowedMimeTypes.join(", ")
+            formatAllowedFileTypes(config.allowedMimeTypes, language)
           )
         )
         return
@@ -296,10 +292,11 @@ function PublicFileInput({
           : dict.publicForm.clickOrDrop}
       </span>
       <span className="text-[11px] text-muted-foreground mt-0.5">
-        Max {config?.maxFileSizeMb || 10} MB &bull;{" "}
-        {config?.allowedMimeTypes?.length
-          ? config.allowedMimeTypes.join(", ")
-          : dict.publicForm.allTypesAccepted}
+        {formatFileLimitsDescription(
+          config?.maxFileSizeMb,
+          config?.allowedMimeTypes,
+          language
+        )}
       </span>
       <input
         ref={inputRef}
@@ -309,7 +306,7 @@ function PublicFileInput({
           if (file) processFile(file)
           e.target.value = ""
         }}
-        accept={config?.allowedMimeTypes?.join(",")}
+        accept={getAcceptAttribute(config?.allowedMimeTypes)}
         className="hidden"
       />
     </div>

@@ -42,6 +42,7 @@ import { cn } from '@/lib/utils';
 import { useLanguage } from '@/lib/i18n/language-context';
 import { QuestionIcon } from '@/components/form/question-icon';
 import { HeaderImageCropModal } from './header-image-crop-modal';
+import { formatFileLimitsDescription } from '@/lib/file-types';
 
 interface BuilderCanvasProps {
   onDuplicateQuestion: (index: number) => void;
@@ -680,22 +681,11 @@ const QuestionCard = React.memo(function QuestionCard({
                 {dict.builder.canvas.fileZoneTitle}
               </p>
               <p className="text-[11px] text-muted-foreground mt-0.5">
-                {dict.builder.canvas.fileZoneDesc
-                  .replace(
-                    '{max}',
-                    String(currentQuestion.config?.maxFileSizeMb || 10),
-                  )
-                  .replace(
-                    '{types}',
-                    currentQuestion.config?.allowedMimeTypes?.length
-                      ? dict.builder.canvas.customTypesAccepted.replace(
-                          '{count}',
-                          String(
-                            currentQuestion.config.allowedMimeTypes.length,
-                          ),
-                        )
-                      : dict.builder.canvas.allTypesAccepted,
-                  )}
+                {formatFileLimitsDescription(
+                  currentQuestion.config?.maxFileSizeMb,
+                  currentQuestion.config?.allowedMimeTypes,
+                  language,
+                )}
               </p>
             </div>
           )}
