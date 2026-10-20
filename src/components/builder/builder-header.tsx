@@ -12,9 +12,13 @@ import {
   ExternalLink,
   Eye,
   Loader2,
+  Menu,
+  Moon,
   PanelRight,
   Redo2,
   Save,
+  Share2,
+  Sun,
   Undo2,
 } from "lucide-react";
 
@@ -34,11 +38,21 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { useBuilderStore } from "@/stores/use-builder-store";
 import type { FormBuilderValues } from "@/lib/validations/form";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { LogoutButton } from "@/components/admin/logout-button";
 import { useLanguage } from "@/lib/i18n/language-context";
+import { useTheme } from "next-themes";
+import { cn } from "@/lib/utils";
+import { Label } from "../ui/label";
 
 interface BuilderHeaderProps {
   formId?: string;
@@ -135,6 +149,15 @@ export const BuilderHeader = React.memo(function BuilderHeader({
     }
   };
 
+  const { setTheme, theme, resolvedTheme } = useTheme();
+  const [mounted, setMounted] = React.useState(false);
+  React.useEffect(() => {
+    setMounted(true);
+  }, []);
+  const isDark = mounted
+    ? (theme === "system" ? resolvedTheme : theme) === "dark"
+    : false;
+
   const handleCopyLink = () => {
     const origin = typeof window !== "undefined" ? window.location.origin : "";
     const publicUrl = `${origin}/forms/${slug}`;
@@ -142,11 +165,218 @@ export const BuilderHeader = React.memo(function BuilderHeader({
     toast.success(dict.builder.header.shareToast);
   };
 
+  const handleNativeShare = async () => {
+    const origin = typeof window !== "undefined" ? window.location.origin : "";
+    const publicUrl = `${origin}/forms/${slug}`;
+    if (typeof navigator !== "undefined" && navigator.share) {
+      try {
+        await navigator.share({
+          title: title || (language === "tr" ? "Form" : "Form"),
+          text:
+            title ||
+            (language === "tr"
+              ? "Bu formu doldurun"
+              : "Please fill out this form"),
+          url: publicUrl,
+        });
+      } catch (err: unknown) {
+        if ((err as Error)?.name !== "AbortError") {
+          await navigator.clipboard.writeText(publicUrl);
+          toast.success(dict.builder.header.shareToast);
+        }
+      }
+    } else {
+      await navigator.clipboard.writeText(publicUrl);
+      toast.success(dict.builder.header.shareToast);
+    }
+  };
+
   return (
     <>
       <header className="sticky top-0 z-30 flex flex-col border-b bg-background/95 backdrop-blur-md">
-        {/* Top Bar */}
-        <div className="flex h-14 items-center justify-between px-4 sm:px-6">
+        {/* Mobile Top Bar */}
+        <div className="flex md:hidden h-14 items-center justify-between px-3 gap-1.5 w-full">
+          {/* Left: Back Button */}
+          <button
+            type="button"
+            onClick={handleBackClick}
+            className={buttonVariants({
+              variant: "ghost",
+              size: "icon-sm",
+              className:
+                "cursor-pointer text-muted-foreground hover:text-foreground h-8 w-8 shrink-0",
+            })}
+            title={dict.builder.header.backToForms}
+          >
+            <ArrowLeft className="size-4" />
+          </button>
+
+          {/* Status Indicator */}
+          <div className="flex items-center shrink min-w-25.5">
+            {isDirty ? (
+              <span className="inline-flex items-center gap-1.5 rounded-full bg-amber-500/10 px-2 py-0.5 text-[11px] font-medium text-amber-600 dark:text-amber-400 border border-amber-500/25 shrink-0 whitespace-nowrap">
+                <span className="size-1.5 rounded-full bg-amber-500 animate-pulse" />
+                <span>{language === "tr" ? "Kaydedilmedi" : "Unsaved"}</span>
+              </span>
+            ) : (
+              <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/10 px-2 py-0.5 text-[11px] font-medium text-emerald-600 dark:text-emerald-400 border border-emerald-500/25 shrink-0 whitespace-nowrap">
+                <Check className="size-3 text-emerald-500" />
+                <span>{dict.builder.header.saved}</span>
+              </span>
+            )}
+          </div>
+
+          {/* Undo / Redo */}
+          <div className="flex items-center rounded-lg border bg-muted/40 p-0.5 shrink-0">
+            <Button
+              variant="ghost"
+              size="icon-xs"
+              onClick={onUndo}
+              disabled={!canUndo}
+              className="cursor-pointer text-muted-foreground hover:text-foreground disabled:opacity-30 h-7 w-7"
+              title={dict.builder.header.undoTooltip}
+            >
+              <Undo2 className="size-3.5" />
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon-xs"
+              onClick={onRedo}
+              disabled={!canRedo}
+              className="cursor-pointer text-muted-foreground hover:text-foreground disabled:opacity-30 h-7 w-7"
+              title={dict.builder.header.redoTooltip}
+            >
+              <Redo2 className="size-3.5" />
+            </Button>
+          </div>
+
+          {/* Save Button */}
+          <Button
+            size="sm"
+            onClick={onSave}
+            disabled={isSaving}
+            className="cursor-pointer items-center gap-1 shadow-sm h-8 px-2.5 text-xs shrink-0"
+          >
+            {isSaving ? (
+              <Loader2 className="size-3.5 animate-spin" />
+            ) : (
+              <Save className="size-3.5" />
+            )}
+            <span>
+              {isSaving ? dict.builder.header.saving : dict.builder.header.save}
+            </span>
+          </Button>
+
+          {/* Dropdown Menu Trigger & Content */}
+          <DropdownMenu>
+            <DropdownMenuTrigger
+              render={
+                <Button
+                  variant="ghost"
+                  size="icon-sm"
+                  className="cursor-pointer text-muted-foreground hover:text-foreground h-8 w-8 shrink-0"
+                >
+                  <Menu className="size-4" />
+                </Button>
+              }
+            />
+            <DropdownMenuContent
+              align="end"
+              side="bottom"
+              sideOffset={6}
+              className="w-56 p-1.5 space-y-1 z-50 bg-popover/95 backdrop-blur-md shadow-lg border rounded-xl"
+            >
+              {/* Preview */}
+              <DropdownMenuItem
+                onClick={() => {
+                  window.open(
+                    `/forms/${slug}?preview=true`,
+                    "_blank",
+                    "noopener,noreferrer",
+                  );
+                }}
+                className="cursor-pointer flex items-center gap-2.5 rounded-lg px-2.5 py-2 text-xs font-medium text-foreground hover:bg-accent hover:text-accent-foreground transition-colors"
+              >
+                <Eye className="size-4 text-muted-foreground shrink-0" />
+                <span>{dict.builder.header.preview}</span>
+              </DropdownMenuItem>
+
+              {/* Publish Toggle */}
+              <div
+                className="flex items-center rounded-lg px-2.5 py-2 text-xs font-medium hover:bg-muted/40 transition-colors"
+                onClick={(e) => e.stopPropagation()}
+                onPointerDown={(e) => e.stopPropagation()}
+              >
+                <Label
+                  htmlFor="publish-toggle"
+                  className="text-foreground text-xs w-full flex items-center cursor-pointer select-none"
+                >
+                  <span
+                    className={cn(
+                      "size-2 ml-1 mr-1.5 rounded-full shrink-0",
+                      isPublished ? "bg-emerald-500" : "bg-muted-foreground/40",
+                    )}
+                  />
+                  {isPublished
+                    ? dict.builder.header.live
+                    : dict.builder.header.draft}
+                </Label>
+                <Switch
+                  checked={isPublished}
+                  id="publish-toggle"
+                  onCheckedChange={(checked) => {
+                    setValue("isPublished", checked, { shouldDirty: true });
+                    toast.info(
+                      checked
+                        ? dict.builder.header.publishedToast
+                        : dict.builder.header.draftToast,
+                    );
+                  }}
+                />
+              </div>
+
+              {/* Native Share */}
+              <DropdownMenuItem
+                onClick={handleNativeShare}
+                className="cursor-pointer flex items-center gap-2.5 rounded-lg px-2.5 py-2 text-xs font-medium text-foreground hover:bg-accent hover:text-accent-foreground transition-colors"
+              >
+                <Share2 className="size-4 text-muted-foreground shrink-0" />
+                <span>{dict.builder.header.share}</span>
+              </DropdownMenuItem>
+
+              <DropdownMenuSeparator className="my-1" />
+
+              {/* Side-by-side Theme & Logout */}
+              <div className="grid grid-cols-4 gap-1.5 pt-0.5">
+                <Button
+                  variant="outline"
+                  size="icon"
+                  onClick={() => setTheme(isDark ? "light" : "dark")}
+                  className="h-8 col-span-1 w-full cursor-pointer justify-center gap-1.5 px-2 text-xs font-medium text-foreground hover:bg-accent"
+                >
+                  {isDark ? (
+                    <>
+                      <Sun className="size-3.5 text-amber-500 shrink-0" />
+                    </>
+                  ) : (
+                    <>
+                      <Moon className="size-3.5 text-slate-700 dark:text-slate-300 shrink-0" />
+                    </>
+                  )}
+                </Button>
+                <LogoutButton
+                  variant="outline"
+                  size="sm"
+                  showText
+                  className="h-8 col-span-3 justify-center text-xs font-medium text-destructive rounded-lg"
+                />
+              </div>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
+
+        {/* Desktop Top Bar */}
+        <div className="hidden md:flex h-14 items-center justify-between px-4 sm:px-6">
           {/* Left: Back & Title & Unsaved Indicator */}
           <div className="flex items-center gap-3 min-w-0">
             <button
@@ -196,7 +426,7 @@ export const BuilderHeader = React.memo(function BuilderHeader({
           </div>
 
           {/* Center: Undo / Redo */}
-          <div className="hidden lg:flex items-center">
+          <div className="flex items-center">
             <div className="flex items-center rounded-lg border bg-muted/40 p-0.5">
               <Tooltip>
                 <TooltipTrigger
@@ -240,39 +470,25 @@ export const BuilderHeader = React.memo(function BuilderHeader({
 
           {/* Right: Actions, Publish Switch, Inspector Toggle */}
           <div className="flex items-center gap-2">
-            {/* Mobile / Tablet Undo/Redo */}
-            <div className="flex lg:hidden items-center rounded-lg border bg-muted/40 p-0.5 mr-1">
-              <Button
-                variant="ghost"
-                size="icon-xs"
-                onClick={onUndo}
-                disabled={!canUndo}
-                className="cursor-pointer text-muted-foreground hover:text-foreground disabled:opacity-30 h-7 w-7"
-                title={dict.builder.header.undoTooltip}
-              >
-                <Undo2 className="size-3.5" />
-              </Button>
-              <Button
-                variant="ghost"
-                size="icon-xs"
-                onClick={onRedo}
-                disabled={!canRedo}
-                className="cursor-pointer text-muted-foreground hover:text-foreground disabled:opacity-30 h-7 w-7"
-                title={dict.builder.header.redoTooltip}
-              >
-                <Redo2 className="size-3.5" />
-              </Button>
-            </div>
-
             {/* Published Toggle */}
             <div className="flex items-center gap-2 border-r pr-3 mr-1">
-              <span className="text-xs font-medium text-muted-foreground hidden sm:inline">
+              <Label
+                htmlFor="desktop-publish-toggle"
+                className="flex items-center text-xs font-medium text-foreground select-none"
+              >
+                <span
+                  className={cn(
+                    "size-2 rounded-full shrink-0",
+                    isPublished ? "bg-emerald-500" : "bg-muted-foreground/40",
+                  )}
+                />
                 {isPublished
                   ? dict.builder.header.live
                   : dict.builder.header.draft}
-              </span>
+              </Label>
               <Switch
                 checked={isPublished}
+                id="desktop-publish-toggle"
                 onCheckedChange={(checked) => {
                   setValue("isPublished", checked, { shouldDirty: true });
                   toast.info(

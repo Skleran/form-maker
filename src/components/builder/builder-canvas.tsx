@@ -78,7 +78,9 @@ const FormHeaderSection = React.memo(function FormHeaderSection() {
   });
 
   const headerImageInputRef = React.useRef<HTMLInputElement>(null);
-  const [selectedRawFile, setSelectedRawFile] = React.useState<File | null>(null);
+  const [selectedRawFile, setSelectedRawFile] = React.useState<File | null>(
+    null,
+  );
   const [rawImageForCrop, setRawImageForCrop] = React.useState<string | null>(
     null,
   );
@@ -181,7 +183,7 @@ const FormHeaderSection = React.memo(function FormHeaderSection() {
                 setRawImageForCrop(null);
                 setActiveCropForModal(null);
               }}
-              className="cursor-pointer shadow-sm bg-destructive/40 hover:bg-destructive/70"
+              className="cursor-pointer shadow-sm bg-destructive/20 hover:bg-destructive/30 dark:bg-destructive/30 dark:hover:bg-destructive/40"
               title={
                 language === 'tr'
                   ? 'Kapak Görselini Kaldır'
@@ -290,15 +292,23 @@ const FormHeaderSection = React.memo(function FormHeaderSection() {
 
             // Track uploaded files in builder session for atomic reconciliation
             if (result.headerImage) {
-              useBuilderStore.getState().addSessionUploadedFile(result.headerImage);
+              useBuilderStore
+                .getState()
+                .addSessionUploadedFile(result.headerImage);
             }
             if (result.headerImageRaw) {
-              useBuilderStore.getState().addSessionUploadedFile(result.headerImageRaw);
+              useBuilderStore
+                .getState()
+                .addSessionUploadedFile(result.headerImageRaw);
             }
 
             setValue('headerImage', result.headerImage, { shouldDirty: true });
-            setValue('headerImageRaw', result.headerImageRaw, { shouldDirty: true });
-            setValue('headerImageCrop', result.headerImageCrop, { shouldDirty: true });
+            setValue('headerImageRaw', result.headerImageRaw, {
+              shouldDirty: true,
+            });
+            setValue('headerImageCrop', result.headerImageCrop, {
+              shouldDirty: true,
+            });
             setActiveCropForModal(result.headerImageCrop);
             setSelectedRawFile(null);
 
