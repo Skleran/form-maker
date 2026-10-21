@@ -1,9 +1,9 @@
-"use client"
+"use client";
 
-import * as React from "react"
-import { useForm, Controller } from "react-hook-form"
-import { zodResolver } from "@hookform/resolvers/zod"
-import { toast } from "sonner"
+import * as React from "react";
+import { useForm, Controller } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { toast } from "sonner";
 import {
   CheckCircle2,
   FileText,
@@ -12,40 +12,40 @@ import {
   Send,
   Upload,
   X,
-} from "lucide-react"
+} from "lucide-react";
 
-import { Button } from "@/components/ui/button"
-import { Card } from "@/components/ui/card"
-import { Input } from "@/components/ui/input"
-import { Textarea } from "@/components/ui/textarea"
+import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/ui/select"
-import { ThemeToggle } from "@/components/theme-toggle"
-import { buildDynamicFormSchema } from "@/lib/validations/dynamic-schema"
-import { submitFormResponse } from "@/actions/submission-actions"
-import type { QuestionFormItem, QuestionConfig } from "@/types/form"
-import { useLanguage } from "@/lib/i18n/language-context"
-import { cn } from "@/lib/utils"
-import { QuestionIcon } from "@/components/form/question-icon"
+} from "@/components/ui/select";
+import { ThemeToggle } from "@/components/theme-toggle";
+import { buildDynamicFormSchema } from "@/lib/validations/dynamic-schema";
+import { submitFormResponse } from "@/actions/submission-actions";
+import type { QuestionFormItem, QuestionConfig } from "@/types/form";
+import { useLanguage } from "@/lib/i18n/language-context";
+import { cn } from "@/lib/utils";
+import { QuestionIcon } from "@/components/form/question-icon";
 import {
   formatAllowedFileTypes,
   formatFileLimitsDescription,
   getAcceptAttribute,
   isFileTypeAllowed,
-} from "@/lib/file-types"
+} from "@/lib/file-types";
 
 interface FileUploadValue {
-  name: string
-  size: number
-  type: string
-  url?: string
-  dataUrl?: string
-  path?: string
+  name: string;
+  size: number;
+  type: string;
+  url?: string;
+  dataUrl?: string;
+  path?: string;
 }
 
 function PublicFileInput({
@@ -54,26 +54,28 @@ function PublicFileInput({
   onChange,
   onUploadStateChange,
 }: {
-  config?: QuestionConfig
-  value: FileUploadValue | null
-  onChange: (val: FileUploadValue | null) => void
-  onUploadStateChange?: (isUploading: boolean) => void
+  config?: QuestionConfig;
+  value: FileUploadValue | null;
+  onChange: (val: FileUploadValue | null) => void;
+  onUploadStateChange?: (isUploading: boolean) => void;
 }) {
-  const { dict, language } = useLanguage()
-  const [isDragging, setIsDragging] = React.useState(false)
-  const [isUploading, setIsUploading] = React.useState(false)
-  const [uploadProgress, setUploadProgress] = React.useState<number | null>(null)
-  const inputRef = React.useRef<HTMLInputElement>(null)
+  const { dict, language } = useLanguage();
+  const [isDragging, setIsDragging] = React.useState(false);
+  const [isUploading, setIsUploading] = React.useState(false);
+  const [uploadProgress, setUploadProgress] = React.useState<number | null>(
+    null,
+  );
+  const inputRef = React.useRef<HTMLInputElement>(null);
 
   const processFile = (file: File) => {
-    const maxMb = config?.maxFileSizeMb || 10
+    const maxMb = config?.maxFileSizeMb || 10;
     if (file.size > maxMb * 1024 * 1024) {
       toast.error(
         dict.publicForm.fileSizeExceeded
           .replace("{size}", (file.size / (1024 * 1024)).toFixed(2))
-          .replace("{max}", String(maxMb))
-      )
-      return
+          .replace("{max}", String(maxMb)),
+      );
+      return;
     }
 
     if (config?.allowedMimeTypes && config.allowedMimeTypes.length > 0) {
@@ -81,49 +83,51 @@ function PublicFileInput({
         toast.error(
           dict.publicForm.fileTypeNotAllowed.replace(
             "{types}",
-            formatAllowedFileTypes(config.allowedMimeTypes, language)
-          )
-        )
-        return
+            formatAllowedFileTypes(config.allowedMimeTypes, language),
+          ),
+        );
+        return;
       }
     }
 
     // If user replaces an already uploaded file, delete the old one from storage
     if (value) {
-      const oldTarget = value.path || value.url
+      const oldTarget = value.path || value.url;
       if (oldTarget && !oldTarget.startsWith("data:")) {
         fetch(`/api/upload?path=${encodeURIComponent(oldTarget)}`, {
           method: "DELETE",
-        }).catch((err) => console.warn("Failed to delete replaced attachment:", err))
+        }).catch((err) =>
+          console.warn("Failed to delete replaced attachment:", err),
+        );
       }
     }
 
-    setIsUploading(true)
-    setUploadProgress(0)
-    onUploadStateChange?.(true)
+    setIsUploading(true);
+    setUploadProgress(0);
+    onUploadStateChange?.(true);
 
-    const formData = new FormData()
-    formData.append("file", file)
-    formData.append("folder", "submissions")
+    const formData = new FormData();
+    formData.append("file", file);
+    formData.append("folder", "submissions");
 
-    const xhr = new XMLHttpRequest()
-    xhr.open("POST", "/api/upload")
+    const xhr = new XMLHttpRequest();
+    xhr.open("POST", "/api/upload");
 
     xhr.upload.onprogress = (event) => {
       if (event.lengthComputable) {
-        const percent = Math.round((event.loaded / event.total) * 100)
-        setUploadProgress(percent)
+        const percent = Math.round((event.loaded / event.total) * 100);
+        setUploadProgress(percent);
       }
-    }
+    };
 
     xhr.onload = () => {
-      setIsUploading(false)
-      setUploadProgress(null)
-      onUploadStateChange?.(false)
+      setIsUploading(false);
+      setUploadProgress(null);
+      onUploadStateChange?.(false);
 
       if (xhr.status >= 200 && xhr.status < 300) {
         try {
-          const res = JSON.parse(xhr.responseText)
+          const res = JSON.parse(xhr.responseText);
           if (res.success && res.data) {
             onChange({
               name: res.data.name,
@@ -131,62 +135,64 @@ function PublicFileInput({
               type: res.data.type || file.type,
               url: res.data.url,
               path: res.data.path,
-            })
-            toast.success(dict.publicForm.attachedSuccess.replace("{name}", file.name))
+            });
+            toast.success(
+              dict.publicForm.attachedSuccess.replace("{name}", file.name),
+            );
           } else {
-            toast.error(res.error || dict.publicForm.uploadFailed)
+            toast.error(res.error || dict.publicForm.uploadFailed);
           }
         } catch {
-          toast.error(dict.publicForm.uploadFailed)
+          toast.error(dict.publicForm.uploadFailed);
         }
       } else {
-        let errMsg = dict.publicForm.uploadFailed
+        let errMsg = dict.publicForm.uploadFailed;
         try {
-          const res = JSON.parse(xhr.responseText)
-          if (res.error) errMsg = res.error
+          const res = JSON.parse(xhr.responseText);
+          if (res.error) errMsg = res.error;
         } catch {}
-        toast.error(errMsg)
+        toast.error(errMsg);
       }
-    }
+    };
 
     xhr.onerror = () => {
-      setIsUploading(false)
-      setUploadProgress(null)
-      onUploadStateChange?.(false)
-      toast.error(dict.publicForm.uploadFailed)
-    }
+      setIsUploading(false);
+      setUploadProgress(null);
+      onUploadStateChange?.(false);
+      toast.error(dict.publicForm.uploadFailed);
+    };
 
-    xhr.send(formData)
-  }
+    xhr.send(formData);
+  };
 
   const handleDragOver = (e: React.DragEvent) => {
-    e.preventDefault()
-    e.stopPropagation()
-    if (!isUploading) setIsDragging(true)
-  }
+    e.preventDefault();
+    e.stopPropagation();
+    if (!isUploading) setIsDragging(true);
+  };
 
   const handleDragEnter = (e: React.DragEvent) => {
-    e.preventDefault()
-    e.stopPropagation()
-    if (!isUploading) setIsDragging(true)
-  }
+    e.preventDefault();
+    e.stopPropagation();
+    if (!isUploading) setIsDragging(true);
+  };
 
   const handleDragLeave = (e: React.DragEvent) => {
-    e.preventDefault()
-    e.stopPropagation()
-    setIsDragging(false)
-  }
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(false);
+  };
 
   const handleDrop = (e: React.DragEvent) => {
-    e.preventDefault()
-    e.stopPropagation()
-    setIsDragging(false)
-    if (isUploading) return
-    const file = e.dataTransfer.files?.[0]
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(false);
+    if (isUploading) return;
+    const file = e.dataTransfer.files?.[0];
     if (file) {
-      processFile(file)
+      processFile(file);
     }
-  }
+  };
 
   if (isUploading) {
     return (
@@ -196,7 +202,7 @@ function PublicFileInput({
           <span className="text-xs font-semibold text-foreground">
             {dict.publicForm.uploadProgress.replace(
               "{percent}",
-              String(uploadProgress ?? 0)
+              String(uploadProgress ?? 0),
             )}
           </span>
           <div className="w-full bg-muted rounded-full h-1.5 overflow-hidden">
@@ -207,16 +213,16 @@ function PublicFileInput({
           </div>
         </div>
       </div>
-    )
+    );
   }
 
   if (value) {
     const isImage =
       value.type.startsWith("image/") ||
       Boolean(value.url?.match(/\.(png|jpe?g|webp|gif|svg)(\?.*)?$/i)) ||
-      Boolean(value.dataUrl?.startsWith("data:image/"))
+      Boolean(value.dataUrl?.startsWith("data:image/"));
 
-    const previewSrc = value.url || value.dataUrl
+    const previewSrc = value.url || value.dataUrl;
 
     return (
       <div className="space-y-3">
@@ -236,13 +242,15 @@ function PublicFileInput({
             size="icon-xs"
             onClick={() => {
               if (value) {
-                const target = value.path || value.url
+                const target = value.path || value.url;
                 if (target && !target.startsWith("data:")) {
                   fetch(`/api/upload?path=${encodeURIComponent(target)}`, {
                     method: "DELETE",
-                  }).catch((err) => console.warn("Failed to delete removed attachment:", err))
+                  }).catch((err) =>
+                    console.warn("Failed to delete removed attachment:", err),
+                  );
                 }
-                onChange(null)
+                onChange(null);
               }
             }}
             className="cursor-pointer text-muted-foreground hover:text-destructive"
@@ -263,7 +271,7 @@ function PublicFileInput({
           </div>
         )}
       </div>
-    )
+    );
   }
 
   return (
@@ -295,51 +303,54 @@ function PublicFileInput({
         {formatFileLimitsDescription(
           config?.maxFileSizeMb,
           config?.allowedMimeTypes,
-          language
+          language,
         )}
       </span>
       <input
         ref={inputRef}
         type="file"
         onChange={(e) => {
-          const file = e.target.files?.[0]
-          if (file) processFile(file)
-          e.target.value = ""
+          const file = e.target.files?.[0];
+          if (file) processFile(file);
+          e.target.value = "";
         }}
         accept={getAcceptAttribute(config?.allowedMimeTypes)}
         className="hidden"
       />
     </div>
-  )
+  );
 }
 
 interface PublicFormRendererProps {
   form: {
-    id: string
-    title: string
-    description: string | null
-    headerImage?: string | null
-    slug: string
-    isPublished: boolean
-    questions: QuestionFormItem[]
-  }
-  isPreview?: boolean
+    id: string;
+    title: string;
+    description: string | null;
+    headerImage?: string | null;
+    slug: string;
+    isPublished: boolean;
+    questions: QuestionFormItem[];
+  };
+  isPreview?: boolean;
 }
 
-export function PublicFormRenderer({ form, isPreview = false }: PublicFormRendererProps) {
-  const { dict, language } = useLanguage()
-  const [isSubmitted, setIsSubmitted] = React.useState(false)
-  const [isSubmitting, setIsSubmitting] = React.useState(false)
-  const [uploadingCount, setUploadingCount] = React.useState(0)
+export function PublicFormRenderer({
+  form,
+  isPreview = false,
+}: PublicFormRendererProps) {
+  const { dict, language } = useLanguage();
+  const [isSubmitted, setIsSubmitted] = React.useState(false);
+  const [isSubmitting, setIsSubmitting] = React.useState(false);
+  const [uploadingCount, setUploadingCount] = React.useState(0);
 
   const handleUploadStateChange = React.useCallback((isUploading: boolean) => {
-    setUploadingCount((prev) => Math.max(0, prev + (isUploading ? 1 : -1)))
-  }, [])
+    setUploadingCount((prev) => Math.max(0, prev + (isUploading ? 1 : -1)));
+  }, []);
 
   // Build the dynamic Zod schema for this form's specific questions
   const dynamicSchema = React.useMemo(() => {
-    return buildDynamicFormSchema(form.questions)
-  }, [form.questions])
+    return buildDynamicFormSchema(form.questions);
+  }, [form.questions]);
 
   // Initialize React Hook Form with dynamic resolver
   const {
@@ -350,58 +361,62 @@ export function PublicFormRenderer({ form, isPreview = false }: PublicFormRender
     formState: { errors },
   } = useForm<Record<string, unknown>>({
     resolver: zodResolver(dynamicSchema),
-    defaultValues: form.questions.reduce((acc, q) => {
-      if (q.type === "MULTIPLE_CHOICE") {
-        acc[q.id] = []
-      } else if (q.type === "FILE_UPLOAD") {
-        acc[q.id] = null
-      } else {
-        acc[q.id] = ""
-      }
-      return acc
-    }, {} as Record<string, unknown>),
-  })
+    defaultValues: form.questions.reduce(
+      (acc, q) => {
+        if (q.type === "MULTIPLE_CHOICE") {
+          acc[q.id] = [];
+        } else if (q.type === "FILE_UPLOAD") {
+          acc[q.id] = null;
+        } else {
+          acc[q.id] = "";
+        }
+        return acc;
+      },
+      {} as Record<string, unknown>,
+    ),
+  });
 
   const onSubmit = async (values: Record<string, unknown>) => {
     if (uploadingCount > 0) {
       toast.warning(
         language === "tr"
           ? "Lütfen dosya yüklemesinin tamamlanmasını bekleyin."
-          : "Please wait for file upload to complete."
-      )
-      return
+          : "Please wait for file upload to complete.",
+      );
+      return;
     }
 
-    setIsSubmitting(true)
+    setIsSubmitting(true);
     try {
       if (isPreview) {
-        await new Promise((r) => setTimeout(r, 600))
-        setIsSubmitted(true)
-        toast.info(dict.publicForm.simulationToast)
-        window.scrollTo({ top: 0, behavior: "smooth" })
-        return
+        await new Promise((r) => setTimeout(r, 600));
+        setIsSubmitted(true);
+        toast.info(dict.publicForm.simulationToast);
+        window.scrollTo({ top: 0, behavior: "smooth" });
+        return;
       }
 
-      const userAgent = typeof navigator !== "undefined" ? navigator.userAgent : undefined
-      const res = await submitFormResponse(form.id, values, { userAgent })
+      const userAgent =
+        typeof navigator !== "undefined" ? navigator.userAgent : undefined;
+      const res = await submitFormResponse(form.id, values, { userAgent });
 
       if (res.success) {
-        setIsSubmitted(true)
-        window.scrollTo({ top: 0, behavior: "smooth" })
+        setIsSubmitted(true);
+        window.scrollTo({ top: 0, behavior: "smooth" });
       } else {
-        toast.error(res.error || dict.publicForm.submissionFailed)
+        toast.error(res.error || dict.publicForm.submissionFailed);
       }
     } catch {
-      toast.error(dict.publicForm.networkError)
+      toast.error(dict.publicForm.networkError);
     } finally {
-      setIsSubmitting(false)
+      setIsSubmitting(false);
     }
-  }
+  };
 
   const handleReset = () => {
-    reset()
-    setIsSubmitted(false)
-  }
+    reset();
+    setIsSubmitted(false);
+  };
 
   if (isSubmitted) {
     return (
@@ -456,7 +471,7 @@ export function PublicFormRenderer({ form, isPreview = false }: PublicFormRender
           </div>
         </div>
       </div>
-    )
+    );
   }
 
   return (
@@ -479,7 +494,9 @@ export function PublicFormRenderer({ form, isPreview = false }: PublicFormRender
           </div>
           <div className="flex items-center gap-2">
             <span className="rounded-full bg-background/60 border px-2 py-0.5 text-[10px] text-muted-foreground font-mono">
-              {form.isPublished ? dict.publicForm.statusLive : dict.publicForm.statusDraft}
+              {form.isPublished
+                ? dict.publicForm.statusLive
+                : dict.publicForm.statusDraft}
             </span>
             <button
               type="button"
@@ -504,11 +521,14 @@ export function PublicFormRenderer({ form, isPreview = false }: PublicFormRender
           </div>
         </div>
 
-        <form onSubmit={handleSubmit(onSubmit)} className="mx-auto max-w-2xl space-y-4">
+        <form
+          onSubmit={handleSubmit(onSubmit)}
+          className="mx-auto max-w-2xl space-y-4"
+        >
           {/* Form Header Banner & Title Card */}
-          <div className="space-y-0">
+          <div className="space-y-4">
             {form.headerImage && (
-              <div className="overflow-hidden rounded-t-xl border border-b-0 shadow-sm bg-muted/20">
+              <div className="overflow-hidden rounded-xl border shadow-sm bg-card">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
                   src={form.headerImage}
@@ -517,35 +537,34 @@ export function PublicFormRenderer({ form, isPreview = false }: PublicFormRender
                 />
               </div>
             )}
-            <Card
-              className={cn(
-                "p-6 sm:p-8 bg-card shadow-sm transition-all",
-                form.headerImage ? "rounded-t-none border-t-0" : "border-t-4 border-t-primary"
-              )}
-            >
-              <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-foreground">
-                {form.title}
-              </h1>
-              {form.description && (
-                <p className="mt-2 text-sm text-muted-foreground whitespace-pre-wrap leading-relaxed">
-                  {form.description}
-                </p>
-              )}
-              <div className="mt-6 pt-3 border-t text-xs text-destructive font-medium">
-                {dict.publicForm.requiredIndicator}
+            <Card className="relative overflow-hidden rounded-xl border bg-card shadow-sm transition-all py-0">
+              <div className="p-6 sm:p-8">
+                <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-foreground">
+                  {form.title}
+                </h1>
+                {form.description && (
+                  <p className="mt-2 text-sm text-muted-foreground whitespace-pre-wrap leading-relaxed">
+                    {form.description}
+                  </p>
+                )}
+                <div className="mt-6 pt-3 border-t text-xs text-destructive font-medium">
+                  {dict.publicForm.requiredIndicator}
+                </div>
               </div>
             </Card>
           </div>
 
           {/* Dynamic Question Cards */}
           {form.questions.map((q) => {
-            const fieldError = errors[q.id]?.message as string | undefined
+            const fieldError = errors[q.id]?.message as string | undefined;
 
             return (
               <Card
                 key={q.id}
                 className={`p-6 bg-card shadow-sm border transition-all ${
-                  fieldError ? "border-destructive ring-1 ring-destructive/40" : ""
+                  fieldError
+                    ? "border-destructive ring-1 ring-destructive/40"
+                    : ""
                 }`}
               >
                 {/* Question Label & Description */}
@@ -558,10 +577,14 @@ export function PublicFormRenderer({ form, isPreview = false }: PublicFormRender
                   <div className="space-y-1 flex-1 min-w-0">
                     <label className="text-base font-semibold text-foreground flex items-baseline gap-1">
                       <span>{q.label}</span>
-                      {q.required && <span className="text-destructive font-bold">*</span>}
+                      {q.required && (
+                        <span className="text-destructive font-bold">*</span>
+                      )}
                     </label>
                     {q.config?.description && (
-                      <p className="text-xs text-muted-foreground">{q.config.description}</p>
+                      <p className="text-xs text-muted-foreground">
+                        {q.config.description}
+                      </p>
                     )}
                   </div>
                 </div>
@@ -621,19 +644,23 @@ export function PublicFormRenderer({ form, isPreview = false }: PublicFormRender
                       control={control}
                       name={q.id}
                       render={({ field }) => {
-                        const currentValues: string[] = Array.isArray(field.value) ? field.value : []
+                        const currentValues: string[] = Array.isArray(
+                          field.value,
+                        )
+                          ? field.value
+                          : [];
 
                         const toggleOption = (optId: string) => {
                           const updated = currentValues.includes(optId)
                             ? currentValues.filter((v) => v !== optId)
-                            : [...currentValues, optId]
-                          field.onChange(updated)
-                        }
+                            : [...currentValues, optId];
+                          field.onChange(updated);
+                        };
 
                         return (
                           <div className="space-y-2.5">
                             {q.options.map((opt) => {
-                              const isChecked = currentValues.includes(opt.id)
+                              const isChecked = currentValues.includes(opt.id);
                               return (
                                 <label
                                   key={opt.id}
@@ -649,10 +676,10 @@ export function PublicFormRenderer({ form, isPreview = false }: PublicFormRender
                                     {opt.label}
                                   </span>
                                 </label>
-                              )
+                              );
                             })}
                           </div>
-                        )
+                        );
                       }}
                     />
                   )}
@@ -664,15 +691,18 @@ export function PublicFormRenderer({ form, isPreview = false }: PublicFormRender
                       name={q.id}
                       render={({ field }) => (
                         <Select
-                          value={typeof field.value === "string" ? field.value : ""}
+                          value={
+                            typeof field.value === "string" ? field.value : ""
+                          }
                           onValueChange={(val) => {
-                            if (val) field.onChange(val)
+                            if (val) field.onChange(val);
                           }}
                         >
                           <SelectTrigger className="w-full text-sm">
                             <SelectValue
                               placeholder={
-                                q.config?.placeholder || dict.publicForm.selectOptionPlaceholder
+                                q.config?.placeholder ||
+                                dict.publicForm.selectOptionPlaceholder
                               }
                             >
                               {(val: string | null) => {
@@ -680,12 +710,12 @@ export function PublicFormRenderer({ form, isPreview = false }: PublicFormRender
                                   return (
                                     q.config?.placeholder ||
                                     dict.publicForm.selectOptionPlaceholder
-                                  )
+                                  );
                                 }
                                 const matched = q.options.find(
-                                  (o) => o.id === val || o.label === val
-                                )
-                                return matched ? matched.label : val
+                                  (o) => o.id === val || o.label === val,
+                                );
+                                return matched ? matched.label : val;
                               }}
                             </SelectValue>
                           </SelectTrigger>
@@ -720,10 +750,12 @@ export function PublicFormRenderer({ form, isPreview = false }: PublicFormRender
 
                 {/* Validation error display */}
                 {fieldError && (
-                  <p className="mt-2 text-xs text-destructive font-medium">{fieldError}</p>
+                  <p className="mt-2 text-xs text-destructive font-medium">
+                    {fieldError}
+                  </p>
                 )}
               </Card>
-            )
+            );
           })}
 
           {/* Form Actions */}
@@ -742,8 +774,8 @@ export function PublicFormRenderer({ form, isPreview = false }: PublicFormRender
                 {uploadingCount > 0
                   ? dict.publicForm.uploading
                   : isSubmitting
-                  ? dict.publicForm.submitting
-                  : dict.publicForm.submit}
+                    ? dict.publicForm.submitting
+                    : dict.publicForm.submit}
               </span>
             </Button>
 
@@ -755,9 +787,9 @@ export function PublicFormRenderer({ form, isPreview = false }: PublicFormRender
                 const confirmMsg =
                   language === "tr"
                     ? "Tüm yanıtlar temizlensin mi? Bu işlem geri alınamaz."
-                    : "Clear all responses? This cannot be undone."
+                    : "Clear all responses? This cannot be undone.";
                 if (confirm(confirmMsg)) {
-                  reset()
+                  reset();
                 }
               }}
               className="cursor-pointer text-muted-foreground hover:text-foreground text-xs"
@@ -776,5 +808,5 @@ export function PublicFormRenderer({ form, isPreview = false }: PublicFormRender
         </form>
       </div>
     </div>
-  )
+  );
 }

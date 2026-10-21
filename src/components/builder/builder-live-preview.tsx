@@ -1,41 +1,43 @@
-"use client"
+"use client";
 
-import * as React from "react"
-import { useFormContext } from "react-hook-form"
-import { Eye, Smartphone, Laptop, Upload, CheckCircle2 } from "lucide-react"
+import * as React from "react";
+import { useFormContext } from "react-hook-form";
+import { Eye, Smartphone, Laptop, Upload, CheckCircle2 } from "lucide-react";
 
 import {
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
-} from "@/components/ui/dialog"
-import { Button } from "@/components/ui/button"
-import { Card } from "@/components/ui/card"
-import { Input } from "@/components/ui/input"
-import { Textarea } from "@/components/ui/textarea"
+} from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/ui/select"
-import { useBuilderStore } from "@/stores/use-builder-store"
-import type { FormBuilderValues } from "@/lib/validations/form"
-import { cn } from "@/lib/utils"
+} from "@/components/ui/select";
+import { useBuilderStore } from "@/stores/use-builder-store";
+import type { FormBuilderValues } from "@/lib/validations/form";
+import { cn } from "@/lib/utils";
 
 export function BuilderLivePreview() {
-  const { isLivePreview, setIsLivePreview } = useBuilderStore()
-  const { watch } = useFormContext<FormBuilderValues>()
-  const formValues = watch()
+  const { isLivePreview, setIsLivePreview } = useBuilderStore();
+  const { watch } = useFormContext<FormBuilderValues>();
+  const formValues = watch();
 
-  const [previewDevice, setPreviewDevice] = React.useState<"desktop" | "mobile">("desktop")
-  const [submitted, setSubmitted] = React.useState(false)
+  const [previewDevice, setPreviewDevice] = React.useState<
+    "desktop" | "mobile"
+  >("desktop");
+  const [submitted, setSubmitted] = React.useState(false);
 
   const handleReset = () => {
-    setSubmitted(false)
-  }
+    setSubmitted(false);
+  };
 
   return (
     <Dialog open={isLivePreview} onOpenChange={setIsLivePreview}>
@@ -44,7 +46,9 @@ export function BuilderLivePreview() {
         <DialogHeader className="p-4 border-b flex flex-row items-center justify-between sticky top-0 bg-background z-10">
           <div className="flex items-center gap-2">
             <Eye className="size-4 text-primary" />
-            <DialogTitle className="text-sm font-semibold">Respondent Live Preview</DialogTitle>
+            <DialogTitle className="text-sm font-semibold">
+              Respondent Live Preview
+            </DialogTitle>
             <span className="rounded-full bg-muted px-2 py-0.5 text-[11px] font-medium text-muted-foreground border">
               Simulation Mode
             </span>
@@ -70,7 +74,12 @@ export function BuilderLivePreview() {
               </Button>
             </div>
             {submitted && (
-              <Button variant="outline" size="xs" onClick={handleReset} className="cursor-pointer">
+              <Button
+                variant="outline"
+                size="xs"
+                onClick={handleReset}
+                className="cursor-pointer"
+              >
                 Reset Preview
               </Button>
             )}
@@ -82,32 +91,39 @@ export function BuilderLivePreview() {
           <div
             className={cn(
               "mx-auto space-y-4 transition-all duration-300",
-              previewDevice === "mobile" ? "max-w-sm" : "max-w-2xl"
+              previewDevice === "mobile" ? "max-w-sm" : "max-w-2xl",
             )}
           >
             {submitted ? (
               <Card className="p-8 text-center bg-card shadow-sm border space-y-3">
                 <CheckCircle2 className="size-12 text-emerald-500 mx-auto" />
-                <h3 className="text-xl font-bold text-foreground">Response Submitted</h3>
+                <h3 className="text-xl font-bold text-foreground">
+                  Response Submitted
+                </h3>
                 <p className="text-sm text-muted-foreground">
-                  Your response has been recorded. This was a live simulation preview.
+                  Your response has been recorded. This was a live simulation
+                  preview.
                 </p>
-                <Button size="sm" onClick={handleReset} className="mt-4 cursor-pointer">
+                <Button
+                  size="sm"
+                  onClick={handleReset}
+                  className="mt-4 cursor-pointer"
+                >
                   Submit another response
                 </Button>
               </Card>
             ) : (
               <form
                 onSubmit={(e) => {
-                  e.preventDefault()
-                  setSubmitted(true)
+                  e.preventDefault();
+                  setSubmitted(true);
                 }}
                 className="space-y-4"
               >
                 {/* Form Title & Description Card */}
-                <div className="space-y-0">
+                <div className="space-y-4">
                   {formValues.headerImage && (
-                    <div className="overflow-hidden rounded-t-xl border border-b-0 shadow-sm bg-muted/20">
+                    <div className="overflow-hidden rounded-xl border shadow-sm bg-card">
                       {/* eslint-disable-next-line @next/next/no-img-element */}
                       <img
                         src={formValues.headerImage}
@@ -116,36 +132,40 @@ export function BuilderLivePreview() {
                       />
                     </div>
                   )}
-                  <Card
-                    className={cn(
-                      "p-6 shadow-sm bg-card",
-                      formValues.headerImage ? "rounded-t-none border-t-0" : "border-t-4 border-t-primary"
-                    )}
-                  >
-                    <h1 className="text-2xl font-bold tracking-tight text-foreground">
-                      {formValues.title || "Başlıksız Form"}
-                    </h1>
-                    {formValues.description && (
-                      <p className="mt-2 text-sm text-muted-foreground whitespace-pre-wrap">
-                        {formValues.description}
-                      </p>
-                    )}
-                    <div className="mt-4 pt-3 border-t text-xs text-destructive font-medium">
-                      * Zorunlu soruyu belirtir
+                  <Card className="relative overflow-hidden rounded-xl border shadow-sm bg-card py-0">
+                    <div className="p-6">
+                      <h1 className="text-2xl font-bold tracking-tight text-foreground">
+                        {formValues.title || "Başlıksız Form"}
+                      </h1>
+                      {formValues.description && (
+                        <p className="mt-2 text-sm text-muted-foreground whitespace-pre-wrap">
+                          {formValues.description}
+                        </p>
+                      )}
+                      <div className="mt-4 pt-3 border-t text-xs text-destructive font-medium">
+                        * Zorunlu soruyu belirtir
+                      </div>
                     </div>
                   </Card>
                 </div>
 
                 {/* Question Cards */}
                 {(formValues.questions || []).map((q, idx) => (
-                  <Card key={q.id || idx} className="p-6 shadow-sm bg-card border">
+                  <Card
+                    key={q.id || idx}
+                    className="p-6 shadow-sm bg-card border"
+                  >
                     <div className="space-y-1.5 mb-4">
                       <label className="text-sm font-semibold text-foreground flex items-baseline gap-1">
                         <span>{q.label || `Soru ${idx + 1}`}</span>
-                        {q.required && <span className="text-destructive">*</span>}
+                        {q.required && (
+                          <span className="text-destructive">*</span>
+                        )}
                       </label>
                       {q.config?.description && (
-                        <p className="text-xs text-muted-foreground">{q.config.description}</p>
+                        <p className="text-xs text-muted-foreground">
+                          {q.config.description}
+                        </p>
                       )}
                     </div>
 
@@ -193,7 +213,10 @@ export function BuilderLivePreview() {
                             key={opt.id}
                             className="flex items-center gap-2.5 text-sm text-foreground cursor-pointer"
                           >
-                            <input type="checkbox" className="size-4 accent-primary rounded" />
+                            <input
+                              type="checkbox"
+                              className="size-4 accent-primary rounded"
+                            />
                             <span>{opt.label}</span>
                           </label>
                         ))}
@@ -207,7 +230,10 @@ export function BuilderLivePreview() {
                         </SelectTrigger>
                         <SelectContent>
                           {(q.options || []).map((opt) => (
-                            <SelectItem key={opt.id} value={opt.label || opt.id}>
+                            <SelectItem
+                              key={opt.id}
+                              value={opt.label || opt.id}
+                            >
                               {opt.label}
                             </SelectItem>
                           ))}
@@ -219,7 +245,8 @@ export function BuilderLivePreview() {
                       <div className="rounded-lg border-2 border-dashed border-muted-foreground/30 p-6 text-center bg-muted/10">
                         <Upload className="size-8 text-muted-foreground mx-auto mb-2" />
                         <p className="text-xs font-medium text-foreground">
-                          Yüklemeyi simüle etmek için tıklayın veya dosyayı sürükleyin
+                          Yüklemeyi simüle etmek için tıklayın veya dosyayı
+                          sürükleyin
                         </p>
                         <p className="text-[11px] text-muted-foreground mt-0.5">
                           Maksimum boyut: {q.config?.maxFileSizeMb || 10} MB
@@ -249,5 +276,5 @@ export function BuilderLivePreview() {
         </div>
       </DialogContent>
     </Dialog>
-  )
+  );
 }

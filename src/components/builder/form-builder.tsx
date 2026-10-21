@@ -191,7 +191,7 @@ function BuilderMainContainer({ children }: { children: React.ReactNode }) {
     <main
       className={`flex flex-1 overflow-hidden relative transition-[--inspector-width] duration-225 ease-in-out ${
         isInspectorOpen
-          ? "[--inspector-width:18rem] xl:[--inspector-width:20rem]"
+          ? "md:[--inspector-width:18rem] xl:[--inspector-width:20rem] [--inspector-width:0px]"
           : "[--inspector-width:0px]"
       }`}
     >

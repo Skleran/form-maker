@@ -28,6 +28,14 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
+import {
+  Drawer,
+  DrawerClose,
+  DrawerContent,
+  DrawerHeader,
+  DrawerTitle,
+} from "@/components/ui/drawer";
+import { useIsMobile } from "@/hooks/use-mobile";
 import { useBuilderStore } from "@/stores/use-builder-store";
 import type {
   FormBuilderValues,
@@ -37,6 +45,7 @@ import type { QuestionType } from "@/types/form";
 import { useLanguage } from "@/lib/i18n/language-context";
 import { cn } from "@/lib/utils";
 import { QUESTION_ICON_OPTIONS } from "@/components/form/question-icon";
+import { Label } from "../ui/label";
 
 interface BuilderInspectorProps {
   onDuplicateQuestion: (index: number) => void;
@@ -48,6 +57,7 @@ export const BuilderInspector = React.memo(function BuilderInspector({
   onDeleteQuestion,
 }: BuilderInspectorProps) {
   const { dict, language } = useLanguage();
+  const isMobile = useIsMobile();
   const activeQuestionId = useBuilderStore((s) => s.activeQuestionId);
   const isInspectorOpen = useBuilderStore((s) => s.isInspectorOpen);
   const setActiveQuestionId = useBuilderStore((s) => s.setActiveQuestionId);
@@ -129,7 +139,9 @@ export const BuilderInspector = React.memo(function BuilderInspector({
 
     const currentQuestions = getValues("questions") || [];
     // 1. Check matching persistent question.id
-    const qIndex = currentQuestions.findIndex((q) => q?.id === activeQuestionId);
+    const qIndex = currentQuestions.findIndex(
+      (q) => q?.id === activeQuestionId,
+    );
     if (qIndex !== -1) return qIndex;
 
     // 2. Check matching RHF field key in case activeQuestionId was set to field.id
@@ -148,7 +160,10 @@ export const BuilderInspector = React.memo(function BuilderInspector({
 
   const resolvedQuestion: QuestionItemValues | undefined =
     resolvedIndex !== -1
-      ? watchedQuestion || (getValues(`questions.${resolvedIndex}`) as QuestionItemValues | undefined)
+      ? watchedQuestion ||
+        (getValues(`questions.${resolvedIndex}`) as
+          | QuestionItemValues
+          | undefined)
       : undefined;
 
   // Cache last active question & index to prevent flickering during exit slide animation
@@ -209,486 +224,558 @@ export const BuilderInspector = React.memo(function BuilderInspector({
     }
   };
 
-  return (
-    <aside
-      style={{ width: "var(--inspector-width, 0px)" }}
-      className={cn(
-        "bg-card flex flex-col shrink-0 h-full overflow-hidden shadow-sm border-l z-20 transition-[opacity,transform,border-color] duration-225 ease-in-out",
-        isInspectorOpen
-          ? "opacity-100 translate-x-0"
-          : "border-l-0 opacity-0 translate-x-6 pointer-events-none",
-      )}
-      aria-hidden={!isInspectorOpen}
-    >
-      <div className="w-72 xl:w-80 flex flex-col h-full shrink-0 overflow-hidden">
-        {/* Inspector Header */}
-        <div className="flex h-11 items-center justify-between border-b px-3.5 bg-muted/20 shrink-0">
-          <div className="flex items-center gap-2 min-w-0">
-            <SlidersHorizontal className="size-3.5 text-primary shrink-0" />
-            <span className="text-xs font-semibold tracking-tight text-foreground truncate">
-              {dict.builder.inspector.title}
-            </span>
-            {activeQuestion && totalQuestions > 0 && (
-              <span className="text-[10px] font-mono bg-muted text-muted-foreground px-1.5 py-0.5 rounded shrink-0">
-                {activeIndex + 1}/{totalQuestions}
-              </span>
+  const renderInspectorContent = () => {
+    if (!activeQuestion) {
+      return (
+        <div className="flex flex-col items-center justify-center h-48 text-center text-muted-foreground p-4">
+          <div className="size-9 rounded-full bg-muted flex items-center justify-center mb-2.5">
+            <SlidersHorizontal className="size-4 text-muted-foreground/70" />
+          </div>
+          <p className="text-xs font-semibold text-foreground">
+            {dict.builder.inspector.emptyTitle}
+          </p>
+          <p className="text-[11px] text-muted-foreground mt-1 max-w-[200px]">
+            {dict.builder.inspector.emptyDesc}
+          </p>
+        </div>
+      );
+    }
+
+    return (
+      <div key={activeQuestion.id || activeIndex} className="space-y-3.5">
+        {/* Field Type Selector */}
+        <div className="space-y-1">
+          <label className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+            {dict.builder.inspector.fieldType}
+          </label>
+          <Select
+            value={activeQuestion.type}
+            onValueChange={(val) => {
+              if (!val) return;
+              const typedVal = val as QuestionType;
+              setValue(`questions.${activeIndex}.type`, typedVal, {
+                shouldDirty: true,
+              });
+              if (
+                ["SINGLE_CHOICE", "MULTIPLE_CHOICE", "DROPDOWN"].includes(
+                  typedVal,
+                ) &&
+                (!activeQuestion.options || activeQuestion.options.length === 0)
+              ) {
+                setValue(`questions.${activeIndex}.options`, [
+                  {
+                    id: `opt_${Date.now()}_1`,
+                    label: language === "tr" ? "Seçenek 1" : "Option 1",
+                  },
+                ]);
+              }
+            }}
+          >
+            <SelectTrigger className="w-full h-8 text-xs">
+              <SelectValue placeholder={dict.builder.inspector.selectType}>
+                {(val: string | null) => {
+                  const selected = questionTypesList.find(
+                    (t) => t.value === val,
+                  );
+                  if (!selected) return dict.builder.inspector.selectType;
+                  const Icon = selected.icon;
+                  return (
+                    <span className="flex items-center gap-1.5 truncate">
+                      <Icon className="size-3.5 text-muted-foreground shrink-0" />
+                      <span className="truncate">{selected.label}</span>
+                    </span>
+                  );
+                }}
+              </SelectValue>
+            </SelectTrigger>
+            <SelectContent>
+              {questionTypesList.map((t) => {
+                const Icon = t.icon;
+                return (
+                  <SelectItem key={t.value} value={t.value} className="text-xs">
+                    <div className="flex items-center gap-2">
+                      <Icon className="size-3.5 text-muted-foreground" />
+                      <span>{t.label}</span>
+                    </div>
+                  </SelectItem>
+                );
+              })}
+            </SelectContent>
+          </Select>
+        </div>
+
+        {/* Question Icon Selector */}
+        <div className="space-y-1">
+          <div className="flex items-center justify-between">
+            <label className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+              {language === "tr" ? "Soru İkonu" : "Question Icon"}
+            </label>
+            {activeQuestion.config?.icon && (
+              <button
+                type="button"
+                onClick={() => {
+                  setValue(`questions.${activeIndex}.config.icon`, undefined, {
+                    shouldDirty: true,
+                  });
+                }}
+                className="text-[10px] text-muted-foreground hover:text-destructive underline cursor-pointer"
+              >
+                {language === "tr" ? "Kaldır" : "Remove"}
+              </button>
             )}
           </div>
+          <Select
+            value={activeQuestion.config?.icon || "none"}
+            onValueChange={(val) => {
+              const nextVal = !val || val === "none" ? undefined : val;
+              setValue(`questions.${activeIndex}.config.icon`, nextVal, {
+                shouldDirty: true,
+              });
+            }}
+          >
+            <SelectTrigger className="w-full h-8 text-xs">
+              <SelectValue
+                placeholder={
+                  language === "tr" ? "İkon seçin..." : "Select icon..."
+                }
+              >
+                {(val: string | null) => {
+                  if (!val || val === "none")
+                    return language === "tr"
+                      ? "Yok (İkonsuz)"
+                      : "None (No icon)";
+                  const iconOpt = QUESTION_ICON_OPTIONS.find(
+                    (item) => item.value === val,
+                  );
+                  if (!iconOpt)
+                    return language === "tr" ? "Yok (İkonsuz)" : "None";
+                  const Icon = iconOpt.icon;
+                  return (
+                    <span className="flex items-center gap-1.5 truncate">
+                      <Icon className="size-3.5 text-primary shrink-0" />
+                      <span className="truncate">{iconOpt.label}</span>
+                    </span>
+                  );
+                }}
+              </SelectValue>
+            </SelectTrigger>
+            <SelectContent className="max-h-56">
+              <SelectItem value="none" className="text-xs">
+                <span className="text-muted-foreground">
+                  {language === "tr" ? "Yok (İkonsuz)" : "None (No icon)"}
+                </span>
+              </SelectItem>
+              {QUESTION_ICON_OPTIONS.map((opt) => {
+                const Icon = opt.icon;
+                return (
+                  <SelectItem
+                    key={opt.value}
+                    value={opt.value}
+                    className="text-xs"
+                  >
+                    <div className="flex items-center gap-2">
+                      <Icon className="size-3.5 text-primary shrink-0" />
+                      <span>{opt.label}</span>
+                    </div>
+                  </SelectItem>
+                );
+              })}
+            </SelectContent>
+          </Select>
+        </div>
 
-          <div className="flex items-center gap-1">
-            {totalQuestions > 1 && (
-              <div className="flex items-center gap-0.5 mr-1">
-                <Button
-                  variant="ghost"
-                  size="icon-xs"
-                  disabled={activeIndex <= 0}
-                  onClick={handlePrevQuestion}
-                  className="cursor-pointer text-muted-foreground hover:text-foreground h-6 w-6"
-                  title={
-                    language === "tr" ? "Önceki soru" : "Previous question"
-                  }
-                >
-                  <ChevronUp className="size-3.5" />
-                </Button>
-                <Button
-                  variant="ghost"
-                  size="icon-xs"
-                  disabled={activeIndex >= totalQuestions - 1}
-                  onClick={handleNextQuestion}
-                  className="cursor-pointer text-muted-foreground hover:text-foreground h-6 w-6"
-                  title={language === "tr" ? "Sonraki soru" : "Next question"}
-                >
-                  <ChevronDown className="size-3.5" />
-                </Button>
+        {/* Required Field Toggle */}
+        <div className="flex items-center rounded-md border border-border/60 bg-muted/20 px-2.5 py-1.5">
+          <Label
+            htmlFor={`questions.${activeIndex}.required`}
+            className="flex-1"
+          >
+            <div className="space-y-0.5">
+              <span className="text-xs font-medium text-foreground">
+                {dict.builder.inspector.requiredField}
+              </span>
+              <p className="text-[10px] text-muted-foreground/80 leading-3.5">
+                {dict.builder.inspector.requiredDesc}
+              </p>
+            </div>
+          </Label>
+
+          <Switch
+            id={`questions.${activeIndex}.required`}
+            checked={activeQuestion.required}
+            onCheckedChange={(checked) =>
+              setValue(`questions.${activeIndex}.required`, checked, {
+                shouldDirty: true,
+              })
+            }
+          />
+        </div>
+
+        <Separator />
+
+        {/* Helper Description */}
+        <div className="space-y-1">
+          <label className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+            {dict.builder.inspector.descriptionHelp}
+          </label>
+          <Textarea
+            rows={2}
+            placeholder={dict.builder.inspector.descriptionPlaceholder}
+            {...register(`questions.${activeIndex}.config.description`)}
+            className="text-xs resize-none py-1.5 min-h-[48px]"
+          />
+        </div>
+
+        {/* Field Placeholder (for Text inputs) */}
+        {(activeQuestion.type === "SHORT_TEXT" ||
+          activeQuestion.type === "LONG_TEXT" ||
+          activeQuestion.type === "DROPDOWN") && (
+          <div className="space-y-1">
+            <label className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+              {dict.builder.inspector.placeholder}
+            </label>
+            <Input
+              placeholder={dict.builder.inspector.placeholderField}
+              {...register(`questions.${activeIndex}.config.placeholder`)}
+              className="h-8 text-xs"
+            />
+          </div>
+        )}
+
+        {/* Text Constraints: Min / Max Length */}
+        {(activeQuestion.type === "SHORT_TEXT" ||
+          activeQuestion.type === "LONG_TEXT") && (
+          <div className="space-y-1">
+            <label className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+              {language === "tr" ? "Metin Sınırları" : "Text Limits"}
+            </label>
+            <div className="grid grid-cols-2 gap-2">
+              <div className="space-y-0.5">
+                <span className="text-[10px] text-muted-foreground">
+                  {language === "tr" ? "Min karakter" : "Min chars"}
+                </span>
+                <Input
+                  type="number"
+                  min={0}
+                  placeholder={language === "tr" ? "Yok" : "None"}
+                  value={activeQuestion.config?.minLength ?? ""}
+                  onChange={(e) => {
+                    const val =
+                      e.target.value === ""
+                        ? undefined
+                        : Number(e.target.value);
+                    setValue(`questions.${activeIndex}.config.minLength`, val, {
+                      shouldDirty: true,
+                    });
+                  }}
+                  className="h-7 text-xs"
+                />
               </div>
-            )}
+              <div className="space-y-0.5">
+                <span className="text-[10px] text-muted-foreground">
+                  {language === "tr" ? "Maks karakter" : "Max chars"}
+                </span>
+                <Input
+                  type="number"
+                  min={1}
+                  placeholder={language === "tr" ? "Yok" : "None"}
+                  value={activeQuestion.config?.maxLength ?? ""}
+                  onChange={(e) => {
+                    const val =
+                      e.target.value === ""
+                        ? undefined
+                        : Number(e.target.value);
+                    setValue(`questions.${activeIndex}.config.maxLength`, val, {
+                      shouldDirty: true,
+                    });
+                  }}
+                  className="h-7 text-xs"
+                />
+              </div>
+            </div>
+          </div>
+        )}
 
+        {/* File Upload Configuration */}
+        {activeQuestion.type === "FILE_UPLOAD" && (
+          <div className="space-y-2.5">
+            <label className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+              {dict.builder.inspector.fileLimitsTitle}
+            </label>
+            <div className="space-y-1">
+              <span className="text-[10px] text-muted-foreground">
+                {dict.builder.inspector.maxFileSize}
+              </span>
+              <Select
+                value={String(activeQuestion.config?.maxFileSizeMb || 10)}
+                onValueChange={(val) =>
+                  setValue(
+                    `questions.${activeIndex}.config.maxFileSizeMb`,
+                    Number(val),
+                    {
+                      shouldDirty: true,
+                    },
+                  )
+                }
+              >
+                <SelectTrigger className="w-full h-8 text-xs">
+                  <SelectValue placeholder="10 MB">
+                    {(val: string | null) => (val ? `${val} MB` : "10 MB")}
+                  </SelectValue>
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="5" className="text-xs">
+                    5 MB
+                  </SelectItem>
+                  <SelectItem value="10" className="text-xs">
+                    10 MB ({language === "tr" ? "Varsayılan" : "Default"})
+                  </SelectItem>
+                  <SelectItem value="25" className="text-xs">
+                    25 MB
+                  </SelectItem>
+                  <SelectItem value="50" className="text-xs">
+                    50 MB
+                  </SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-1">
+              <span className="text-[10px] text-muted-foreground">
+                {dict.builder.inspector.allowedTypes}
+              </span>
+              <div className="space-y-1.5 rounded-md border border-border/60 bg-muted/15 p-2">
+                {allowedMimePresets.map((preset) => {
+                  const currentMimes =
+                    activeQuestion.config?.allowedMimeTypes || [];
+                  const isChecked = currentMimes.includes(preset.value);
+
+                  return (
+                    <label
+                      key={preset.value}
+                      className="flex items-center gap-2 text-[11px] text-foreground cursor-pointer select-none"
+                    >
+                      <input
+                        type="checkbox"
+                        checked={isChecked}
+                        onChange={(e) => {
+                          const updated = e.target.checked
+                            ? [...currentMimes, preset.value]
+                            : currentMimes.filter((m) => m !== preset.value);
+                          setValue(
+                            `questions.${activeIndex}.config.allowedMimeTypes`,
+                            updated,
+                            { shouldDirty: true },
+                          );
+                        }}
+                        className="size-3.5 rounded border-muted-foreground/30 accent-primary"
+                      />
+                      <span className="truncate">{preset.label}</span>
+                    </label>
+                  );
+                })}
+              </div>
+            </div>
+          </div>
+        )}
+
+        <Separator />
+
+        {/* Quick Actions */}
+        <div className="space-y-1.5 pt-0.5">
+          <label className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+            {language === "tr" ? "Kart İşlemleri" : "Card Actions"}
+          </label>
+          <div className="grid grid-cols-2 gap-2">
             <Button
-              variant="ghost"
-              size="icon-xs"
-              onClick={deselectQuestion}
-              className="cursor-pointer text-muted-foreground hover:text-foreground h-6 w-6"
-              title={dict.builder.inspector.closeInspector}
+              variant="outline"
+              size="xs"
+              onClick={() => onDuplicateQuestion(activeIndex)}
+              className="cursor-pointer gap-1.5 text-xs h-7 w-full"
             >
-              <X className="size-3.5" />
+              <Copy className="size-3 text-muted-foreground" />
+              {dict.builder.inspector.duplicate}
+            </Button>
+            <Button
+              variant="destructive"
+              size="xs"
+              onClick={() => {
+                onDeleteQuestion(activeIndex);
+              }}
+              className="cursor-pointer gap-1.5 text-xs h-7 w-full"
+            >
+              <Trash2 className="size-3" />
+              {dict.builder.inspector.delete}
             </Button>
           </div>
         </div>
 
-        {/* Inspector Content */}
-        <div className="flex-1 p-3.5 overflow-y-auto">
-          {!activeQuestion ? (
-            <div className="flex flex-col items-center justify-center h-48 text-center text-muted-foreground p-4">
-              <div className="size-9 rounded-full bg-muted flex items-center justify-center mb-2.5">
-                <SlidersHorizontal className="size-4 text-muted-foreground/70" />
-              </div>
-              <p className="text-xs font-semibold text-foreground">
-                {dict.builder.inspector.emptyTitle}
-              </p>
-              <p className="text-[11px] text-muted-foreground mt-1 max-w-[200px]">
-                {dict.builder.inspector.emptyDesc}
-              </p>
-            </div>
-          ) : (
-            <div key={activeQuestion.id || activeIndex} className="space-y-3.5">
-              {/* Field Type Selector */}
-              <div className="space-y-1">
-                <label className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
-                  {dict.builder.inspector.fieldType}
-                </label>
-                <Select
-                  value={activeQuestion.type}
-                  onValueChange={(val) => {
-                    if (!val) return;
-                    const typedVal = val as QuestionType;
-                    setValue(`questions.${activeIndex}.type`, typedVal, {
-                      shouldDirty: true,
-                    });
-                    if (
-                      ["SINGLE_CHOICE", "MULTIPLE_CHOICE", "DROPDOWN"].includes(
-                        typedVal,
-                      ) &&
-                      (!activeQuestion.options ||
-                        activeQuestion.options.length === 0)
-                    ) {
-                      setValue(`questions.${activeIndex}.options`, [
-                        {
-                          id: `opt_${Date.now()}_1`,
-                          label: language === "tr" ? "Seçenek 1" : "Option 1",
-                        },
-                      ]);
-                    }
-                  }}
-                >
-                  <SelectTrigger className="w-full h-8 text-xs">
-                    <SelectValue
-                      placeholder={dict.builder.inspector.selectType}
-                    >
-                      {(val: string | null) => {
-                        const selected = questionTypesList.find(
-                          (t) => t.value === val,
-                        );
-                        if (!selected) return dict.builder.inspector.selectType;
-                        const Icon = selected.icon;
-                        return (
-                          <span className="flex items-center gap-1.5 truncate">
-                            <Icon className="size-3.5 text-muted-foreground shrink-0" />
-                            <span className="truncate">{selected.label}</span>
-                          </span>
-                        );
-                      }}
-                    </SelectValue>
-                  </SelectTrigger>
-                  <SelectContent>
-                    {questionTypesList.map((t) => {
-                      const Icon = t.icon;
-                      return (
-                        <SelectItem
-                          key={t.value}
-                          value={t.value}
-                          className="text-xs"
-                        >
-                          <div className="flex items-center gap-2">
-                            <Icon className="size-3.5 text-muted-foreground" />
-                            <span>{t.label}</span>
-                          </div>
-                        </SelectItem>
-                      );
-                    })}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              {/* Question Icon Selector */}
-              <div className="space-y-1">
-                <div className="flex items-center justify-between">
-                  <label className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
-                    {language === "tr" ? "Soru İkonu" : "Question Icon"}
-                  </label>
-                  {activeQuestion.config?.icon && (
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setValue(
-                          `questions.${activeIndex}.config.icon`,
-                          undefined,
-                          {
-                            shouldDirty: true,
-                          },
-                        );
-                      }}
-                      className="text-[10px] text-muted-foreground hover:text-destructive underline cursor-pointer"
-                    >
-                      {language === "tr" ? "Kaldır" : "Remove"}
-                    </button>
-                  )}
-                </div>
-                <Select
-                  value={activeQuestion.config?.icon || "none"}
-                  onValueChange={(val) => {
-                    const nextVal = !val || val === "none" ? undefined : val;
-                    setValue(`questions.${activeIndex}.config.icon`, nextVal, {
-                      shouldDirty: true,
-                    });
-                  }}
-                >
-                  <SelectTrigger className="w-full h-8 text-xs">
-                    <SelectValue
-                      placeholder={
-                        language === "tr" ? "İkon seçin..." : "Select icon..."
-                      }
-                    >
-                      {(val: string | null) => {
-                        if (!val || val === "none")
-                          return language === "tr"
-                            ? "Yok (İkonsuz)"
-                            : "None (No icon)";
-                        const iconOpt = QUESTION_ICON_OPTIONS.find(
-                          (item) => item.value === val,
-                        );
-                        if (!iconOpt)
-                          return language === "tr" ? "Yok (İkonsuz)" : "None";
-                        const Icon = iconOpt.icon;
-                        return (
-                          <span className="flex items-center gap-1.5 truncate">
-                            <Icon className="size-3.5 text-primary shrink-0" />
-                            <span className="truncate">{iconOpt.label}</span>
-                          </span>
-                        );
-                      }}
-                    </SelectValue>
-                  </SelectTrigger>
-                  <SelectContent className="max-h-56">
-                    <SelectItem value="none" className="text-xs">
-                      <span className="text-muted-foreground">
-                        {language === "tr" ? "Yok (İkonsuz)" : "None (No icon)"}
-                      </span>
-                    </SelectItem>
-                    {QUESTION_ICON_OPTIONS.map((opt) => {
-                      const Icon = opt.icon;
-                      return (
-                        <SelectItem
-                          key={opt.value}
-                          value={opt.value}
-                          className="text-xs"
-                        >
-                          <div className="flex items-center gap-2">
-                            <Icon className="size-3.5 text-primary shrink-0" />
-                            <span>{opt.label}</span>
-                          </div>
-                        </SelectItem>
-                      );
-                    })}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              {/* Required Field Toggle */}
-              <div className="flex items-center justify-between rounded-md border border-border/60 bg-muted/20 px-2.5 py-1.5">
-                <div className="space-y-0.5">
-                  <span className="text-xs font-medium text-foreground">
-                    {dict.builder.inspector.requiredField}
-                  </span>
-                  <p className="text-[10px] text-muted-foreground">
-                    {dict.builder.inspector.requiredDesc}
-                  </p>
-                </div>
-                <Switch
-                  checked={activeQuestion.required}
-                  onCheckedChange={(checked) =>
-                    setValue(`questions.${activeIndex}.required`, checked, {
-                      shouldDirty: true,
-                    })
-                  }
-                />
-              </div>
-
-              <Separator />
-
-              {/* Helper Description */}
-              <div className="space-y-1">
-                <label className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
-                  {dict.builder.inspector.descriptionHelp}
-                </label>
-                <Textarea
-                  rows={2}
-                  placeholder={dict.builder.inspector.descriptionPlaceholder}
-                  {...register(`questions.${activeIndex}.config.description`)}
-                  className="text-xs resize-none py-1.5 min-h-[48px]"
-                />
-              </div>
-
-              {/* Field Placeholder (for Text inputs) */}
-              {(activeQuestion.type === "SHORT_TEXT" ||
-                activeQuestion.type === "LONG_TEXT" ||
-                activeQuestion.type === "DROPDOWN") && (
-                <div className="space-y-1">
-                  <label className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
-                    {dict.builder.inspector.placeholder}
-                  </label>
-                  <Input
-                    placeholder={dict.builder.inspector.placeholderField}
-                    {...register(`questions.${activeIndex}.config.placeholder`)}
-                    className="h-8 text-xs"
-                  />
-                </div>
-              )}
-
-              {/* Text Constraints: Min / Max Length */}
-              {(activeQuestion.type === "SHORT_TEXT" ||
-                activeQuestion.type === "LONG_TEXT") && (
-                <div className="space-y-1">
-                  <label className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
-                    {language === "tr" ? "Metin Sınırları" : "Text Limits"}
-                  </label>
-                  <div className="grid grid-cols-2 gap-2">
-                    <div className="space-y-0.5">
-                      <span className="text-[10px] text-muted-foreground">
-                        {language === "tr" ? "Min karakter" : "Min chars"}
-                      </span>
-                      <Input
-                        type="number"
-                        min={0}
-                        placeholder={language === "tr" ? "Yok" : "None"}
-                        value={activeQuestion.config?.minLength ?? ""}
-                        onChange={(e) => {
-                          const val =
-                            e.target.value === ""
-                              ? undefined
-                              : Number(e.target.value);
-                          setValue(
-                            `questions.${activeIndex}.config.minLength`,
-                            val,
-                            {
-                              shouldDirty: true,
-                            },
-                          );
-                        }}
-                        className="h-7 text-xs"
-                      />
-                    </div>
-                    <div className="space-y-0.5">
-                      <span className="text-[10px] text-muted-foreground">
-                        {language === "tr" ? "Maks karakter" : "Max chars"}
-                      </span>
-                      <Input
-                        type="number"
-                        min={1}
-                        placeholder={language === "tr" ? "Yok" : "None"}
-                        value={activeQuestion.config?.maxLength ?? ""}
-                        onChange={(e) => {
-                          const val =
-                            e.target.value === ""
-                              ? undefined
-                              : Number(e.target.value);
-                          setValue(
-                            `questions.${activeIndex}.config.maxLength`,
-                            val,
-                            {
-                              shouldDirty: true,
-                            },
-                          );
-                        }}
-                        className="h-7 text-xs"
-                      />
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              {/* File Upload Configuration */}
-              {activeQuestion.type === "FILE_UPLOAD" && (
-                <div className="space-y-2.5">
-                  <label className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
-                    {dict.builder.inspector.fileLimitsTitle}
-                  </label>
-                  <div className="space-y-1">
-                    <span className="text-[10px] text-muted-foreground">
-                      {dict.builder.inspector.maxFileSize}
-                    </span>
-                    <Select
-                      value={String(activeQuestion.config?.maxFileSizeMb || 10)}
-                      onValueChange={(val) =>
-                        setValue(
-                          `questions.${activeIndex}.config.maxFileSizeMb`,
-                          Number(val),
-                          {
-                            shouldDirty: true,
-                          },
-                        )
-                      }
-                    >
-                      <SelectTrigger className="w-full h-8 text-xs">
-                        <SelectValue placeholder="10 MB">
-                          {(val: string | null) =>
-                            val ? `${val} MB` : "10 MB"
-                          }
-                        </SelectValue>
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="5" className="text-xs">
-                          5 MB
-                        </SelectItem>
-                        <SelectItem value="10" className="text-xs">
-                          10 MB ({language === "tr" ? "Varsayılan" : "Default"})
-                        </SelectItem>
-                        <SelectItem value="25" className="text-xs">
-                          25 MB
-                        </SelectItem>
-                        <SelectItem value="50" className="text-xs">
-                          50 MB
-                        </SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-
-                  <div className="space-y-1">
-                    <span className="text-[10px] text-muted-foreground">
-                      {dict.builder.inspector.allowedTypes}
-                    </span>
-                    <div className="space-y-1.5 rounded-md border border-border/60 bg-muted/15 p-2">
-                      {allowedMimePresets.map((preset) => {
-                        const currentMimes =
-                          activeQuestion.config?.allowedMimeTypes || [];
-                        const isChecked = currentMimes.includes(preset.value);
-
-                        return (
-                          <label
-                            key={preset.value}
-                            className="flex items-center gap-2 text-[11px] text-foreground cursor-pointer select-none"
-                          >
-                            <input
-                              type="checkbox"
-                              checked={isChecked}
-                              onChange={(e) => {
-                                const updated = e.target.checked
-                                  ? [...currentMimes, preset.value]
-                                  : currentMimes.filter(
-                                      (m) => m !== preset.value,
-                                    );
-                                setValue(
-                                  `questions.${activeIndex}.config.allowedMimeTypes`,
-                                  updated,
-                                  { shouldDirty: true },
-                                );
-                              }}
-                              className="size-3.5 rounded border-muted-foreground/30 accent-primary"
-                            />
-                            <span className="truncate">{preset.label}</span>
-                          </label>
-                        );
-                      })}
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              <Separator />
-
-              {/* Quick Actions */}
-              <div className="space-y-1.5 pt-0.5">
-                <label className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
-                  {language === "tr" ? "Kart İşlemleri" : "Card Actions"}
-                </label>
-                <div className="grid grid-cols-2 gap-2">
-                  <Button
-                    variant="outline"
-                    size="xs"
-                    onClick={() => onDuplicateQuestion(activeIndex)}
-                    className="cursor-pointer gap-1.5 text-xs h-7 w-full"
-                  >
-                    <Copy className="size-3 text-muted-foreground" />
-                    {dict.builder.inspector.duplicate}
-                  </Button>
-                  <Button
-                    variant="destructive"
-                    size="xs"
-                    onClick={() => {
-                      onDeleteQuestion(activeIndex);
-                    }}
-                    className="cursor-pointer gap-1.5 text-xs h-7 w-full"
-                  >
-                    <Trash2 className="size-3" />
-                    {dict.builder.inspector.delete}
-                  </Button>
-                </div>
-              </div>
-
-              {/* Meta Info */}
-              <div className="rounded border border-border/50 bg-muted/20 px-2.5 py-1.5 text-[10px] text-muted-foreground flex items-center justify-between font-mono">
-                <span>
-                  {language === "tr"
-                    ? `Sıra #${activeIndex + 1}`
-                    : `Position #${activeIndex + 1}`}
-                </span>
-                <span className="truncate max-w-[120px]">
-                  {activeQuestion.id}
-                </span>
-              </div>
-            </div>
-          )}
+        {/* Meta Info */}
+        <div className="rounded border border-border/50 bg-muted/20 px-2.5 py-1.5 text-[10px] text-muted-foreground flex items-center justify-between font-mono">
+          <span>
+            {language === "tr"
+              ? `Sıra #${activeIndex + 1}`
+              : `Position #${activeIndex + 1}`}
+          </span>
+          <span className="truncate max-w-[120px]">{activeQuestion.id}</span>
         </div>
       </div>
-    </aside>
+    );
+  };
+
+  return (
+    <>
+      {/* Desktop Sidebar (hidden on mobile) */}
+      <aside
+        style={{ width: "var(--inspector-width, 0px)" }}
+        className={cn(
+          "hidden md:flex bg-card flex-col shrink-0 h-full overflow-hidden shadow-sm border-l z-20 transition-[opacity,transform,border-color] duration-225 ease-in-out",
+          isInspectorOpen
+            ? "opacity-100 translate-x-0"
+            : "border-l-0 opacity-0 translate-x-6 pointer-events-none",
+        )}
+        aria-hidden={!isInspectorOpen}
+      >
+        <div className="w-72 xl:w-80 flex flex-col h-full shrink-0 overflow-hidden">
+          {/* Inspector Header */}
+          <div className="flex h-11 items-center justify-between border-b px-3.5 bg-muted/20 shrink-0">
+            <div className="flex items-center gap-2 min-w-0">
+              <SlidersHorizontal className="size-3.5 text-primary shrink-0" />
+              <span className="text-xs font-semibold tracking-tight text-foreground truncate">
+                {dict.builder.inspector.title}
+              </span>
+              {activeQuestion && totalQuestions > 0 && (
+                <span className="text-[10px] font-mono bg-muted text-muted-foreground px-1.5 py-0.5 rounded shrink-0">
+                  {activeIndex + 1}/{totalQuestions}
+                </span>
+              )}
+            </div>
+
+            <div className="flex items-center gap-1">
+              {totalQuestions > 1 && (
+                <div className="flex items-center gap-0.5 mr-1">
+                  <Button
+                    variant="ghost"
+                    size="icon-xs"
+                    disabled={activeIndex <= 0}
+                    onClick={handlePrevQuestion}
+                    className="cursor-pointer text-muted-foreground hover:text-foreground h-6 w-6"
+                    title={
+                      language === "tr" ? "Önceki soru" : "Previous question"
+                    }
+                  >
+                    <ChevronUp className="size-3.5" />
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="icon-xs"
+                    disabled={activeIndex >= totalQuestions - 1}
+                    onClick={handleNextQuestion}
+                    className="cursor-pointer text-muted-foreground hover:text-foreground h-6 w-6"
+                    title={language === "tr" ? "Sonraki soru" : "Next question"}
+                  >
+                    <ChevronDown className="size-3.5" />
+                  </Button>
+                </div>
+              )}
+
+              <Button
+                variant="ghost"
+                size="icon-xs"
+                onClick={deselectQuestion}
+                className="cursor-pointer text-muted-foreground hover:text-foreground h-6 w-6"
+                title={dict.builder.inspector.closeInspector}
+              >
+                <X className="size-3.5" />
+              </Button>
+            </div>
+          </div>
+
+          {/* Inspector Content (not mounted on mobile → fields are registered only once, inside the drawer) */}
+          <div className="flex-1 p-3.5 overflow-y-auto">
+            {!isMobile && renderInspectorContent()}
+          </div>
+        </div>
+      </aside>
+
+      {/* Mobile Drawer (Base UI Drawer, only active on mobile) */}
+      <Drawer
+        open={Boolean(isMobile && isInspectorOpen && activeQuestion)}
+        onOpenChange={(open) => {
+          if (!open) {
+            deselectQuestion();
+          }
+        }}
+      >
+        <DrawerContent
+          // Don't restore focus to the previously focused card input on close:
+          // on mobile that would pop the software keyboard up again.
+          finalFocus={false}
+          className="max-h-[85dvh] flex flex-col p-0 bg-card"
+        >
+          <DrawerHeader className="border-b px-4 py-3 shrink-0 flex flex-row items-center justify-between">
+            <div className="flex items-center gap-2 min-w-0">
+              <SlidersHorizontal className="size-4 text-primary shrink-0" />
+              <DrawerTitle className="text-sm font-semibold truncate">
+                {dict.builder.inspector.title}
+              </DrawerTitle>
+              {activeQuestion && totalQuestions > 0 && (
+                <span className="text-[10px] font-mono bg-muted text-muted-foreground px-1.5 py-0.5 rounded shrink-0">
+                  {activeIndex + 1}/{totalQuestions}
+                </span>
+              )}
+            </div>
+
+            <div className="flex items-center gap-1">
+              {totalQuestions > 1 && (
+                <div className="flex items-center gap-0.5 mr-1">
+                  <Button
+                    variant="ghost"
+                    size="icon-xs"
+                    disabled={activeIndex <= 0}
+                    onClick={handlePrevQuestion}
+                    className="cursor-pointer text-muted-foreground hover:text-foreground h-7 w-7"
+                    title={
+                      language === "tr" ? "Önceki soru" : "Previous question"
+                    }
+                  >
+                    <ChevronUp className="size-4" />
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="icon-xs"
+                    disabled={activeIndex >= totalQuestions - 1}
+                    onClick={handleNextQuestion}
+                    className="cursor-pointer text-muted-foreground hover:text-foreground h-7 w-7"
+                    title={language === "tr" ? "Sonraki soru" : "Next question"}
+                  >
+                    <ChevronDown className="size-4" />
+                  </Button>
+                </div>
+              )}
+
+              <DrawerClose
+                render={
+                  <Button
+                    variant="ghost"
+                    size="icon-xs"
+                    className="h-7 w-7 cursor-pointer text-muted-foreground hover:text-foreground"
+                    title={dict.builder.inspector.closeInspector}
+                  />
+                }
+              >
+                <X className="size-4" />
+                <span className="sr-only">Close</span>
+              </DrawerClose>
+            </div>
+          </DrawerHeader>
+
+          {/* min-h-0 lets this flex child shrink below its content so it actually scrolls */}
+          <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain p-4 space-y-3.5">
+            {renderInspectorContent()}
+          </div>
+        </DrawerContent>
+      </Drawer>
+    </>
   );
 });
