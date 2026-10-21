@@ -30,7 +30,12 @@ function DrawerOverlay({
       data-slot="drawer-overlay"
       className={cn(
         // Fades with the swipe gesture via Base UI's --drawer-swipe-progress (0 → 1)
-        "fixed inset-0 z-50 bg-black/60 opacity-[calc(1-var(--drawer-swipe-progress,0))] transition-opacity duration-300 data-ending-style:opacity-0 data-starting-style:opacity-0 supports-backdrop-filter:backdrop-blur-xs",
+        "fixed inset-0 z-50 bg-black/60 opacity-[calc(1-var(--drawer-swipe-progress,0))]",
+        // Transition when opening or closing normally, but 0 duration while swiping so it tracks finger 1:1 without delay
+        "transition-opacity duration-300 ease-[cubic-bezier(0.32,0.72,0,1)]",
+        "data-swiping:duration-0 data-swiping:transition-none data-[swiping]:duration-0 data-[swiping]:transition-none",
+        "data-starting-style:opacity-0 data-ending-style:opacity-0 data-ending-style:duration-[calc(var(--drawer-swipe-strength,1)*300ms)]",
+        "supports-backdrop-filter:backdrop-blur-xs will-change-[opacity]",
         className,
       )}
       {...props}

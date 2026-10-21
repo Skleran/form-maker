@@ -234,7 +234,7 @@ const FormHeaderSection = React.memo(function FormHeaderSection() {
             variant="outline"
             size="xs"
             onClick={() => headerImageInputRef.current?.click()}
-            className="cursor-pointer gap-1.5 text-xs text-muted-foreground hover:text-foreground shadow-xs bg-card hover:bg-muted/50"
+            className="cursor-pointer gap-1.5 text-xs shadow-xs bg-card hover:bg-muted/50"
           >
             <ImagePlus className="size-3.5 text-primary" />
             {language === "tr" ? "Kapak Görseli Ekle" : "Add Cover Image"}
@@ -1058,22 +1058,60 @@ export const BuilderCanvas = React.memo(function BuilderCanvas({
       const latestClientY = latestDragPointerYRef.current;
       if (container) {
         const containerRect = container.getBoundingClientRect();
-        const edgeThreshold = 85;
-        const maxScrollSpeed = 14;
+        const isMobile = isMobileViewport();
 
-        if (latestClientY < containerRect.top + edgeThreshold) {
+        // Calculate against the actual visible viewport bounds (avoids off-screen bottom on mobile)
+        const viewportBottom =
+          typeof window !== "undefined"
+            ? window.innerHeight
+            : containerRect.bottom;
+        const effectiveBottom = Math.min(containerRect.bottom, viewportBottom);
+        const effectiveTop = Math.max(containerRect.top, 0);
+
+        // On mobile, give a generous bottom zone (170px) so scrolling starts comfortably
+        // well before the user reaches the physical bottom edge / system gesture bar
+        const edgeThresholdTop = isMobile ? 110 : 85;
+        const edgeThresholdBottom = isMobile ? 170 : 90;
+        const maxScrollSpeed = isMobile ? 18 : 14;
+
+        let didScroll = false;
+
+        if (latestClientY < effectiveTop + edgeThresholdTop) {
           const intensity = Math.max(
             0.2,
-            (containerRect.top + edgeThreshold - latestClientY) / edgeThreshold,
+            Math.min(
+              2.5,
+              (effectiveTop + edgeThresholdTop - latestClientY) /
+                edgeThresholdTop,
+            ),
           );
           container.scrollTop -= maxScrollSpeed * intensity;
-        } else if (latestClientY > containerRect.bottom - edgeThreshold) {
+          didScroll = true;
+        } else if (latestClientY > effectiveBottom - edgeThresholdBottom) {
           const intensity = Math.max(
             0.2,
-            (latestClientY - (containerRect.bottom - edgeThreshold)) /
-              edgeThreshold,
+            Math.min(
+              2.5,
+              (latestClientY - (effectiveBottom - edgeThresholdBottom)) /
+                edgeThresholdBottom,
+            ),
           );
           container.scrollTop += maxScrollSpeed * intensity;
+          didScroll = true;
+        }
+
+        // As elements scroll under the user's stationary finger, keep the drop slot updated in real time
+        if (didScroll && activeDragRef.current) {
+          const currentDrag = activeDragRef.current;
+          const nextOver = calculateOverIndex(latestClientY, currentDrag.index);
+          if (nextOver !== currentDrag.overIndex) {
+            const nextState: ActiveDragState = {
+              ...currentDrag,
+              overIndex: nextOver,
+            };
+            activeDragRef.current = nextState;
+            setActiveDrag(nextState);
+          }
         }
       }
       animFrameId = requestAnimationFrame(handleAutoScroll);

@@ -544,7 +544,7 @@ export function FormBuilder({ initialForm }: FormBuilderProps) {
         previousSnapshotRef={previousSnapshotRef}
         savedSnapshotRef={savedSnapshotRef}
       />
-      <div className="flex h-screen flex-col bg-background overflow-hidden">
+      <div className="flex h-screen h-dvh flex-col bg-background overflow-hidden">
         {/* Top Header */}
         <BuilderHeader
           formId={initialForm.id}
