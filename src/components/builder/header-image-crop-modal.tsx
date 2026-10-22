@@ -1,6 +1,7 @@
 "use client"
 
 import * as React from "react"
+import { createPortal } from "react-dom"
 import { Check, Loader2, RotateCcw, X } from "lucide-react"
 import { toast } from "sonner"
 
@@ -349,9 +350,9 @@ export function HeaderImageCropModal({
     }
   }
 
-  if (!isOpen) return null
+  if (!isOpen || typeof document === "undefined") return null
 
-  return (
+  return createPortal(
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4 sm:p-6 animate-in fade-in-0 duration-150">
       <div className="relative flex flex-col w-full max-w-3xl rounded-xl bg-card border shadow-2xl overflow-hidden max-h-[90vh]">
         {/* Header */}
@@ -550,6 +551,7 @@ export function HeaderImageCropModal({
           </div>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   )
 }

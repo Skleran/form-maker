@@ -1,9 +1,9 @@
-"use client";
+'use client';
 
-import * as React from "react";
-import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { useFormContext, useWatch } from "react-hook-form";
-import { toast } from "sonner";
+import * as React from 'react';
+import { usePathname, useRouter, useSearchParams } from 'next/navigation';
+import { useFormContext, useWatch } from 'react-hook-form';
+import { toast } from 'sonner';
 import {
   AlertTriangle,
   ArrowLeft,
@@ -20,16 +20,16 @@ import {
   Share2,
   Sun,
   Undo2,
-} from "lucide-react";
+} from 'lucide-react';
 
-import { Button, buttonVariants } from "@/components/ui/button";
-import { Switch } from "@/components/ui/switch";
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Button, buttonVariants } from '@/components/ui/button';
+import { Switch } from '@/components/ui/switch';
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
   Tooltip,
   TooltipContent,
   TooltipTrigger,
-} from "@/components/ui/tooltip";
+} from '@/components/ui/tooltip';
 import {
   Dialog,
   DialogContent,
@@ -37,22 +37,22 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from "@/components/ui/dialog";
+} from '@/components/ui/dialog';
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import { useBuilderStore } from "@/stores/use-builder-store";
-import type { FormBuilderValues } from "@/lib/validations/form";
-import { ThemeToggle } from "@/components/theme-toggle";
-import { LogoutButton } from "@/components/admin/logout-button";
-import { useLanguage } from "@/lib/i18n/language-context";
-import { useTheme } from "next-themes";
-import { cn } from "@/lib/utils";
-import { Label } from "../ui/label";
+} from '@/components/ui/dropdown-menu';
+import { useBuilderStore } from '@/stores/use-builder-store';
+import type { FormBuilderValues } from '@/lib/validations/form';
+import { ThemeToggle } from '@/components/theme-toggle';
+import { LogoutButton } from '@/components/admin/logout-button';
+import { useLanguage } from '@/lib/i18n/language-context';
+import { useTheme } from 'next-themes';
+import { cn } from '@/lib/utils';
+import { Label } from '../ui/label';
 
 interface BuilderHeaderProps {
   formId?: string;
@@ -62,6 +62,48 @@ interface BuilderHeaderProps {
   onRedo: () => void;
   onDiscard: () => void;
 }
+
+const HeaderTitleDisplay = React.memo(function HeaderTitleDisplay() {
+  const { dict } = useLanguage();
+  const { control } = useFormContext<FormBuilderValues>();
+  const title = useWatch({
+    control,
+    name: 'title',
+    exact: true,
+  });
+
+  return (
+    <span className="font-semibold text-foreground truncate max-w-[160px] sm:max-w-[260px]">
+      {title || dict.builder.header.untitledForm}
+    </span>
+  );
+});
+
+const InspectorToggleButton = React.memo(function InspectorToggleButton() {
+  const { dict } = useLanguage();
+  const isInspectorOpen = useBuilderStore((s) => s.isInspectorOpen);
+  const toggleInspector = useBuilderStore((s) => s.toggleInspector);
+
+  return (
+    <Tooltip>
+      <TooltipTrigger
+        render={
+          <Button
+            variant={isInspectorOpen ? 'secondary' : 'ghost'}
+            size="icon-sm"
+            onClick={toggleInspector}
+            className="cursor-pointer"
+          >
+            <PanelRight className="size-4" />
+          </Button>
+        }
+      />
+      <TooltipContent side="bottom">
+        {dict.builder.header.inspectorTooltip}
+      </TooltipContent>
+    </Tooltip>
+  );
+});
 
 export const BuilderHeader = React.memo(function BuilderHeader({
   submissionCount = 0,
@@ -75,21 +117,20 @@ export const BuilderHeader = React.memo(function BuilderHeader({
   const searchParams = useSearchParams();
   const { dict, language } = useLanguage();
 
-  const { control, setValue } = useFormContext<FormBuilderValues>();
-  const [title, slug, isPublished] = useWatch({
+  const { control, setValue, getValues } = useFormContext<FormBuilderValues>();
+  const [slug, isPublished] = useWatch({
     control,
-    name: ["title", "slug", "isPublished"],
+    name: ['slug', 'isPublished'],
+    exact: true,
   });
 
-  const isInspectorOpen = useBuilderStore((s) => s.isInspectorOpen);
-  const toggleInspector = useBuilderStore((s) => s.toggleInspector);
   const isSaving = useBuilderStore((s) => s.isSaving);
   const lastSavedAt = useBuilderStore((s) => s.lastSavedAt);
   const isDirty = useBuilderStore((s) => s.isDirty);
   const canUndo = useBuilderStore((s) => s.canUndo);
   const canRedo = useBuilderStore((s) => s.canRedo);
 
-  const currentTab = searchParams.get("tab") || "questions";
+  const currentTab = searchParams.get('tab') || 'questions';
 
   // Unsaved changes navigation interception dialog state
   const [showUnsavedDialog, setShowUnsavedDialog] = React.useState(false);
@@ -103,7 +144,7 @@ export const BuilderHeader = React.memo(function BuilderHeader({
     if (isDirty) {
       setPendingAction(() => () => {
         const params = new URLSearchParams(searchParams.toString());
-        params.set("tab", value);
+        params.set('tab', value);
         router.replace(`${pathname}?${params.toString()}`);
       });
       setShowUnsavedDialog(true);
@@ -111,7 +152,7 @@ export const BuilderHeader = React.memo(function BuilderHeader({
     }
 
     const params = new URLSearchParams(searchParams.toString());
-    params.set("tab", value);
+    params.set('tab', value);
     router.replace(`${pathname}?${params.toString()}`);
   };
 
@@ -119,11 +160,11 @@ export const BuilderHeader = React.memo(function BuilderHeader({
     if (isDirty) {
       e.preventDefault();
       setPendingAction(() => () => {
-        router.push("/admin/forms");
+        router.push('/admin/forms');
       });
       setShowUnsavedDialog(true);
     } else {
-      router.push("/admin/forms");
+      router.push('/admin/forms');
     }
   };
 
@@ -134,7 +175,7 @@ export const BuilderHeader = React.memo(function BuilderHeader({
       pendingAction();
       setPendingAction(null);
     } else {
-      router.push("/admin/forms");
+      router.push('/admin/forms');
     }
   };
 
@@ -145,7 +186,7 @@ export const BuilderHeader = React.memo(function BuilderHeader({
       pendingAction();
       setPendingAction(null);
     } else {
-      router.push("/admin/forms");
+      router.push('/admin/forms');
     }
   };
 
@@ -155,32 +196,33 @@ export const BuilderHeader = React.memo(function BuilderHeader({
     setMounted(true);
   }, []);
   const isDark = mounted
-    ? (theme === "system" ? resolvedTheme : theme) === "dark"
+    ? (theme === 'system' ? resolvedTheme : theme) === 'dark'
     : false;
 
   const handleCopyLink = () => {
-    const origin = typeof window !== "undefined" ? window.location.origin : "";
+    const origin = typeof window !== 'undefined' ? window.location.origin : '';
     const publicUrl = `${origin}/forms/${slug}`;
     navigator.clipboard.writeText(publicUrl);
     toast.success(dict.builder.header.shareToast);
   };
 
   const handleNativeShare = async () => {
-    const origin = typeof window !== "undefined" ? window.location.origin : "";
+    const origin = typeof window !== 'undefined' ? window.location.origin : '';
     const publicUrl = `${origin}/forms/${slug}`;
-    if (typeof navigator !== "undefined" && navigator.share) {
+    const currentTitle = getValues('title');
+    if (typeof navigator !== 'undefined' && navigator.share) {
       try {
         await navigator.share({
-          title: title || (language === "tr" ? "Form" : "Form"),
+          title: currentTitle || (language === 'tr' ? 'Form' : 'Form'),
           text:
-            title ||
-            (language === "tr"
-              ? "Bu formu doldurun"
-              : "Please fill out this form"),
+            currentTitle ||
+            (language === 'tr'
+              ? 'Bu formu doldurun'
+              : 'Please fill out this form'),
           url: publicUrl,
         });
       } catch (err: unknown) {
-        if ((err as Error)?.name !== "AbortError") {
+        if ((err as Error)?.name !== 'AbortError') {
           await navigator.clipboard.writeText(publicUrl);
           toast.success(dict.builder.header.shareToast);
         }
@@ -201,10 +243,10 @@ export const BuilderHeader = React.memo(function BuilderHeader({
             type="button"
             onClick={handleBackClick}
             className={buttonVariants({
-              variant: "ghost",
-              size: "icon-sm",
+              variant: 'ghost',
+              size: 'icon-sm',
               className:
-                "cursor-pointer text-muted-foreground hover:text-foreground h-8 w-8 shrink-0",
+                'cursor-pointer text-muted-foreground hover:text-foreground h-8 w-8 shrink-0',
             })}
             title={dict.builder.header.backToForms}
           >
@@ -216,7 +258,7 @@ export const BuilderHeader = React.memo(function BuilderHeader({
             {isDirty ? (
               <span className="inline-flex items-center gap-1.5 rounded-full bg-amber-500/10 px-2 py-0.5 text-[11px] font-medium text-amber-600 dark:text-amber-400 border border-amber-500/25 shrink-0 whitespace-nowrap">
                 <span className="size-1.5 rounded-full bg-amber-500 animate-pulse" />
-                <span>{language === "tr" ? "Kaydedilmedi" : "Unsaved"}</span>
+                <span>{language === 'tr' ? 'Kaydedilmedi' : 'Unsaved'}</span>
               </span>
             ) : (
               <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/10 px-2 py-0.5 text-[11px] font-medium text-emerald-600 dark:text-emerald-400 border border-emerald-500/25 shrink-0 whitespace-nowrap">
@@ -291,8 +333,8 @@ export const BuilderHeader = React.memo(function BuilderHeader({
                 onClick={() => {
                   window.open(
                     `/forms/${slug}?preview=true`,
-                    "_blank",
-                    "noopener,noreferrer",
+                    '_blank',
+                    'noopener,noreferrer',
                   );
                 }}
                 className="cursor-pointer flex items-center gap-2.5 rounded-lg px-2.5 py-2 text-xs font-medium text-foreground hover:bg-accent hover:text-accent-foreground transition-colors"
@@ -313,8 +355,8 @@ export const BuilderHeader = React.memo(function BuilderHeader({
                 >
                   <span
                     className={cn(
-                      "size-2 ml-1 mr-1.5 rounded-full shrink-0",
-                      isPublished ? "bg-emerald-500" : "bg-muted-foreground/40",
+                      'size-2 ml-1 mr-1.5 rounded-full shrink-0',
+                      isPublished ? 'bg-emerald-500' : 'bg-muted-foreground/40',
                     )}
                   />
                   {isPublished
@@ -325,7 +367,7 @@ export const BuilderHeader = React.memo(function BuilderHeader({
                   checked={isPublished}
                   id="publish-toggle"
                   onCheckedChange={(checked) => {
-                    setValue("isPublished", checked, { shouldDirty: true });
+                    setValue('isPublished', checked, { shouldDirty: true });
                     toast.info(
                       checked
                         ? dict.builder.header.publishedToast
@@ -351,7 +393,7 @@ export const BuilderHeader = React.memo(function BuilderHeader({
                 <Button
                   variant="outline"
                   size="icon"
-                  onClick={() => setTheme(isDark ? "light" : "dark")}
+                  onClick={() => setTheme(isDark ? 'light' : 'dark')}
                   className="h-8 col-span-1 w-full cursor-pointer justify-center gap-1.5 px-2 text-xs font-medium text-foreground hover:bg-accent"
                 >
                   {isDark ? (
@@ -383,10 +425,10 @@ export const BuilderHeader = React.memo(function BuilderHeader({
               type="button"
               onClick={handleBackClick}
               className={buttonVariants({
-                variant: "ghost",
-                size: "icon-sm",
+                variant: 'ghost',
+                size: 'icon-sm',
                 className:
-                  "cursor-pointer text-muted-foreground hover:text-foreground",
+                  'cursor-pointer text-muted-foreground hover:text-foreground',
               })}
               title={dict.builder.header.backToForms}
             >
@@ -394,9 +436,7 @@ export const BuilderHeader = React.memo(function BuilderHeader({
             </button>
 
             <div className="flex items-center gap-2.5 truncate">
-              <span className="font-semibold text-foreground truncate max-w-[160px] sm:max-w-[260px]">
-                {title || dict.builder.header.untitledForm}
-              </span>
+              <HeaderTitleDisplay />
 
               {/* Status Indicator */}
               {isDirty ? (
@@ -407,12 +447,12 @@ export const BuilderHeader = React.memo(function BuilderHeader({
               ) : lastSavedAt ? (
                 <span className="hidden md:inline-flex items-center gap-1 text-xs text-muted-foreground shrink-0">
                   <Check className="size-3 text-emerald-500" />
-                  {dict.builder.header.saved}{" "}
+                  {dict.builder.header.saved}{' '}
                   {lastSavedAt.toLocaleTimeString(
-                    language === "tr" ? "tr-TR" : "en-US",
+                    language === 'tr' ? 'tr-TR' : 'en-US',
                     {
-                      hour: "2-digit",
-                      minute: "2-digit",
+                      hour: '2-digit',
+                      minute: '2-digit',
                     },
                   )}
                 </span>
@@ -478,8 +518,8 @@ export const BuilderHeader = React.memo(function BuilderHeader({
               >
                 <span
                   className={cn(
-                    "size-2 rounded-full shrink-0",
-                    isPublished ? "bg-emerald-500" : "bg-muted-foreground/40",
+                    'size-2 rounded-full shrink-0',
+                    isPublished ? 'bg-emerald-500' : 'bg-muted-foreground/40',
                   )}
                 />
                 {isPublished
@@ -490,7 +530,7 @@ export const BuilderHeader = React.memo(function BuilderHeader({
                 checked={isPublished}
                 id="desktop-publish-toggle"
                 onCheckedChange={(checked) => {
-                  setValue("isPublished", checked, { shouldDirty: true });
+                  setValue('isPublished', checked, { shouldDirty: true });
                   toast.info(
                     checked
                       ? dict.builder.header.publishedToast
@@ -514,10 +554,10 @@ export const BuilderHeader = React.memo(function BuilderHeader({
                     target="_blank"
                     rel="noopener noreferrer"
                     className={buttonVariants({
-                      variant: "outline",
-                      size: "sm",
+                      variant: 'outline',
+                      size: 'sm',
                       className:
-                        "cursor-pointer hidden sm:inline-flex items-center gap-1.5",
+                        'cursor-pointer hidden sm:inline-flex items-center gap-1.5',
                     })}
                   >
                     <Eye className="size-3.5 text-muted-foreground" />
@@ -584,23 +624,7 @@ export const BuilderHeader = React.memo(function BuilderHeader({
             </Tooltip>
 
             {/* Inspector Toggle */}
-            <Tooltip>
-              <TooltipTrigger
-                render={
-                  <Button
-                    variant={isInspectorOpen ? "secondary" : "ghost"}
-                    size="icon-sm"
-                    onClick={toggleInspector}
-                    className="cursor-pointer"
-                  >
-                    <PanelRight className="size-4" />
-                  </Button>
-                }
-              />
-              <TooltipContent side="bottom">
-                {dict.builder.header.inspectorTooltip}
-              </TooltipContent>
-            </Tooltip>
+            <InspectorToggleButton />
 
             <ThemeToggle />
             <LogoutButton size="icon-sm" />
@@ -614,16 +638,16 @@ export const BuilderHeader = React.memo(function BuilderHeader({
             onValueChange={handleTabChange}
             className="w-auto"
           >
-            <TabsList className="bg-transparent h-10 p-0 space-x-6">
+            <TabsList variant={'line'} className="h-10 space-x-6">
               <TabsTrigger
                 value="questions"
-                className="rounded-none border-b-2 border-transparent px-2 py-2 text-xs sm:text-sm font-medium data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none cursor-pointer"
+                className="px-2 text-xs sm:text-sm font-medium cursor-pointer"
               >
                 {dict.builder.header.tabQuestions}
               </TabsTrigger>
               <TabsTrigger
                 value="responses"
-                className="rounded-none border-b-2 border-transparent px-2 py-2 text-xs sm:text-sm font-medium data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none cursor-pointer flex items-center gap-1.5"
+                className="px-2 text-xs sm:text-sm font-medium cursor-pointer flex items-center gap-1.5"
               >
                 {dict.builder.header.tabResponses}
                 <span className="rounded-full bg-muted px-1.5 py-0.2 text-[10px] font-semibold text-muted-foreground">
@@ -632,7 +656,7 @@ export const BuilderHeader = React.memo(function BuilderHeader({
               </TabsTrigger>
               <TabsTrigger
                 value="settings"
-                className="rounded-none border-b-2 border-transparent px-2 py-2 text-xs sm:text-sm font-medium data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none cursor-pointer"
+                className="px-2 text-xs sm:text-sm font-medium cursor-pointer"
               >
                 {dict.builder.header.tabSettings}
               </TabsTrigger>
@@ -676,7 +700,7 @@ export const BuilderHeader = React.memo(function BuilderHeader({
             >
               {dict.builder.header.discardAndLeave}
             </Button>
-            <div className="flex items-center gap-2 shrink-0">
+            <div className="flex w-full items-center gap-2 sm:w-auto sm:shrink-0">
               <Button
                 variant="outline"
                 size="sm"
@@ -684,14 +708,14 @@ export const BuilderHeader = React.memo(function BuilderHeader({
                   setShowUnsavedDialog(false);
                   setPendingAction(null);
                 }}
-                className="cursor-pointer shrink-0 whitespace-nowrap"
+                className="cursor-pointer flex-1 whitespace-nowrap sm:flex-none"
               >
                 {dict.builder.header.keepEditing}
               </Button>
               <Button
                 size="sm"
                 onClick={handleSaveAndProceed}
-                className="cursor-pointer shrink-0 whitespace-nowrap"
+                className="cursor-pointer flex-1 whitespace-nowrap sm:flex-none"
               >
                 {dict.builder.header.saveAndLeave}
               </Button>

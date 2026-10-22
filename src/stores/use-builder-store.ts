@@ -7,6 +7,8 @@ export type PreviewDevice = "desktop" | "tablet" | "mobile"
 export interface BuilderState {
   // Active selected question for inspector panel
   activeQuestionId: string | null
+  // Last non-null activeQuestionId retained so inspector exit animation keeps showing its fields without extra state sync
+  lastActiveQuestionId: string | null
 
   // Device preview simulation mode
   previewDevice: PreviewDevice
@@ -61,6 +63,7 @@ export type BuilderStore = BuilderState & BuilderActions
 
 const initialState: BuilderState = {
   activeQuestionId: null,
+  lastActiveQuestionId: null,
   previewDevice: "desktop",
   isInspectorOpen: false,
   isLivePreview: false,
@@ -79,7 +82,14 @@ export const useBuilderStore = create<BuilderStore>((set) => ({
   ...initialState,
 
   setActiveQuestionId: (id) =>
-    set((state) => (state.activeQuestionId === id ? state : { activeQuestionId: id })),
+    set((state) =>
+      state.activeQuestionId === id
+        ? state
+        : {
+            activeQuestionId: id,
+            lastActiveQuestionId: id ?? state.lastActiveQuestionId,
+          },
+    ),
 
   selectQuestion: (id) =>
     set((state) => {
@@ -88,6 +98,7 @@ export const useBuilderStore = create<BuilderStore>((set) => ({
       }
       return {
         activeQuestionId: id,
+        lastActiveQuestionId: id,
         isInspectorOpen: true,
       }
     }),
@@ -108,7 +119,9 @@ export const useBuilderStore = create<BuilderStore>((set) => ({
 
   setIsInspectorOpen: (isOpen) =>
     set((state) => {
-      const nextActiveId = isOpen ? state.activeQuestionId : null
+      const nextActiveId = isOpen
+        ? (state.activeQuestionId ?? state.lastActiveQuestionId)
+        : null
       if (state.isInspectorOpen === isOpen && state.activeQuestionId === nextActiveId) {
         return state
       }
@@ -123,7 +136,9 @@ export const useBuilderStore = create<BuilderStore>((set) => ({
       const nextOpen = !state.isInspectorOpen
       return {
         isInspectorOpen: nextOpen,
-        activeQuestionId: nextOpen ? state.activeQuestionId : null,
+        activeQuestionId: nextOpen
+          ? (state.activeQuestionId ?? state.lastActiveQuestionId)
+          : null,
       }
     }),
 

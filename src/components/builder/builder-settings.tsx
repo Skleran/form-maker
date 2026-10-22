@@ -3,7 +3,7 @@
 import * as React from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { useFormContext } from 'react-hook-form';
+import { useFormContext, useFormState, useWatch } from 'react-hook-form';
 import { toast } from 'sonner';
 import {
   AlertCircle,
@@ -42,16 +42,17 @@ interface BuilderSettingsProps {
 export function BuilderSettings({ formId }: BuilderSettingsProps) {
   const router = useRouter();
   const { dict } = useLanguage();
-  const {
-    register,
-    watch,
-    setValue,
-    setError,
-    clearErrors,
-    formState: { errors },
-  } = useFormContext<FormBuilderValues>();
-  const isPublished = watch('isPublished');
-  const currentSlug = watch('slug');
+  const { register, control, setValue, setError, clearErrors } =
+    useFormContext<FormBuilderValues>();
+  const { errors } = useFormState({
+    control,
+    name: ['title', 'slug'],
+  });
+  const [isPublished, currentSlug] = useWatch({
+    control,
+    name: ['isPublished', 'slug'],
+    exact: true,
+  });
 
   const slugConflict = useBuilderStore((s) => s.slugConflict);
   const setSlugConflict = useBuilderStore((s) => s.setSlugConflict);
@@ -294,7 +295,7 @@ export function BuilderSettings({ formId }: BuilderSettingsProps) {
                 </p>
               </div>
               <Switch
-                checked={isPublished}
+                checked={Boolean(isPublished)}
                 onCheckedChange={(checked) =>
                   setValue('isPublished', checked, { shouldDirty: true })
                 }
