@@ -1,7 +1,7 @@
-"use client";
+'use client';
 
-import * as React from "react";
-import { useFieldArray, useFormContext, useWatch } from "react-hook-form";
+import * as React from 'react';
+import { useFieldArray, useFormContext, useWatch } from 'react-hook-form';
 import {
   AlignLeft,
   CheckSquare,
@@ -14,38 +14,38 @@ import {
   Trash2,
   Type,
   X,
-} from "lucide-react";
+} from 'lucide-react';
 
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Switch } from "@/components/ui/switch";
-import { Textarea } from "@/components/ui/textarea";
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Switch } from '@/components/ui/switch';
+import { Textarea } from '@/components/ui/textarea';
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/ui/select";
-import { Separator } from "@/components/ui/separator";
+} from '@/components/ui/select';
+import { Separator } from '@/components/ui/separator';
 import {
   Drawer,
   DrawerClose,
   DrawerContent,
   DrawerHeader,
   DrawerTitle,
-} from "@/components/ui/drawer";
-import { useIsMobile } from "@/hooks/use-mobile";
-import { useBuilderStore } from "@/stores/use-builder-store";
+} from '@/components/ui/drawer';
+import { useIsMobile } from '@/hooks/use-mobile';
+import { useBuilderStore } from '@/stores/use-builder-store';
 import type {
   FormBuilderValues,
   QuestionItemValues,
-} from "@/lib/validations/form";
-import type { QuestionType } from "@/types/form";
-import { useLanguage } from "@/lib/i18n/language-context";
-import { cn } from "@/lib/utils";
-import { QUESTION_ICON_OPTIONS } from "@/components/form/question-icon";
-import { Label } from "../ui/label";
+} from '@/lib/validations/form';
+import type { QuestionType } from '@/types/form';
+import { useLanguage } from '@/lib/i18n/language-context';
+import { cn } from '@/lib/utils';
+import { QUESTION_ICON_OPTIONS } from '@/components/form/question-icon';
+import { Label } from '../ui/label';
 
 interface BuilderInspectorProps {
   onDuplicateQuestion: (index: number) => void;
@@ -67,38 +67,38 @@ export const BuilderInspector = React.memo(function BuilderInspector({
     useFormContext<FormBuilderValues>();
   const { fields } = useFieldArray({
     control,
-    name: "questions",
+    name: 'questions',
   });
 
   const questionTypesList = React.useMemo(
     () => [
       {
-        value: "SHORT_TEXT" as QuestionType,
+        value: 'SHORT_TEXT' as QuestionType,
         label: dict.builder.canvas.questionTypes.SHORT_TEXT,
         icon: Type,
       },
       {
-        value: "LONG_TEXT" as QuestionType,
+        value: 'LONG_TEXT' as QuestionType,
         label: dict.builder.canvas.questionTypes.LONG_TEXT,
         icon: AlignLeft,
       },
       {
-        value: "SINGLE_CHOICE" as QuestionType,
+        value: 'SINGLE_CHOICE' as QuestionType,
         label: dict.builder.canvas.questionTypes.SINGLE_CHOICE,
         icon: Radio,
       },
       {
-        value: "MULTIPLE_CHOICE" as QuestionType,
+        value: 'MULTIPLE_CHOICE' as QuestionType,
         label: dict.builder.canvas.questionTypes.MULTIPLE_CHOICE,
         icon: CheckSquare,
       },
       {
-        value: "DROPDOWN" as QuestionType,
+        value: 'DROPDOWN' as QuestionType,
         label: dict.builder.canvas.questionTypes.DROPDOWN,
         icon: ChevronDown,
       },
       {
-        value: "FILE_UPLOAD" as QuestionType,
+        value: 'FILE_UPLOAD' as QuestionType,
         label: dict.builder.canvas.questionTypes.FILE_UPLOAD,
         icon: FileUp,
       },
@@ -110,22 +110,22 @@ export const BuilderInspector = React.memo(function BuilderInspector({
     () => [
       {
         label: dict.builder.inspector.presetTypes.pdf,
-        value: "application/pdf",
+        value: 'application/pdf',
       },
-      { label: dict.builder.inspector.presetTypes.images, value: "image/*" },
+      { label: dict.builder.inspector.presetTypes.images, value: 'image/*' },
       {
         label: dict.builder.inspector.presetTypes.word,
         value:
-          "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+          'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
       },
       {
         label: dict.builder.inspector.presetTypes.spreadsheets,
         value:
-          "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,text/csv",
+          'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,text/csv',
       },
       {
         label: dict.builder.inspector.presetTypes.zip,
-        value: "application/zip",
+        value: 'application/zip',
       },
     ],
     [dict],
@@ -137,7 +137,7 @@ export const BuilderInspector = React.memo(function BuilderInspector({
       return -1;
     }
 
-    const currentQuestions = getValues("questions") || [];
+    const currentQuestions = getValues('questions') || [];
     // 1. Check matching persistent question.id
     const qIndex = currentQuestions.findIndex(
       (q) => q?.id === activeQuestionId,
@@ -208,7 +208,7 @@ export const BuilderInspector = React.memo(function BuilderInspector({
 
   const handlePrevQuestion = () => {
     if (activeIndex > 0) {
-      const currentQuestions = getValues("questions") || [];
+      const currentQuestions = getValues('questions') || [];
       const prevQ = currentQuestions[activeIndex - 1];
       const prevId = prevQ?.id || fields[activeIndex - 1]?.id;
       if (prevId) setActiveQuestionId(prevId);
@@ -217,7 +217,7 @@ export const BuilderInspector = React.memo(function BuilderInspector({
 
   const handleNextQuestion = () => {
     if (activeIndex < totalQuestions - 1) {
-      const currentQuestions = getValues("questions") || [];
+      const currentQuestions = getValues('questions') || [];
       const nextQ = currentQuestions[activeIndex + 1];
       const nextId = nextQ?.id || fields[activeIndex + 1]?.id;
       if (nextId) setActiveQuestionId(nextId);
@@ -257,7 +257,7 @@ export const BuilderInspector = React.memo(function BuilderInspector({
                 shouldDirty: true,
               });
               if (
-                ["SINGLE_CHOICE", "MULTIPLE_CHOICE", "DROPDOWN"].includes(
+                ['SINGLE_CHOICE', 'MULTIPLE_CHOICE', 'DROPDOWN'].includes(
                   typedVal,
                 ) &&
                 (!activeQuestion.options || activeQuestion.options.length === 0)
@@ -265,7 +265,7 @@ export const BuilderInspector = React.memo(function BuilderInspector({
                 setValue(`questions.${activeIndex}.options`, [
                   {
                     id: `opt_${Date.now()}_1`,
-                    label: language === "tr" ? "Seçenek 1" : "Option 1",
+                    label: language === 'tr' ? 'Seçenek 1' : 'Option 1',
                   },
                 ]);
               }
@@ -308,7 +308,7 @@ export const BuilderInspector = React.memo(function BuilderInspector({
         <div className="space-y-1">
           <div className="flex items-center justify-between">
             <label className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
-              {language === "tr" ? "Soru İkonu" : "Question Icon"}
+              {language === 'tr' ? 'Soru İkonu' : 'Question Icon'}
             </label>
             {activeQuestion.config?.icon && (
               <button
@@ -320,14 +320,14 @@ export const BuilderInspector = React.memo(function BuilderInspector({
                 }}
                 className="text-[10px] text-muted-foreground hover:text-destructive underline cursor-pointer"
               >
-                {language === "tr" ? "Kaldır" : "Remove"}
+                {language === 'tr' ? 'Kaldır' : 'Remove'}
               </button>
             )}
           </div>
           <Select
-            value={activeQuestion.config?.icon || "none"}
+            value={activeQuestion.config?.icon || 'none'}
             onValueChange={(val) => {
-              const nextVal = !val || val === "none" ? undefined : val;
+              const nextVal = !val || val === 'none' ? undefined : val;
               setValue(`questions.${activeIndex}.config.icon`, nextVal, {
                 shouldDirty: true,
               });
@@ -336,19 +336,19 @@ export const BuilderInspector = React.memo(function BuilderInspector({
             <SelectTrigger className="w-full h-8 text-xs">
               <SelectValue
                 placeholder={
-                  language === "tr" ? "İkon seçin..." : "Select icon..."
+                  language === 'tr' ? 'İkon seçin...' : 'Select icon...'
                 }
               >
                 {(val: string | null) => {
-                  if (!val || val === "none")
-                    return language === "tr"
-                      ? "Yok (İkonsuz)"
-                      : "None (No icon)";
+                  if (!val || val === 'none')
+                    return language === 'tr'
+                      ? 'Yok (İkonsuz)'
+                      : 'None (No icon)';
                   const iconOpt = QUESTION_ICON_OPTIONS.find(
                     (item) => item.value === val,
                   );
                   if (!iconOpt)
-                    return language === "tr" ? "Yok (İkonsuz)" : "None";
+                    return language === 'tr' ? 'Yok (İkonsuz)' : 'None';
                   const Icon = iconOpt.icon;
                   return (
                     <span className="flex items-center gap-1.5 truncate">
@@ -362,7 +362,7 @@ export const BuilderInspector = React.memo(function BuilderInspector({
             <SelectContent className="max-h-56">
               <SelectItem value="none" className="text-xs">
                 <span className="text-muted-foreground">
-                  {language === "tr" ? "Yok (İkonsuz)" : "None (No icon)"}
+                  {language === 'tr' ? 'Yok (İkonsuz)' : 'None (No icon)'}
                 </span>
               </SelectItem>
               {QUESTION_ICON_OPTIONS.map((opt) => {
@@ -427,9 +427,9 @@ export const BuilderInspector = React.memo(function BuilderInspector({
         </div>
 
         {/* Field Placeholder (for Text inputs) */}
-        {(activeQuestion.type === "SHORT_TEXT" ||
-          activeQuestion.type === "LONG_TEXT" ||
-          activeQuestion.type === "DROPDOWN") && (
+        {(activeQuestion.type === 'SHORT_TEXT' ||
+          activeQuestion.type === 'LONG_TEXT' ||
+          activeQuestion.type === 'DROPDOWN') && (
           <div className="space-y-1">
             <label className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
               {dict.builder.inspector.placeholder}
@@ -443,25 +443,25 @@ export const BuilderInspector = React.memo(function BuilderInspector({
         )}
 
         {/* Text Constraints: Min / Max Length */}
-        {(activeQuestion.type === "SHORT_TEXT" ||
-          activeQuestion.type === "LONG_TEXT") && (
+        {(activeQuestion.type === 'SHORT_TEXT' ||
+          activeQuestion.type === 'LONG_TEXT') && (
           <div className="space-y-1">
             <label className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
-              {language === "tr" ? "Metin Sınırları" : "Text Limits"}
+              {language === 'tr' ? 'Metin Sınırları' : 'Text Limits'}
             </label>
             <div className="grid grid-cols-2 gap-2">
               <div className="space-y-0.5">
                 <span className="text-[10px] text-muted-foreground">
-                  {language === "tr" ? "Min karakter" : "Min chars"}
+                  {language === 'tr' ? 'Min karakter' : 'Min chars'}
                 </span>
                 <Input
                   type="number"
                   min={0}
-                  placeholder={language === "tr" ? "Yok" : "None"}
-                  value={activeQuestion.config?.minLength ?? ""}
+                  placeholder={language === 'tr' ? 'Yok' : 'None'}
+                  value={activeQuestion.config?.minLength ?? ''}
                   onChange={(e) => {
                     const val =
-                      e.target.value === ""
+                      e.target.value === ''
                         ? undefined
                         : Number(e.target.value);
                     setValue(`questions.${activeIndex}.config.minLength`, val, {
@@ -473,16 +473,16 @@ export const BuilderInspector = React.memo(function BuilderInspector({
               </div>
               <div className="space-y-0.5">
                 <span className="text-[10px] text-muted-foreground">
-                  {language === "tr" ? "Maks karakter" : "Max chars"}
+                  {language === 'tr' ? 'Maks karakter' : 'Max chars'}
                 </span>
                 <Input
                   type="number"
                   min={1}
-                  placeholder={language === "tr" ? "Yok" : "None"}
-                  value={activeQuestion.config?.maxLength ?? ""}
+                  placeholder={language === 'tr' ? 'Yok' : 'None'}
+                  value={activeQuestion.config?.maxLength ?? ''}
                   onChange={(e) => {
                     const val =
-                      e.target.value === ""
+                      e.target.value === ''
                         ? undefined
                         : Number(e.target.value);
                     setValue(`questions.${activeIndex}.config.maxLength`, val, {
@@ -497,7 +497,7 @@ export const BuilderInspector = React.memo(function BuilderInspector({
         )}
 
         {/* File Upload Configuration */}
-        {activeQuestion.type === "FILE_UPLOAD" && (
+        {activeQuestion.type === 'FILE_UPLOAD' && (
           <div className="space-y-2.5">
             <label className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
               {dict.builder.inspector.fileLimitsTitle}
@@ -520,7 +520,7 @@ export const BuilderInspector = React.memo(function BuilderInspector({
               >
                 <SelectTrigger className="w-full h-8 text-xs">
                   <SelectValue placeholder="10 MB">
-                    {(val: string | null) => (val ? `${val} MB` : "10 MB")}
+                    {(val: string | null) => (val ? `${val} MB` : '10 MB')}
                   </SelectValue>
                 </SelectTrigger>
                 <SelectContent>
@@ -528,7 +528,7 @@ export const BuilderInspector = React.memo(function BuilderInspector({
                     5 MB
                   </SelectItem>
                   <SelectItem value="10" className="text-xs">
-                    10 MB ({language === "tr" ? "Varsayılan" : "Default"})
+                    10 MB ({language === 'tr' ? 'Varsayılan' : 'Default'})
                   </SelectItem>
                   <SelectItem value="25" className="text-xs">
                     25 MB
@@ -584,7 +584,7 @@ export const BuilderInspector = React.memo(function BuilderInspector({
         {/* Quick Actions */}
         <div className="space-y-1.5 pt-0.5">
           <label className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
-            {language === "tr" ? "Kart İşlemleri" : "Card Actions"}
+            {language === 'tr' ? 'Kart İşlemleri' : 'Card Actions'}
           </label>
           <div className="grid grid-cols-2 gap-2">
             <Button
@@ -613,7 +613,7 @@ export const BuilderInspector = React.memo(function BuilderInspector({
         {/* Meta Info */}
         <div className="rounded border border-border/50 bg-muted/20 px-2.5 py-1.5 text-[10px] text-muted-foreground flex items-center justify-between font-mono">
           <span>
-            {language === "tr"
+            {language === 'tr'
               ? `Sıra #${activeIndex + 1}`
               : `Position #${activeIndex + 1}`}
           </span>
@@ -627,12 +627,12 @@ export const BuilderInspector = React.memo(function BuilderInspector({
     <>
       {/* Desktop Sidebar (hidden on mobile) */}
       <aside
-        style={{ width: "var(--inspector-width, 0px)" }}
+        style={{ width: 'var(--inspector-width, 0px)' }}
         className={cn(
-          "hidden md:flex bg-card flex-col shrink-0 h-full overflow-hidden shadow-sm border-l z-20 transition-[opacity,transform,border-color] duration-225 ease-in-out",
+          'hidden md:flex bg-card flex-col shrink-0 h-full overflow-hidden shadow-sm border-l z-20 transition-[opacity,transform,border-color] duration-225 ease-in-out',
           isInspectorOpen
-            ? "opacity-100 translate-x-0"
-            : "border-l-0 opacity-0 translate-x-6 pointer-events-none",
+            ? 'opacity-100 translate-x-0'
+            : 'border-l-0 opacity-0 translate-x-6 pointer-events-none',
         )}
         aria-hidden={!isInspectorOpen}
       >
@@ -661,7 +661,7 @@ export const BuilderInspector = React.memo(function BuilderInspector({
                     onClick={handlePrevQuestion}
                     className="cursor-pointer text-muted-foreground hover:text-foreground h-6 w-6"
                     title={
-                      language === "tr" ? "Önceki soru" : "Previous question"
+                      language === 'tr' ? 'Önceki soru' : 'Previous question'
                     }
                   >
                     <ChevronUp className="size-3.5" />
@@ -672,7 +672,7 @@ export const BuilderInspector = React.memo(function BuilderInspector({
                     disabled={activeIndex >= totalQuestions - 1}
                     onClick={handleNextQuestion}
                     className="cursor-pointer text-muted-foreground hover:text-foreground h-6 w-6"
-                    title={language === "tr" ? "Sonraki soru" : "Next question"}
+                    title={language === 'tr' ? 'Sonraki soru' : 'Next question'}
                   >
                     <ChevronDown className="size-3.5" />
                   </Button>
@@ -706,6 +706,7 @@ export const BuilderInspector = React.memo(function BuilderInspector({
             deselectQuestion();
           }
         }}
+        showSwipeHandle={true}
       >
         <DrawerContent
           // Don't restore focus to the previously focused card input on close:
@@ -736,7 +737,7 @@ export const BuilderInspector = React.memo(function BuilderInspector({
                     onClick={handlePrevQuestion}
                     className="cursor-pointer text-muted-foreground hover:text-foreground h-7 w-7"
                     title={
-                      language === "tr" ? "Önceki soru" : "Previous question"
+                      language === 'tr' ? 'Önceki soru' : 'Previous question'
                     }
                   >
                     <ChevronUp className="size-4" />
@@ -747,7 +748,7 @@ export const BuilderInspector = React.memo(function BuilderInspector({
                     disabled={activeIndex >= totalQuestions - 1}
                     onClick={handleNextQuestion}
                     className="cursor-pointer text-muted-foreground hover:text-foreground h-7 w-7"
-                    title={language === "tr" ? "Sonraki soru" : "Next question"}
+                    title={language === 'tr' ? 'Sonraki soru' : 'Next question'}
                   >
                     <ChevronDown className="size-4" />
                   </Button>

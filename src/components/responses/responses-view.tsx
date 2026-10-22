@@ -27,9 +27,9 @@ import {
   type PaginatedResponsesResult,
 } from '@/actions/response-actions';
 import { ResponsesTable } from './responses-table';
-import { ResponseDetailSheet } from './response-detail-sheet';
 import { ExportCsvButton } from './export-csv-button';
 import { useLanguage } from '@/lib/i18n/language-context';
+import { ResponseDetailDrawer } from './response-detail-drawer';
 
 interface ResponsesViewProps {
   formId: string;
@@ -103,10 +103,9 @@ export function ResponsesView({ formId }: ResponsesViewProps) {
       };
     });
 
-    // If currently inspecting this submission, close the sheet
+    // If currently inspecting this submission, close the drawer smoothly
     if (selectedSubmission?.id === idToDelete) {
       setIsSheetOpen(false);
-      setSelectedSubmission(null);
     }
 
     setIsDeleting(true);
@@ -241,14 +240,13 @@ export function ResponsesView({ formId }: ResponsesViewProps) {
           />
         )}
 
-        {/* Detail Inspection Sheet */}
-        <ResponseDetailSheet
+        {/* Detail Inspection Drawer */}
+        <ResponseDetailDrawer
           formId={formId}
           submission={selectedSubmission}
           isOpen={isSheetOpen}
           onClose={() => {
             setIsSheetOpen(false);
-            setSelectedSubmission(null);
           }}
           onDeleted={() => loadResponses(currentPage)}
           onDeleteRequest={(id) => setSubmissionToDelete(id)}
