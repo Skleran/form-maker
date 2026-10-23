@@ -38,6 +38,7 @@ import {
   getAcceptAttribute,
   isFileTypeAllowed,
 } from '@/lib/file-types';
+import { FormMakerLogo } from '../formmaker-logo';
 
 interface FileUploadValue {
   name: string;
@@ -513,7 +514,7 @@ export function PublicFormRenderer({
         {/* Top Header Floating Controls */}
         <div className="mx-auto max-w-2xl flex items-center justify-between mb-4">
           <div className="flex items-center gap-2 text-xs font-medium text-muted-foreground">
-            <FileText className="size-4 text-primary" />
+            <FormMakerLogo className="size-4" />
             <span>{dict.publicForm.brand}</span>
           </div>
           <div className="flex items-center gap-2 sm:gap-3">

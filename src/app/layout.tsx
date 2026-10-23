@@ -19,9 +19,24 @@ const geistMono = Geist_Mono({
   subsets: ['latin'],
 });
 
+const siteUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
+
 export const metadata: Metadata = {
+  metadataBase: new URL(siteUrl),
   title: 'Form Maker',
   description: 'Form creation and data-collection web platform',
+  openGraph: {
+    title: 'Form Maker',
+    description: 'Form creation and data-collection web platform',
+    images: [
+      {
+        url: '/web-app-manifest-512x512.png',
+        width: 512,
+        height: 512,
+        alt: 'FormMaker Logo',
+      },
+    ],
+  },
 };
 
 export default function RootLayout({
