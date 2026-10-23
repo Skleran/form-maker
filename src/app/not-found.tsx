@@ -1,23 +1,23 @@
-"use client"
+'use client';
 
-import Link from "next/link"
-import { useRouter } from "next/navigation"
+import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import {
   FileQuestion,
   ArrowLeft,
   Home,
   LayoutDashboard,
   CheckCircle2,
-  FileText,
-} from "lucide-react"
-import { Button, buttonVariants } from "@/components/ui/button"
-import { Card } from "@/components/ui/card"
-import { ThemeToggle } from "@/components/theme-toggle"
-import { useLanguage } from "@/lib/i18n/language-context"
+} from 'lucide-react';
+import { Button, buttonVariants } from '@/components/ui/button';
+import { Card } from '@/components/ui/card';
+import { ThemeToggle } from '@/components/theme-toggle';
+import { useLanguage } from '@/lib/i18n/language-context';
+import { FormMakerLogo } from '@/components/formmaker-logo';
 
 export default function NotFound() {
-  const router = useRouter()
-  const { dict } = useLanguage()
+  const router = useRouter();
+  const { dict } = useLanguage();
 
   return (
     <div className="flex min-h-screen flex-col items-center justify-center bg-muted/20 px-4 py-12 relative selection:bg-primary selection:text-primary-foreground">
@@ -28,7 +28,7 @@ export default function NotFound() {
           className="flex items-center gap-2 text-sm font-semibold tracking-tight text-foreground transition-opacity hover:opacity-80"
         >
           <div className="flex size-7 items-center justify-center rounded-lg bg-primary text-primary-foreground shadow-xs">
-            <FileText className="size-3.5" />
+            <FormMakerLogo className="size-4" />
           </div>
           <span>FormMaker</span>
         </Link>
@@ -92,9 +92,9 @@ export default function NotFound() {
           <Link
             href="/"
             className={buttonVariants({
-              variant: "default",
-              size: "default",
-              className: "w-full sm:w-auto gap-2 font-medium cursor-pointer",
+              variant: 'default',
+              size: 'default',
+              className: 'w-full sm:w-auto gap-2 font-medium cursor-pointer',
             })}
           >
             <Home className="size-4" />
@@ -104,9 +104,10 @@ export default function NotFound() {
           <Link
             href="/admin/forms"
             className={buttonVariants({
-              variant: "outline",
-              size: "default",
-              className: "w-full sm:w-auto gap-2 text-muted-foreground hover:text-foreground cursor-pointer",
+              variant: 'outline',
+              size: 'default',
+              className:
+                'w-full sm:w-auto gap-2 text-muted-foreground hover:text-foreground cursor-pointer',
             })}
           >
             <LayoutDashboard className="size-4" />
@@ -120,5 +121,5 @@ export default function NotFound() {
         FormMaker • Kurum İçi Form Yönetim Platformu
       </footer>
     </div>
-  )
+  );
 }

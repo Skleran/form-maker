@@ -1,11 +1,10 @@
-"use client";
+'use client';
 
-import Link from "next/link";
-import { ThemeToggle } from "@/components/theme-toggle";
-import { buttonVariants } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
+import Link from 'next/link';
+import { ThemeToggle } from '@/components/theme-toggle';
+import { buttonVariants } from '@/components/ui/button';
+import { Card } from '@/components/ui/card';
 import {
-  FileText,
   SlidersHorizontal,
   Database,
   Layers,
@@ -13,8 +12,9 @@ import {
   ShieldCheck,
   Smartphone,
   Eye,
-} from "lucide-react";
-import { useLanguage } from "@/lib/i18n/language-context";
+} from 'lucide-react';
+import { useLanguage } from '@/lib/i18n/language-context';
+import { FormMakerLogo } from '@/components/formmaker-logo';
 
 export default function Home() {
   const { dict } = useLanguage();
@@ -26,7 +26,7 @@ export default function Home() {
         <div className="container mx-auto flex h-14 max-w-6xl items-center justify-between px-4 sm:px-6">
           <div className="flex items-center gap-2.5">
             <div className="flex size-8 items-center justify-center rounded-lg bg-primary text-primary-foreground shadow-sm">
-              <FileText className="size-4" />
+              <FormMakerLogo className="size-5" />
             </div>
             <span className="font-semibold tracking-tight text-foreground">
               FormMaker
@@ -41,8 +41,8 @@ export default function Home() {
             <Link
               href="/admin/forms"
               className={buttonVariants({
-                size: "sm",
-                className: "font-medium",
+                size: 'sm',
+                className: 'font-medium',
               })}
             >
               {dict.nav.goToAdmin}
@@ -71,8 +71,8 @@ export default function Home() {
             <Link
               href="/admin/forms"
               className={buttonVariants({
-                size: "lg",
-                className: "h-10 px-6 font-medium",
+                size: 'lg',
+                className: 'h-10 px-6 font-medium',
               })}
             >
               {dict.home.openDashboard}

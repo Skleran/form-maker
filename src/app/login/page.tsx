@@ -1,44 +1,47 @@
-"use client"
+'use client';
 
-import * as React from "react"
-import { useRouter, useSearchParams } from "next/navigation"
-import { Eye, EyeOff, FileText, Lock, User, Loader2, AlertCircle } from "lucide-react"
-import { Card } from "@/components/ui/card"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { ThemeToggle } from "@/components/theme-toggle"
-import { loginAdmin } from "@/actions/auth-actions"
+import * as React from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
+import { Eye, EyeOff, Lock, User, Loader2, AlertCircle } from 'lucide-react';
+import { Card } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { ThemeToggle } from '@/components/theme-toggle';
+import { loginAdmin } from '@/actions/auth-actions';
+import { FormMakerLogo } from '@/components/formmaker-logo';
 
 function LoginForm() {
-  const router = useRouter()
-  const searchParams = useSearchParams()
-  const from = searchParams.get("from") || "/admin/forms"
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const from = searchParams.get('from') || '/admin/forms';
 
-  const [username, setUsername] = React.useState("")
-  const [password, setPassword] = React.useState("")
-  const [showPassword, setShowPassword] = React.useState(false)
-  const [error, setError] = React.useState<string | null>(null)
-  const [isLoading, setIsLoading] = React.useState(false)
+  const [username, setUsername] = React.useState('');
+  const [password, setPassword] = React.useState('');
+  const [showPassword, setShowPassword] = React.useState(false);
+  const [error, setError] = React.useState<string | null>(null);
+  const [isLoading, setIsLoading] = React.useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setError(null)
-    setIsLoading(true)
+    e.preventDefault();
+    setError(null);
+    setIsLoading(true);
 
     try {
-      const res = await loginAdmin({ username, password })
+      const res = await loginAdmin({ username, password });
       if (res.success) {
-        router.push(from)
-        router.refresh()
+        router.push(from);
+        router.refresh();
       } else {
-        setError(res.error || "Giriş başarısız. Lütfen bilgilerinizi kontrol edin.")
+        setError(
+          res.error || 'Giriş başarısız. Lütfen bilgilerinizi kontrol edin.',
+        );
       }
     } catch {
-      setError("Giriş yapılırken beklenmeyen bir hata oluştu.")
+      setError('Giriş yapılırken beklenmeyen bir hata oluştu.');
     } finally {
-      setIsLoading(false)
+      setIsLoading(false);
     }
-  }
+  };
 
   return (
     <div className="min-h-screen flex flex-col justify-center items-center bg-muted/20 px-4 py-12 relative selection:bg-primary selection:text-primary-foreground">
@@ -51,13 +54,14 @@ function LoginForm() {
         {/* Branding header */}
         <div className="flex flex-col items-center text-center space-y-2">
           <div className="flex size-12 items-center justify-center rounded-2xl bg-primary text-primary-foreground shadow-lg shadow-primary/25">
-            <FileText className="size-6" />
+            <FormMakerLogo className="size-7" />
           </div>
           <h1 className="text-xl font-bold tracking-tight text-foreground">
             FormMaker Yönetim Paneli
           </h1>
           <p className="text-xs text-muted-foreground max-w-xs">
-            Formları yönetmek ve yanıtları incelemek için yönetici hesabınızla giriş yapın
+            Formları yönetmek ve yanıtları incelemek için yönetici hesabınızla
+            giriş yapın
           </p>
         </div>
 
@@ -95,7 +99,7 @@ function LoginForm() {
               </label>
               <div className="relative">
                 <Input
-                  type={showPassword ? "text" : "password"}
+                  type={showPassword ? 'text' : 'password'}
                   autoComplete="current-password"
                   required
                   value={password}
@@ -107,7 +111,7 @@ function LoginForm() {
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
                   className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground cursor-pointer transition-colors"
-                  title={showPassword ? "Şifreyi Gizle" : "Şifreyi Göster"}
+                  title={showPassword ? 'Şifreyi Gizle' : 'Şifreyi Göster'}
                 >
                   {showPassword ? (
                     <EyeOff className="size-4" />
@@ -128,7 +132,7 @@ function LoginForm() {
               ) : (
                 <Lock className="size-4" />
               )}
-              <span>{isLoading ? "Giriş yapılıyor..." : "Giriş Yap"}</span>
+              <span>{isLoading ? 'Giriş yapılıyor...' : 'Giriş Yap'}</span>
             </Button>
           </form>
         </Card>
@@ -139,7 +143,7 @@ function LoginForm() {
         </p>
       </div>
     </div>
-  )
+  );
 }
 
 export default function LoginPage() {
@@ -153,5 +157,5 @@ export default function LoginPage() {
     >
       <LoginForm />
     </React.Suspense>
-  )
+  );
 }

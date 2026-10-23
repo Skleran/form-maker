@@ -28,6 +28,7 @@ import { CreateFormButton } from '@/components/admin/create-form-button';
 import { FormCardActions } from '@/components/admin/form-card-actions';
 import { deleteForm } from '@/actions/form-actions';
 import { useLanguage } from '@/lib/i18n/language-context';
+import { FormMakerLogo } from '../formmaker-logo';
 
 export interface DashboardFormItem {
   id: string;
@@ -112,7 +113,7 @@ export function FormsDashboardClient({
           <span className="text-muted-foreground/40">/</span>
           <div className="flex items-center gap-2">
             <div className="flex size-7 items-center justify-center rounded-md bg-primary text-primary-foreground shadow-sm">
-              <FileText className="size-3.5" />
+              <FormMakerLogo className="size-4" />
             </div>
             <span className="font-semibold text-foreground text-sm">
               {dict.dashboard.title}

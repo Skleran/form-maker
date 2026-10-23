@@ -1,9 +1,9 @@
-"use client";
+'use client';
 
-import * as React from "react";
-import { useForm, Controller } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { toast } from "sonner";
+import * as React from 'react';
+import { useForm, Controller } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { toast } from 'sonner';
 import {
   CheckCircle2,
   FileText,
@@ -12,32 +12,32 @@ import {
   Send,
   Upload,
   X,
-} from "lucide-react";
+} from 'lucide-react';
 
-import { Button } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
+import { Button } from '@/components/ui/button';
+import { Card } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/ui/select";
-import { ThemeToggle } from "@/components/theme-toggle";
-import { buildDynamicFormSchema } from "@/lib/validations/dynamic-schema";
-import { submitFormResponse } from "@/actions/submission-actions";
-import type { QuestionFormItem, QuestionConfig } from "@/types/form";
-import { useLanguage } from "@/lib/i18n/language-context";
-import { cn } from "@/lib/utils";
-import { QuestionIcon } from "@/components/form/question-icon";
+} from '@/components/ui/select';
+import { ThemeToggle } from '@/components/theme-toggle';
+import { buildDynamicFormSchema } from '@/lib/validations/dynamic-schema';
+import { submitFormResponse } from '@/actions/submission-actions';
+import type { QuestionFormItem, QuestionConfig } from '@/types/form';
+import { useLanguage } from '@/lib/i18n/language-context';
+import { cn } from '@/lib/utils';
+import { QuestionIcon } from '@/components/form/question-icon';
 import {
   formatAllowedFileTypes,
   formatFileLimitsDescription,
   getAcceptAttribute,
   isFileTypeAllowed,
-} from "@/lib/file-types";
+} from '@/lib/file-types';
 
 interface FileUploadValue {
   name: string;
@@ -72,8 +72,8 @@ function PublicFileInput({
     if (file.size > maxMb * 1024 * 1024) {
       toast.error(
         dict.publicForm.fileSizeExceeded
-          .replace("{size}", (file.size / (1024 * 1024)).toFixed(2))
-          .replace("{max}", String(maxMb)),
+          .replace('{size}', (file.size / (1024 * 1024)).toFixed(2))
+          .replace('{max}', String(maxMb)),
       );
       return;
     }
@@ -82,7 +82,7 @@ function PublicFileInput({
       if (!isFileTypeAllowed(file, config.allowedMimeTypes)) {
         toast.error(
           dict.publicForm.fileTypeNotAllowed.replace(
-            "{types}",
+            '{types}',
             formatAllowedFileTypes(config.allowedMimeTypes, language),
           ),
         );
@@ -93,11 +93,11 @@ function PublicFileInput({
     // If user replaces an already uploaded file, delete the old one from storage
     if (value) {
       const oldTarget = value.path || value.url;
-      if (oldTarget && !oldTarget.startsWith("data:")) {
+      if (oldTarget && !oldTarget.startsWith('data:')) {
         fetch(`/api/upload?path=${encodeURIComponent(oldTarget)}`, {
-          method: "DELETE",
+          method: 'DELETE',
         }).catch((err) =>
-          console.warn("Failed to delete replaced attachment:", err),
+          console.warn('Failed to delete replaced attachment:', err),
         );
       }
     }
@@ -107,11 +107,11 @@ function PublicFileInput({
     onUploadStateChange?.(true);
 
     const formData = new FormData();
-    formData.append("file", file);
-    formData.append("folder", "submissions");
+    formData.append('file', file);
+    formData.append('folder', 'submissions');
 
     const xhr = new XMLHttpRequest();
-    xhr.open("POST", "/api/upload");
+    xhr.open('POST', '/api/upload');
 
     xhr.upload.onprogress = (event) => {
       if (event.lengthComputable) {
@@ -137,7 +137,7 @@ function PublicFileInput({
               path: res.data.path,
             });
             toast.success(
-              dict.publicForm.attachedSuccess.replace("{name}", file.name),
+              dict.publicForm.attachedSuccess.replace('{name}', file.name),
             );
           } else {
             toast.error(res.error || dict.publicForm.uploadFailed);
@@ -201,7 +201,7 @@ function PublicFileInput({
         <div className="space-y-1.5 w-full max-w-xs">
           <span className="text-xs font-semibold text-foreground">
             {dict.publicForm.uploadProgress.replace(
-              "{percent}",
+              '{percent}',
               String(uploadProgress ?? 0),
             )}
           </span>
@@ -218,9 +218,9 @@ function PublicFileInput({
 
   if (value) {
     const isImage =
-      value.type.startsWith("image/") ||
+      value.type.startsWith('image/') ||
       Boolean(value.url?.match(/\.(png|jpe?g|webp|gif|svg)(\?.*)?$/i)) ||
-      Boolean(value.dataUrl?.startsWith("data:image/"));
+      Boolean(value.dataUrl?.startsWith('data:image/'));
 
     const previewSrc = value.url || value.dataUrl;
 
@@ -243,11 +243,11 @@ function PublicFileInput({
             onClick={() => {
               if (value) {
                 const target = value.path || value.url;
-                if (target && !target.startsWith("data:")) {
+                if (target && !target.startsWith('data:')) {
                   fetch(`/api/upload?path=${encodeURIComponent(target)}`, {
-                    method: "DELETE",
+                    method: 'DELETE',
                   }).catch((err) =>
-                    console.warn("Failed to delete removed attachment:", err),
+                    console.warn('Failed to delete removed attachment:', err),
                   );
                 }
                 onChange(null);
@@ -283,20 +283,20 @@ function PublicFileInput({
       onClick={() => inputRef.current?.click()}
       className={`flex flex-col items-center justify-center rounded-lg border-2 border-dashed p-6 text-center cursor-pointer transition-all ${
         isDragging
-          ? "border-primary bg-primary/10 ring-2 ring-primary/20 scale-[1.01]"
-          : "border-muted-foreground/30 bg-muted/10 hover:bg-muted/20 hover:border-primary/50"
+          ? 'border-primary bg-primary/10 ring-2 ring-primary/20 scale-[1.01]'
+          : 'border-muted-foreground/30 bg-muted/10 hover:bg-muted/20 hover:border-primary/50'
       }`}
     >
       <Upload
         className={`size-8 mb-2 transition-transform ${
-          isDragging ? "text-primary scale-110" : "text-muted-foreground"
+          isDragging ? 'text-primary scale-110' : 'text-muted-foreground'
         }`}
       />
       <span className="text-xs font-medium text-foreground">
         {isDragging
-          ? language === "tr"
-            ? "Dosyayı eklemek için bırakın"
-            : "Drop file to attach"
+          ? language === 'tr'
+            ? 'Dosyayı eklemek için bırakın'
+            : 'Drop file to attach'
           : dict.publicForm.clickOrDrop}
       </span>
       <span className="text-[11px] text-muted-foreground mt-0.5">
@@ -312,7 +312,7 @@ function PublicFileInput({
         onChange={(e) => {
           const file = e.target.files?.[0];
           if (file) processFile(file);
-          e.target.value = "";
+          e.target.value = '';
         }}
         accept={getAcceptAttribute(config?.allowedMimeTypes)}
         className="hidden"
@@ -363,12 +363,12 @@ export function PublicFormRenderer({
     resolver: zodResolver(dynamicSchema),
     defaultValues: form.questions.reduce(
       (acc, q) => {
-        if (q.type === "MULTIPLE_CHOICE") {
+        if (q.type === 'MULTIPLE_CHOICE') {
           acc[q.id] = [];
-        } else if (q.type === "FILE_UPLOAD") {
+        } else if (q.type === 'FILE_UPLOAD') {
           acc[q.id] = null;
         } else {
-          acc[q.id] = "";
+          acc[q.id] = '';
         }
         return acc;
       },
@@ -379,9 +379,9 @@ export function PublicFormRenderer({
   const onSubmit = async (values: Record<string, unknown>) => {
     if (uploadingCount > 0) {
       toast.warning(
-        language === "tr"
-          ? "Lütfen dosya yüklemesinin tamamlanmasını bekleyin."
-          : "Please wait for file upload to complete.",
+        language === 'tr'
+          ? 'Lütfen dosya yüklemesinin tamamlanmasını bekleyin.'
+          : 'Please wait for file upload to complete.',
       );
       return;
     }
@@ -392,17 +392,17 @@ export function PublicFormRenderer({
         await new Promise((r) => setTimeout(r, 600));
         setIsSubmitted(true);
         toast.info(dict.publicForm.simulationToast);
-        window.scrollTo({ top: 0, behavior: "smooth" });
+        window.scrollTo({ top: 0, behavior: 'smooth' });
         return;
       }
 
       const userAgent =
-        typeof navigator !== "undefined" ? navigator.userAgent : undefined;
+        typeof navigator !== 'undefined' ? navigator.userAgent : undefined;
       const res = await submitFormResponse(form.id, values, { userAgent });
 
       if (res.success) {
         setIsSubmitted(true);
-        window.scrollTo({ top: 0, behavior: "smooth" });
+        window.scrollTo({ top: 0, behavior: 'smooth' });
       } else {
         toast.error(res.error || dict.publicForm.submissionFailed);
       }
@@ -563,8 +563,8 @@ export function PublicFormRenderer({
                 key={q.id}
                 className={`p-6 bg-card shadow-sm border transition-all ${
                   fieldError
-                    ? "border-destructive ring-1 ring-destructive/40"
-                    : ""
+                    ? 'border-destructive ring-1 ring-destructive/40'
+                    : ''
                 }`}
               >
                 {/* Question Label & Description */}
@@ -592,11 +592,11 @@ export function PublicFormRenderer({
                 {/* Question Controls based on type */}
                 <div>
                   {/* 1. Short Text */}
-                  {q.type === "SHORT_TEXT" && (
+                  {q.type === 'SHORT_TEXT' && (
                     <Input
                       placeholder={
                         q.config?.placeholder ||
-                        (language === "tr" ? "Yanıtınız" : "Your answer")
+                        (language === 'tr' ? 'Yanıtınız' : 'Your answer')
                       }
                       {...register(q.id)}
                       className="text-sm"
@@ -604,12 +604,12 @@ export function PublicFormRenderer({
                   )}
 
                   {/* 2. Long Text */}
-                  {q.type === "LONG_TEXT" && (
+                  {q.type === 'LONG_TEXT' && (
                     <Textarea
                       rows={4}
                       placeholder={
                         q.config?.placeholder ||
-                        (language === "tr" ? "Yanıtınız" : "Your answer")
+                        (language === 'tr' ? 'Yanıtınız' : 'Your answer')
                       }
                       {...register(q.id)}
                       className="text-sm resize-none"
@@ -617,7 +617,7 @@ export function PublicFormRenderer({
                   )}
 
                   {/* 3. Single Choice (Radio) */}
-                  {q.type === "SINGLE_CHOICE" && (
+                  {q.type === 'SINGLE_CHOICE' && (
                     <div className="space-y-2.5">
                       {q.options.map((opt) => (
                         <label
@@ -639,7 +639,7 @@ export function PublicFormRenderer({
                   )}
 
                   {/* 4. Multiple Choice (Checkboxes) */}
-                  {q.type === "MULTIPLE_CHOICE" && (
+                  {q.type === 'MULTIPLE_CHOICE' && (
                     <Controller
                       control={control}
                       name={q.id}
@@ -685,14 +685,14 @@ export function PublicFormRenderer({
                   )}
 
                   {/* 5. Dropdown Select */}
-                  {q.type === "DROPDOWN" && (
+                  {q.type === 'DROPDOWN' && (
                     <Controller
                       control={control}
                       name={q.id}
                       render={({ field }) => (
                         <Select
                           value={
-                            typeof field.value === "string" ? field.value : ""
+                            typeof field.value === 'string' ? field.value : ''
                           }
                           onValueChange={(val) => {
                             if (val) field.onChange(val);
@@ -732,7 +732,7 @@ export function PublicFormRenderer({
                   )}
 
                   {/* 6. File Upload with native Drag and Drop */}
-                  {q.type === "FILE_UPLOAD" && (
+                  {q.type === 'FILE_UPLOAD' && (
                     <Controller
                       control={control}
                       name={q.id}
@@ -785,24 +785,24 @@ export function PublicFormRenderer({
               size="sm"
               onClick={() => {
                 const confirmMsg =
-                  language === "tr"
-                    ? "Tüm yanıtlar temizlensin mi? Bu işlem geri alınamaz."
-                    : "Clear all responses? This cannot be undone.";
+                  language === 'tr'
+                    ? 'Tüm yanıtlar temizlensin mi? Bu işlem geri alınamaz.'
+                    : 'Clear all responses? This cannot be undone.';
                 if (confirm(confirmMsg)) {
                   reset();
                 }
               }}
               className="cursor-pointer text-muted-foreground hover:text-foreground text-xs"
             >
-              {language === "tr" ? "Formu temizle" : "Clear form"}
+              {language === 'tr' ? 'Formu temizle' : 'Clear form'}
             </Button>
           </div>
 
           <footer className="text-center text-xs text-muted-foreground pt-8 pb-4">
             <p>
-              {language === "tr"
-                ? "Formlar aracılığıyla asla şifre veya hassas finansal bilgi göndermeyin."
-                : "Never submit passwords or sensitive financial information through forms."}
+              {language === 'tr'
+                ? 'Formlar aracılığıyla asla şifre veya hassas finansal bilgi göndermeyin.'
+                : 'Never submit passwords or sensitive financial information through forms.'}
             </p>
           </footer>
         </form>
