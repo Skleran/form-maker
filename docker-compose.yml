@@ -2,34 +2,35 @@ services:
   postgres:
     image: postgres:16-alpine
     container_name: form-maker-db
-    restart: always
+    restart: unless-stopped
     environment:
       POSTGRES_USER: ${DB_USER:-formmaker}
       POSTGRES_PASSWORD: ${DB_PASSWORD:-changeme_secure_password}
       POSTGRES_DB: ${DB_NAME:-formmaker}
     ports:
-      # Expose only to localhost for security (DirectAdmin host access or tools)
       - "127.0.0.1:5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-formmaker} -d ${DB_NAME:-formmaker}"]
-      interval: 10s
+      interval: 5s
       timeout: 5s
-      retries: 5
+      retries: 10
 
   app:
     build:
       context: .
       dockerfile: Dockerfile
     container_name: form-maker-app
-    restart: always
+    restart: unless-stopped
     depends_on:
       postgres:
         condition: service_healthy
     ports:
-      # Bound to localhost:3000 so DirectAdmin (Nginx / Apache) can reverse proxy to it
-      - "127.0.0.1:3000:3000"
+      # Accessible directly on port 3000 for LAN testing, and proxied via Caddy on 80/443
+      - "3000:3000"
+    volumes:
+      - uploads_data:/app/public/uploads
     environment:
       NODE_ENV: production
       DATABASE_URL: "postgresql://${DB_USER:-formmaker}:${DB_PASSWORD:-changeme_secure_password}@postgres:5432/${DB_NAME:-formmaker}"
@@ -39,6 +40,29 @@ services:
       ADMIN_PASSWORD: ${ADMIN_PASSWORD:-admin123}
       AUTH_SECRET: ${AUTH_SECRET:-change_this_to_a_random_32_character_string}
 
+  caddy:
+    image: caddy:2-alpine
+    container_name: form-maker-proxy
+    restart: unless-stopped
+    depends_on:
+      - app
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
+    environment:
+      DOMAIN_NAME: ${DOMAIN_NAME:-:80}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+
 volumes:
   postgres_data:
+    driver: local
+  uploads_data:
+    driver: local
+  caddy_data:
+    driver: local
+  caddy_config:
     driver: local

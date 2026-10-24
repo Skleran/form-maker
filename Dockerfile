@@ -25,6 +25,7 @@ ENV NEXT_TELEMETRY_DISABLED=1
 ENV NODE_ENV=production
 # Dummy DATABASE_URL used during build type check
 ENV DATABASE_URL="postgresql://placeholder:placeholder@localhost:5432/placeholder"
+ENV DIRECT_URL="postgresql://placeholder:placeholder@localhost:5432/placeholder"
 
 RUN npx prisma generate
 RUN pnpm build
@@ -39,18 +40,22 @@ ENV PORT=3000
 ENV HOSTNAME="0.0.0.0"
 
 RUN apk add --no-cache openssl libc6-compat
+RUN npm install -g prisma@6.19.3
 
 RUN addgroup --system --gid 1001 nodejs
 RUN adduser --system --uid 1001 nextjs
 
-# Prepare standalone static and public folders
-COPY --from=builder /app/public ./public
+# Prepare standalone static, public, and persistent upload folders
+COPY --from=builder --chown=nextjs:nodejs /app/public ./public
 COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
 COPY --from=builder --chown=nextjs:nodejs /app/prisma ./prisma
+
+RUN mkdir -p /app/public/uploads/submissions /app/public/uploads/headers && \
+    chown -R nextjs:nodejs /app/public
 
 USER nextjs
 
 EXPOSE 3000
 
-CMD ["node", "server.js"]
+CMD ["sh", "-c", "prisma db push --skip-generate && node server.js"]

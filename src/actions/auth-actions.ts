@@ -1,6 +1,6 @@
 "use server"
 
-import { cookies } from "next/headers"
+import { cookies, headers } from "next/headers"
 import { redirect } from "next/navigation"
 import {
   validateAdminCredentials,
@@ -43,7 +43,25 @@ export async function loginAdmin(credentials: {
 
     const token = await createSessionToken(username)
     const cookieStore = await cookies()
-    cookieStore.set(SESSION_COOKIE_NAME, token, SESSION_COOKIE_OPTIONS)
+    const headerList = await headers()
+
+    const forwardedProto = headerList.get("x-forwarded-proto")?.split(",")[0]?.trim()
+    const origin = headerList.get("origin") || headerList.get("referer") || ""
+    const isSecure =
+      process.env.COOKIE_SECURE === "true"
+        ? true
+        : process.env.COOKIE_SECURE === "false"
+          ? false
+          : Boolean(
+              process.env.VERCEL === "1" ||
+                forwardedProto === "https" ||
+                origin.startsWith("https://")
+            )
+
+    cookieStore.set(SESSION_COOKIE_NAME, token, {
+      ...SESSION_COOKIE_OPTIONS,
+      secure: isSecure,
+    })
 
     return { success: true }
   } catch (error) {

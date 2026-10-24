@@ -1,4 +1,3 @@
-
 //Single-Admin Session & Cryptography Utilities
 
 export const SESSION_COOKIE_NAME = "admin_session"
@@ -6,7 +5,7 @@ export const SESSION_COOKIE_NAME = "admin_session"
 export const SESSION_COOKIE_OPTIONS = {
   name: SESSION_COOKIE_NAME,
   httpOnly: true,
-  secure: process.env.NODE_ENV === "production",
+  secure: process.env.COOKIE_SECURE === "true" || process.env.VERCEL === "1",
   sameSite: "lax" as const,
   path: "/",
   maxAge: 7 * 24 * 60 * 60, // 7 days
@@ -63,7 +62,7 @@ function base64UrlDecode(str: string): Uint8Array {
 }
 
 
-// Toke generation and verification functions
+// Token generation and verification functions
 export async function createSessionToken(username: string): Promise<string> {
   const payload: SessionPayload = {
     sub: username,

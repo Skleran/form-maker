@@ -1,6 +1,9 @@
 import { NextResponse } from "next/server"
+import fs from "fs/promises"
+import path from "path"
 import { prisma } from "@/lib/prisma"
 import { getAdminSession } from "@/lib/auth"
+import { getMimeTypeFromFilename } from "@/app/api/uploads/[...path]/route"
 
 interface RouteContext {
   params: Promise<{
@@ -56,6 +59,35 @@ export async function GET(request: Request, context: RouteContext) {
 
     if (fileUrl.startsWith("http://") || fileUrl.startsWith("https://")) {
       return NextResponse.redirect(fileUrl, 302)
+    }
+
+    if (fileUrl.startsWith("/uploads/")) {
+      const relativeUploadPath = fileUrl.replace(/^\/uploads\//, "")
+      const uploadsRoot = path.resolve(process.cwd(), "public", "uploads")
+      const diskPath = path.resolve(uploadsRoot, relativeUploadPath)
+
+      if (!diskPath.startsWith(uploadsRoot + path.sep)) {
+        return new NextResponse("Geçersiz dosya yolu", { status: 403 })
+      }
+
+      try {
+        const buffer = await fs.readFile(diskPath)
+        const mimeType = getMimeTypeFromFilename(fileName || diskPath)
+        const safeAsciiFilename = fileName.replace(/[^\x20-\x7E]/g, "_")
+        const encodedUtf8Filename = encodeURIComponent(fileName)
+
+        return new NextResponse(buffer, {
+          status: 200,
+          headers: {
+            "Content-Type": mimeType,
+            "Content-Length": String(buffer.byteLength),
+            "Content-Disposition": `inline; filename="${safeAsciiFilename}"; filename*=UTF-8''${encodedUtf8Filename}`,
+            "Cache-Control": "public, max-age=31536000, immutable",
+          },
+        })
+      } catch {
+        return new NextResponse("Dosya diskte bulunamadı", { status: 404 })
+      }
     }
 
     if (fileUrl.startsWith("/")) {

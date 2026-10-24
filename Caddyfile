@@ -1,0 +1,15 @@
+# Caddy Reverse Proxy & Automatic SSL Configuration
+# - For local IP / LAN testing: leave DOMAIN_NAME=:80 in .env (serves HTTP on port 80)
+# - For public domain with automatic Let's Encrypt HTTPS: set DOMAIN_NAME=forms.yourdomain.com in .env
+# - For internal corporate domain with self-signed HTTPS: uncomment "tls internal" below
+
+{$DOMAIN_NAME::80} {
+	request_body {
+		max_size 50MB
+	}
+
+	# Uncomment the line below ONLY if using an internal/private domain (e.g. forms.company.local)
+	# tls internal
+
+	reverse_proxy app:3000
+}
