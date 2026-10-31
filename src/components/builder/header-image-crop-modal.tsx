@@ -361,6 +361,7 @@ export function HeaderImageCropModal({
             variant="ghost"
             size="icon-xs"
             onClick={onClose}
+            aria-label="Kapat"
             className="cursor-pointer text-muted-foreground hover:text-foreground"
           >
             <X className="size-4" />

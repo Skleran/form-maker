@@ -47,7 +47,8 @@ export const getPublicForm = cache(async (slug: string) => {
       })),
     }
   } catch (error) {
+    // Goes to the error page: a database failure must not look like a missing form
     console.error("Failed to fetch public form:", error)
-    return null
+    throw error
   }
 })

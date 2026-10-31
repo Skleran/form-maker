@@ -37,36 +37,35 @@ export const dict = {
     themeToggle: "Temayı değiştir",
   },
   home: {
-    statusBadge: "Faz 1 Mimari ve Altyapı Aktif",
     title: "Kurum İçi Form Yönetim Platformu",
     description:
-      "Kendi sunucunuzda barındırabileceğiniz, yüksek performanslı Google Forms alternatifi. Next.js App Router, React Hook Form + Zustand ile ayrık durum yönetimi, PostgreSQL ORM ve shadcn/ui ile geliştirildi.",
+      "Formlarınızı oluşturun, bağlantısını paylaşın ve yanıtları tek bir yerden takip edin. Tüm veriler kendi sunucunuzda kalır.",
     openDashboard: "Yönetim Panelini Aç",
-    prismaReady: "Prisma Şeması Hazır",
     features: {
-      stateSeparationTitle: "Ayrık Durum Yönetimi",
-      stateSeparationDesc:
-        "Form içeriği ve alan hiyerarşisi React Hook Form (useFieldArray) ile yönetilirken, tuval etkileşimleri ve denetçi Zustand üzerinde izole çalışır.",
-      postgresTitle: "PostgreSQL & Prisma Motoru",
-      postgresDesc:
-        "Form, Soru, Yanıt ve Gönderim tablolarını destekleyen ilişkisel şema. Supabase ve Docker PostgreSQL arasında sıfır kod değişikliğiyle taşınabilir.",
-      dynamicSchemaTitle: "Dinamik Şema Motoru",
-      dynamicSchemaDesc:
-        "Kısa Metin, Uzun Metin, Tekli Seçim (Radyo), Çoklu Seçim (Onay Kutusu), Açılır Liste ve Dosya Yükleme alanlarını detaylı ayarlarla destekler.",
-      multiDeviceTitle: "Çoklu Cihaz Tuval Görünümü",
-      multiDeviceDesc:
-        "Zustand orkestrasyonuyla masaüstü, tablet ve mobil önizleme simülasyonu ve bağımsız alan denetçisi paneli.",
-      validationTitle: "Çalışma Zamanı Zod Doğrulaması",
-      validationDesc:
-        "Kullanıcı formları için dinamik Zod şemaları oluşturarak tip güvenliğini ve zorunlu alan kısıtlamalarını eksiksiz uygular.",
-      themesTitle: "Açık ve Koyu Tema Desteği",
-      themesDesc:
-        "next-themes ve Tailwind CSS tasarım tokenları ile kutudan çıktığı anda erişilebilir kontrast ve şık görünüm sunar.",
+      builderTitle: "Sürükle-Bırak Form Oluşturucu",
+      builderDesc:
+        "Soruları ekleyin, sürükleyerek sıralayın ve her birini ayrı ayrı ayarlayın. Değişikliklerinizi geri alabilirsiniz.",
+      fieldsTitle: "Altı Soru Türü",
+      fieldsDesc:
+        "Kısa ve uzun metin, tekli ve çoklu seçim, açılır liste ve dosya yükleme alanları kullanın.",
+      filesTitle: "Dosya Yükleme",
+      filesDesc:
+        "Katılımcılardan dosya toplayın. Boyut ve tür sınırlarını her soru için ayrı belirleyin.",
+      responsesTitle: "Yanıtlar ve CSV",
+      responsesDesc:
+        "Gelen yanıtları inceleyin ve hepsini Excel'de açabileceğiniz bir CSV dosyası olarak indirin.",
+      mobileTitle: "Her Cihazda Çalışır",
+      mobileDesc:
+        "Formlar telefonda, tablette ve bilgisayarda rahatça doldurulur. Yönetim paneli de mobil uyumludur.",
+      themesTitle: "Açık ve Koyu Tema",
+      themesDesc: "Gözünüze en rahat gelen temayı seçin.",
     },
-    footer: "Kurum İçi Form Yönetim Platformu • Next.js App Router & Tailwind CSS ile Geliştirildi",
+    footer: "Kurum İçi Form Yönetim Platformu",
   },
   dashboard: {
     title: "Form Paneli",
+    search: "Form ara...",
+    noSearchResults: "Aramanızla eşleşen form bulunamadı.",
     totalForms: "Toplam Form",
     publishedCount: "Yayındaki Formlar",
     totalSubmissions: "Kayıtlı Toplam Yanıt",
@@ -223,7 +222,6 @@ export const dict = {
     questionFields: "Soru Alanı",
     latestActivity: "Son Etkinlik",
     noSubmissionsYet: "Henüz yanıt yok",
-    loadingResponses: "Yanıtlar yükleniyor...",
     loadFailed: "Yanıtlar yüklenemedi.",
     noResponsesTitle: "Henüz kayıtlı yanıt yok",
     noResponsesDesc:

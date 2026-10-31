@@ -39,25 +39,15 @@ interface BuilderSettingsProps {
   formId: string;
 }
 
-export function BuilderSettings({ formId }: BuilderSettingsProps) {
-  const router = useRouter();
-  const { register, control, setValue, setError, clearErrors } =
+// Holds its own subscriptions, so typing here re-renders only this field
+const SlugField = React.memo(function SlugField({ formId }: { formId: string }) {
+  const { register, control, setError, clearErrors } =
     useFormContext<FormBuilderValues>();
-  const { errors } = useFormState({
-    control,
-    name: ['title', 'slug'],
-  });
-  const [isPublished, currentSlug] = useWatch({
-    control,
-    name: ['isPublished', 'slug'],
-    exact: true,
-  });
+  const { errors } = useFormState({ control, name: 'slug', exact: true });
+  const currentSlug = useWatch({ control, name: 'slug', exact: true });
 
   const slugConflict = useBuilderStore((s) => s.slugConflict);
   const setSlugConflict = useBuilderStore((s) => s.setSlugConflict);
-
-  const [isDeleting, setIsDeleting] = React.useState(false);
-  const [deleteDialogOpen, setDeleteDialogOpen] = React.useState(false);
 
   const rawSlug = currentSlug ?? '';
   const liveFormatError =
@@ -152,6 +142,90 @@ export function BuilderSettings({ formId }: BuilderSettingsProps) {
     slugRegistration.onChange(e);
   };
 
+  return (
+    <div className="space-y-1.5">
+      <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground flex items-center gap-1">
+        <Link2 className="size-3.5" />
+        {dict.builder.settings.customSlug}
+      </label>
+      <div className="flex items-center gap-2">
+        <span
+          className={cn(
+            'text-xs font-mono px-2.5 py-1.5 rounded-md border transition-colors',
+            hasSlugError
+              ? 'border-destructive/60 bg-destructive/10 text-destructive'
+              : 'text-muted-foreground bg-muted',
+          )}
+        >
+          /forms/
+        </span>
+        <Input
+          {...slugRegistration}
+          onChange={handleSlugChange}
+          aria-invalid={hasSlugError}
+          placeholder="geri-bildirim-formu"
+          className={cn(
+            'font-mono text-sm',
+            hasSlugError &&
+              'border-destructive bg-destructive/5 text-destructive focus-visible:border-destructive focus-visible:ring-destructive/20 dark:border-destructive',
+          )}
+        />
+      </div>
+      <p className="text-[11px] text-muted-foreground">
+        {dict.builder.settings.slugHint}
+      </p>
+
+      {activeConflict ? (
+        <div className="mt-2 rounded-lg border border-destructive/40 bg-destructive/10 p-3 text-xs text-destructive space-y-1.5">
+          <div className="flex items-start gap-2 font-medium">
+            <AlertCircle className="size-4 shrink-0 mt-0.5" />
+            <span>
+              <strong>&ldquo;{activeConflict.slug}&rdquo;</strong> kısa
+              bağlantısı şu anda{' '}
+              <strong>
+                &ldquo;{activeConflict.conflictingFormTitle}&rdquo;
+              </strong>{' '}
+              adlı form tarafından kullanılıyor.
+            </span>
+          </div>
+          <div className="pl-6">
+            <Link
+              href={`/admin/forms/${activeConflict.conflictingFormId}/edit?tab=settings`}
+              className="inline-flex items-center gap-1 font-semibold underline underline-offset-4 hover:opacity-80 transition-opacity"
+            >
+              <span>Bu adresi kullanan forma git</span>
+              <ArrowUpRight className="size-3.5 shrink-0" />
+            </Link>
+          </div>
+        </div>
+      ) : (
+        displaySlugError && (
+          <p className="text-xs text-destructive font-medium flex items-center gap-1.5 pt-0.5">
+            <AlertCircle className="size-3.5 shrink-0" />
+            <span>{displaySlugError}</span>
+          </p>
+        )
+      )}
+    </div>
+  );
+});
+
+const TitleError = React.memo(function TitleError() {
+  const { control } = useFormContext<FormBuilderValues>();
+  const { errors } = useFormState({ control, name: 'title', exact: true });
+
+  if (!errors.title) return null;
+  return <p className="text-xs text-destructive">{errors.title.message}</p>;
+});
+
+export function BuilderSettings({ formId }: BuilderSettingsProps) {
+  const router = useRouter();
+  const { register, control, setValue } = useFormContext<FormBuilderValues>();
+  const isPublished = useWatch({ control, name: 'isPublished', exact: true });
+
+  const [isDeleting, setIsDeleting] = React.useState(false);
+  const [deleteDialogOpen, setDeleteDialogOpen] = React.useState(false);
+
   const handleDelete = async () => {
     setIsDeleting(true);
     try {
@@ -190,11 +264,7 @@ export function BuilderSettings({ formId }: BuilderSettingsProps) {
                 {dict.builder.settings.formTitle}
               </label>
               <Input {...register('title')} className="text-sm" />
-              {errors.title && (
-                <p className="text-xs text-destructive">
-                  {errors.title.message}
-                </p>
-              )}
+              <TitleError />
             </div>
 
             <div className="space-y-1.5">
@@ -220,70 +290,7 @@ export function BuilderSettings({ formId }: BuilderSettingsProps) {
           </div>
 
           <div className="space-y-4">
-            <div className="space-y-1.5">
-              <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground flex items-center gap-1">
-                <Link2 className="size-3.5" />
-                {dict.builder.settings.customSlug}
-              </label>
-              <div className="flex items-center gap-2">
-                <span
-                  className={cn(
-                    'text-xs font-mono px-2.5 py-1.5 rounded-md border transition-colors',
-                    hasSlugError
-                      ? 'border-destructive/60 bg-destructive/10 text-destructive'
-                      : 'text-muted-foreground bg-muted',
-                  )}
-                >
-                  /forms/
-                </span>
-                <Input
-                  {...slugRegistration}
-                  onChange={handleSlugChange}
-                  aria-invalid={hasSlugError}
-                  placeholder="geri-bildirim-formu"
-                  className={cn(
-                    'font-mono text-sm',
-                    hasSlugError &&
-                      'border-destructive bg-destructive/5 text-destructive focus-visible:border-destructive focus-visible:ring-destructive/20 dark:border-destructive',
-                  )}
-                />
-              </div>
-              <p className="text-[11px] text-muted-foreground">
-                {dict.builder.settings.slugHint}
-              </p>
-
-              {activeConflict ? (
-                <div className="mt-2 rounded-lg border border-destructive/40 bg-destructive/10 p-3 text-xs text-destructive space-y-1.5">
-                  <div className="flex items-start gap-2 font-medium">
-                    <AlertCircle className="size-4 shrink-0 mt-0.5" />
-                    <span>
-                      <strong>&ldquo;{activeConflict.slug}&rdquo;</strong> kısa
-                      bağlantısı şu anda{' '}
-                      <strong>
-                        &ldquo;{activeConflict.conflictingFormTitle}&rdquo;
-                      </strong>{' '}
-                      adlı form tarafından kullanılıyor.
-                    </span>
-                  </div>
-                  <div className="pl-6">
-                    <Link
-                      href={`/admin/forms/${activeConflict.conflictingFormId}/edit?tab=settings`}
-                      className="inline-flex items-center gap-1 font-semibold underline underline-offset-4 hover:opacity-80 transition-opacity"
-                    >
-                      <span>Bu adresi kullanan forma git</span>
-                      <ArrowUpRight className="size-3.5 shrink-0" />
-                    </Link>
-                  </div>
-                </div>
-              ) : (
-                displaySlugError && (
-                  <p className="text-xs text-destructive font-medium flex items-center gap-1.5 pt-0.5">
-                    <AlertCircle className="size-3.5 shrink-0" />
-                    <span>{displaySlugError}</span>
-                  </p>
-                )
-              )}
-            </div>
+            <SlugField formId={formId} />
 
             <div className="flex items-center justify-between rounded-lg border p-3.5 bg-muted/20">
               <div className="space-y-0.5">

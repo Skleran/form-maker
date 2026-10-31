@@ -1,7 +1,7 @@
 'use client';
 
 import * as React from 'react';
-import { usePathname, useRouter, useSearchParams } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { useFormContext, useWatch } from 'react-hook-form';
 import { toast } from 'sonner';
 import {
@@ -53,6 +53,7 @@ import { dict } from '@/lib/dictionary';
 import { useTheme } from 'next-themes';
 import { cn } from '@/lib/utils';
 import { copyText } from '@/lib/clipboard';
+import { useHydrated } from '@/hooks/use-hydrated';
 import { Label } from '../ui/label';
 
 interface BuilderHeaderProps {
@@ -62,6 +63,16 @@ interface BuilderHeaderProps {
   onUndo: () => void;
   onRedo: () => void;
   onDiscard: () => void;
+}
+
+/**
+ * Switches tab by changing only the URL: every tab's data is already in the browser,
+ * so a router navigation would just wait for the server. Next keeps useSearchParams in sync.
+ */
+export function setBuilderTab(tab: string) {
+  const params = new URLSearchParams(window.location.search);
+  params.set('tab', tab);
+  window.history.replaceState(null, '', `?${params.toString()}`);
 }
 
 const HeaderTitleDisplay = React.memo(function HeaderTitleDisplay() {
@@ -79,6 +90,55 @@ const HeaderTitleDisplay = React.memo(function HeaderTitleDisplay() {
   );
 });
 
+// The slug's own subscribers: typing in the slug field must not re-render the whole header
+const PreviewLink = React.memo(function PreviewLink() {
+  const { control } = useFormContext<FormBuilderValues>();
+  const slug = useWatch({ control, name: 'slug', exact: true });
+
+  return (
+    <Tooltip>
+      <TooltipTrigger
+        render={
+          <a
+            href={`/forms/${slug}?preview=true`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className={buttonVariants({
+              variant: 'outline',
+              size: 'sm',
+              className:
+                'cursor-pointer hidden sm:inline-flex items-center gap-1.5',
+            })}
+          >
+            <Eye className="size-3.5 text-muted-foreground" />
+            <span>{dict.builder.header.preview}</span>
+          </a>
+        }
+      />
+      <TooltipContent side="bottom">
+        {dict.builder.header.previewTooltip}
+      </TooltipContent>
+    </Tooltip>
+  );
+});
+
+const OpenLiveLink = React.memo(function OpenLiveLink() {
+  const { control } = useFormContext<FormBuilderValues>();
+  const slug = useWatch({ control, name: 'slug', exact: true });
+
+  return (
+    <a
+      href={`/forms/${slug}`}
+      target="_blank"
+      rel="noopener noreferrer"
+      className="hidden sm:inline-flex items-center gap-1.5 text-xs font-medium text-muted-foreground hover:text-foreground transition-colors shrink-0 whitespace-nowrap px-2.5 py-1 rounded-md hover:bg-muted/50"
+    >
+      <span>{dict.builder.header.openLive}</span>
+      <ExternalLink className="size-3.5" />
+    </a>
+  );
+});
+
 const InspectorToggleButton = React.memo(function InspectorToggleButton() {
   const isInspectorOpen = useBuilderStore((s) => s.isInspectorOpen);
   const toggleInspector = useBuilderStore((s) => s.toggleInspector);
@@ -91,6 +151,7 @@ const InspectorToggleButton = React.memo(function InspectorToggleButton() {
             variant={isInspectorOpen ? 'secondary' : 'ghost'}
             size="icon-sm"
             onClick={toggleInspector}
+            aria-label={dict.builder.header.inspectorTooltip}
             className="cursor-pointer"
           >
             <PanelRight className="size-4" />
@@ -103,8 +164,6 @@ const InspectorToggleButton = React.memo(function InspectorToggleButton() {
     </Tooltip>
   );
 });
-
-const subscribeToNothing = () => () => {};
 
 const UndoRedoControls = React.memo(function UndoRedoControls({
   onUndo,
@@ -126,6 +185,7 @@ const UndoRedoControls = React.memo(function UndoRedoControls({
               size="icon-xs"
               onClick={onUndo}
               disabled={!canUndo}
+              aria-label={dict.builder.header.undoTooltip}
               className="cursor-pointer text-muted-foreground hover:text-foreground disabled:opacity-30 h-7 w-7"
             >
               <Undo2 className="size-3.5" />
@@ -145,6 +205,7 @@ const UndoRedoControls = React.memo(function UndoRedoControls({
               size="icon-xs"
               onClick={onRedo}
               disabled={!canRedo}
+              aria-label={dict.builder.header.redoTooltip}
               className="cursor-pointer text-muted-foreground hover:text-foreground disabled:opacity-30 h-7 w-7"
             >
               <Redo2 className="size-3.5" />
@@ -182,19 +243,19 @@ export const BuilderHeader = React.memo(function BuilderHeader({
   onDiscard,
 }: BuilderHeaderProps) {
   const router = useRouter();
-  const pathname = usePathname();
   const searchParams = useSearchParams();
 
   const { control, setValue, getValues } = useFormContext<FormBuilderValues>();
-  const [slug, isPublished] = useWatch({
+  const isPublished = useWatch({
     control,
-    name: ['slug', 'isPublished'],
+    name: 'isPublished',
     exact: true,
   });
 
   const isSaving = useBuilderStore((s) => s.isSaving);
   const lastSavedAt = useBuilderStore((s) => s.lastSavedAt);
   const isDirty = useBuilderStore((s) => s.isDirty);
+  const isBackPromptOpen = useBuilderStore((s) => s.isBackPromptOpen);
   const currentTab = searchParams.get('tab') || 'questions';
 
   // Unsaved changes navigation interception dialog state
@@ -203,22 +264,9 @@ export const BuilderHeader = React.memo(function BuilderHeader({
     null,
   );
 
+  // The form stays in memory across tabs, so switching can't lose unsaved changes
   const handleTabChange = (value: string) => {
-    if (value === currentTab) return;
-
-    const goToTab = () => {
-      const params = new URLSearchParams(searchParams.toString());
-      params.set('tab', value);
-      router.replace(`${pathname}?${params.toString()}`);
-    };
-
-    if (isDirty) {
-      setPendingAction(() => goToTab);
-      setShowUnsavedDialog(true);
-      return;
-    }
-
-    goToTab();
+    if (value !== currentTab) setBuilderTab(value);
   };
 
   const handleBackClick = (e: React.MouseEvent) => {
@@ -233,40 +281,42 @@ export const BuilderHeader = React.memo(function BuilderHeader({
     }
   };
 
-  const handleConfirmDiscard = () => {
-    onDiscard();
+  const closeUnsavedDialog = () => {
     setShowUnsavedDialog(false);
-    if (pendingAction) {
+    setPendingAction(null);
+    useBuilderStore.getState().setIsBackPromptOpen(false);
+  };
+
+  const leavePage = () => {
+    if (isBackPromptOpen) {
+      // Past the guard entry and the edit page's own entry
+      window.history.go(-2);
+    } else if (pendingAction) {
       pendingAction();
-      setPendingAction(null);
     } else {
       router.push('/admin/forms');
     }
+    closeUnsavedDialog();
+  };
+
+  const handleConfirmDiscard = () => {
+    onDiscard();
+    leavePage();
   };
 
   const handleSaveAndProceed = async () => {
     const saved = await onSave();
-    setShowUnsavedDialog(false);
     // Stay on the page after a failed save, or the unsaved changes are lost
     if (!saved) {
-      setPendingAction(null);
+      closeUnsavedDialog();
       return;
     }
-    if (pendingAction) {
-      pendingAction();
-      setPendingAction(null);
-    } else {
-      router.push('/admin/forms');
-    }
+    leavePage();
   };
 
   const { setTheme, resolvedTheme } = useTheme();
   // The theme is only known in the browser, so the server renders the light icon
-  const mounted = React.useSyncExternalStore(
-    subscribeToNothing,
-    () => true,
-    () => false,
-  );
+  const mounted = useHydrated();
   const isDark = mounted && resolvedTheme === 'dark';
 
   const handlePublishChange = (checked: boolean) => {
@@ -279,7 +329,7 @@ export const BuilderHeader = React.memo(function BuilderHeader({
   };
 
   const handleCopyLink = async () => {
-    const publicUrl = `${window.location.origin}/forms/${slug}`;
+    const publicUrl = `${window.location.origin}/forms/${getValues('slug')}`;
     if (await copyText(publicUrl)) {
       toast.success(dict.builder.header.shareToast);
     } else {
@@ -288,7 +338,7 @@ export const BuilderHeader = React.memo(function BuilderHeader({
   };
 
   const handleNativeShare = async () => {
-    const publicUrl = `${window.location.origin}/forms/${slug}`;
+    const publicUrl = `${window.location.origin}/forms/${getValues('slug')}`;
     const currentTitle = getValues('title');
     if (typeof navigator !== 'undefined' && navigator.share) {
       try {
@@ -365,6 +415,7 @@ export const BuilderHeader = React.memo(function BuilderHeader({
                   variant="ghost"
                   size="icon-sm"
                   className="cursor-pointer text-muted-foreground hover:text-foreground h-8 w-8 shrink-0"
+                  aria-label="Menü"
                 >
                   <Menu className="size-4" />
                 </Button>
@@ -380,12 +431,12 @@ export const BuilderHeader = React.memo(function BuilderHeader({
               <DropdownMenuItem
                 onClick={() => {
                   window.open(
-                    `/forms/${slug}?preview=true`,
+                    `/forms/${getValues('slug')}?preview=true`,
                     '_blank',
                     'noopener,noreferrer',
                   );
                 }}
-                className="cursor-pointer flex items-center gap-2.5 rounded-lg px-2.5 py-2 text-xs font-medium text-foreground hover:bg-accent hover:text-accent-foreground transition-colors"
+                className="cursor-pointer flex items-center gap-2.5 rounded-lg px-2.5 py-2 font-medium text-foreground hover:bg-accent hover:text-accent-foreground transition-colors"
               >
                 <Eye className="size-4 text-muted-foreground shrink-0" />
                 <span>{dict.builder.header.preview}</span>
@@ -393,13 +444,13 @@ export const BuilderHeader = React.memo(function BuilderHeader({
 
               {/* Publish Toggle */}
               <div
-                className="flex items-center rounded-lg px-2.5 py-2 text-xs font-medium hover:bg-muted/40 transition-colors"
+                className="flex items-center rounded-lg px-2.5 py-2 text-sm font-medium hover:bg-muted/40 transition-colors"
                 onClick={(e) => e.stopPropagation()}
                 onPointerDown={(e) => e.stopPropagation()}
               >
                 <Label
                   htmlFor="publish-toggle"
-                  className="text-foreground text-xs w-full flex items-center cursor-pointer select-none"
+                  className="text-foreground w-full flex items-center cursor-pointer select-none"
                 >
                   <span
                     className={cn(
@@ -421,7 +472,7 @@ export const BuilderHeader = React.memo(function BuilderHeader({
               {/* Native Share */}
               <DropdownMenuItem
                 onClick={handleNativeShare}
-                className="cursor-pointer flex items-center gap-2.5 rounded-lg px-2.5 py-2 text-xs font-medium text-foreground hover:bg-accent hover:text-accent-foreground transition-colors"
+                className="cursor-pointer flex items-center gap-2.5 rounded-lg px-2.5 py-2 font-medium text-foreground hover:bg-accent hover:text-accent-foreground transition-colors"
               >
                 <Share2 className="size-4 text-muted-foreground shrink-0" />
                 <span>{dict.builder.header.share}</span>
@@ -435,6 +486,7 @@ export const BuilderHeader = React.memo(function BuilderHeader({
                   variant="outline"
                   size="icon"
                   onClick={() => setTheme(isDark ? 'light' : 'dark')}
+                  aria-label={`${isDark ? 'Açık' : 'Koyu'} temaya geç`}
                   className="h-8 col-span-1 w-full cursor-pointer justify-center gap-1.5 px-2 text-xs font-medium text-foreground hover:bg-accent"
                 >
                   {isDark ? (
@@ -542,29 +594,7 @@ export const BuilderHeader = React.memo(function BuilderHeader({
             </div>
 
             {/* Preview in New Tab Button */}
-            <Tooltip>
-              <TooltipTrigger
-                render={
-                  <a
-                    href={`/forms/${slug}?preview=true`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className={buttonVariants({
-                      variant: 'outline',
-                      size: 'sm',
-                      className:
-                        'cursor-pointer hidden sm:inline-flex items-center gap-1.5',
-                    })}
-                  >
-                    <Eye className="size-3.5 text-muted-foreground" />
-                    <span>{dict.builder.header.preview}</span>
-                  </a>
-                }
-              />
-              <TooltipContent side="bottom">
-                {dict.builder.header.previewTooltip}
-              </TooltipContent>
-            </Tooltip>
+            <PreviewLink />
 
             {/* Copy Link Button */}
             <Tooltip>
@@ -651,22 +681,15 @@ export const BuilderHeader = React.memo(function BuilderHeader({
           </Tabs>
 
           {/* Quick Public Form Link */}
-          {isPublished && (
-            <a
-              href={`/forms/${slug}`}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="hidden sm:inline-flex items-center gap-1.5 text-xs font-medium text-muted-foreground hover:text-foreground transition-colors shrink-0 whitespace-nowrap px-2.5 py-1 rounded-md hover:bg-muted/50"
-            >
-              <span>{dict.builder.header.openLive}</span>
-              <ExternalLink className="size-3.5" />
-            </a>
-          )}
+          {isPublished && <OpenLiveLink />}
         </div>
       </header>
 
       {/* Unsaved Changes Confirmation Dialog */}
-      <Dialog open={showUnsavedDialog} onOpenChange={setShowUnsavedDialog}>
+      <Dialog
+        open={showUnsavedDialog || isBackPromptOpen}
+        onOpenChange={(open) => !open && closeUnsavedDialog()}
+      >
         <DialogContent className="sm:max-w-[560px]">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2 text-foreground font-semibold">
@@ -691,10 +714,7 @@ export const BuilderHeader = React.memo(function BuilderHeader({
               <Button
                 variant="outline"
                 size="sm"
-                onClick={() => {
-                  setShowUnsavedDialog(false);
-                  setPendingAction(null);
-                }}
+                onClick={closeUnsavedDialog}
                 className="cursor-pointer flex-1 whitespace-nowrap sm:flex-none"
               >
                 {dict.builder.header.keepEditing}

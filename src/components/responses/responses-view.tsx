@@ -11,6 +11,10 @@ import {
 } from 'lucide-react';
 
 import { Card } from '@/components/ui/card';
+import {
+  InlineSkeleton,
+  ResponsesTableSkeleton,
+} from '@/components/skeletons/skeletons';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -191,9 +195,13 @@ export function ResponsesView({ formId }: ResponsesViewProps) {
               <MessageSquare className="size-3.5 text-primary" />
               <span>{dict.responses.totalResponses}</span>
             </div>
-            <p className="text-2xl font-bold text-foreground mt-1">
-              {data?.totalCount ?? 0}
-            </p>
+            {data || !isLoading ? (
+              <p className="text-2xl font-bold text-foreground mt-1">
+                {data?.totalCount ?? 0}
+              </p>
+            ) : (
+              <InlineSkeleton className="h-8 w-12 mt-1" />
+            )}
           </Card>
 
           <Card className="p-4 bg-card border shadow-sm">
@@ -201,9 +209,13 @@ export function ResponsesView({ formId }: ResponsesViewProps) {
               <Layers className="size-3.5 text-primary" />
               <span>{dict.responses.questionFields}</span>
             </div>
-            <p className="text-2xl font-bold text-foreground mt-1">
-              {data?.questions.length ?? 0}
-            </p>
+            {data || !isLoading ? (
+              <p className="text-2xl font-bold text-foreground mt-1">
+                {data?.questions.length ?? 0}
+              </p>
+            ) : (
+              <InlineSkeleton className="h-8 w-12 mt-1" />
+            )}
           </Card>
 
           <Card className="p-4 bg-card border shadow-sm col-span-2 sm:col-span-1">
@@ -211,6 +223,9 @@ export function ResponsesView({ formId }: ResponsesViewProps) {
               <Calendar className="size-3.5 text-primary" />
               <span>{dict.responses.latestActivity}</span>
             </div>
+            {!data && isLoading ? (
+              <InlineSkeleton className="h-4 w-28 mt-2" />
+            ) : (
             <p className="text-xs font-medium text-foreground mt-2 truncate">
               {data?.latestSubmittedAt
                 ? new Date(data.latestSubmittedAt).toLocaleString(
@@ -224,17 +239,13 @@ export function ResponsesView({ formId }: ResponsesViewProps) {
                   )
                 : dict.responses.noSubmissionsYet}
             </p>
+            )}
           </Card>
         </div>
 
         {/* Responses Table / Loading */}
         {isLoading && !data ? (
-          <div className="flex h-64 items-center justify-center rounded-lg border bg-card">
-            <div className="flex flex-col items-center gap-2 text-muted-foreground">
-              <Loader2 className="size-6 animate-spin text-primary" />
-              <span className="text-xs">{dict.responses.loadingResponses}</span>
-            </div>
-          </div>
+          <ResponsesTableSkeleton />
         ) : !data && initialLoadFailed ? (
           <div className="flex h-64 items-center justify-center rounded-lg border bg-card text-xs text-destructive">
             {dict.responses.loadFailed}

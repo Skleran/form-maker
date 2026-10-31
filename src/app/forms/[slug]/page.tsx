@@ -34,8 +34,15 @@ export async function generateMetadata({
 
   const title = `${form.title} | FormMaker`;
   const description = form.description || 'Formu doldurun';
-  // Use form headerImage if one is uploaded, otherwise fallback to the site icon
-  const imageUrl = form.headerImage || '/web-app-manifest-512x512.png';
+  // Header images are cropped to 4:1, so only the fallback site icon has a known size
+  const image = form.headerImage
+    ? { url: form.headerImage, alt: form.title }
+    : {
+        url: '/web-app-manifest-512x512.png',
+        width: 512,
+        height: 512,
+        alt: form.title,
+      };
   return {
     title,
     description,
@@ -43,20 +50,13 @@ export async function generateMetadata({
       title,
       description,
       type: 'website',
-      images: [
-        {
-          url: imageUrl,
-          width: 512,
-          height: 512,
-          alt: form.title,
-        },
-      ],
+      images: [image],
     },
     twitter: {
-      card: 'summary',
+      card: form.headerImage ? 'summary_large_image' : 'summary',
       title,
       description,
-      images: [imageUrl],
+      images: [image.url],
     },
   };
 }

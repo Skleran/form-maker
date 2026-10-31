@@ -21,10 +21,10 @@ const siteUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
 export const metadata: Metadata = {
   metadataBase: new URL(siteUrl),
   title: 'Form Maker',
-  description: 'Form creation and data-collection web platform',
+  description: 'Kurum içi form oluşturma ve veri toplama platformu',
   openGraph: {
     title: 'Form Maker',
-    description: 'Form creation and data-collection web platform',
+    description: 'Kurum içi form oluşturma ve veri toplama platformu',
     images: [
       {
         url: '/web-app-manifest-512x512.png',

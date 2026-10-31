@@ -1,7 +1,7 @@
 'use client';
 
 import * as React from 'react';
-import { usePathname, useRouter, useSearchParams } from 'next/navigation';
+import { useSearchParams } from 'next/navigation';
 import {
   FormProvider,
   useForm,
@@ -18,7 +18,7 @@ import {
 import { saveForm } from '@/actions/form-actions';
 import { useBuilderStore } from '@/stores/use-builder-store';
 import type { QuestionType, ChoiceOption, QuestionConfig } from '@/types/form';
-import { BuilderHeader } from './builder-header';
+import { BuilderHeader, setBuilderTab } from './builder-header';
 import { BuilderCanvas } from './builder-canvas';
 import { BuilderInspector } from './builder-inspector';
 import { BuilderSettings } from './builder-settings';
@@ -60,16 +60,31 @@ function cloneFormSnapshot(values: FormBuilderValues): FormBuilderValues {
   }
 }
 
+// Showing an inspector field registers it, which adds "" to the values. That isn't an edit,
+// so it must not create an undo step or mark the form as unsaved.
+function dropEmptyStrings(_key: string, value: unknown) {
+  return value === '' ? undefined : value;
+}
+
 function isFormValuesEqual(
   a: FormBuilderValues | null | undefined,
   b: FormBuilderValues | null | undefined,
 ): boolean {
   if (!a || !b) return a === b;
   try {
-    return JSON.stringify(a) === JSON.stringify(b);
+    return JSON.stringify(a, dropEmptyStrings) === JSON.stringify(b, dropEmptyStrings);
   } catch {
     return false;
   }
+}
+
+function isTextField(target: EventTarget | null): boolean {
+  return (
+    target instanceof HTMLElement &&
+    (target.tagName === 'INPUT' ||
+      target.tagName === 'TEXTAREA' ||
+      target.isContentEditable)
+  );
 }
 
 const FormHistoryObserver = React.memo(function FormHistoryObserver({
@@ -180,20 +195,10 @@ const FormHistoryObserver = React.memo(function FormHistoryObserver({
 
     const handlePopState = () => {
       if (useBuilderStore.getState().isDirty) {
-        const message =
-          'Kaydedilmemiş değişiklikleriniz var. Sayfadan ayrılmak istediğinizden emin misiniz?\n\nYaptığınız değişiklikler kaybolacaktır.';
-
-        const confirmLeave = window.confirm(message);
-
-        if (!confirmLeave) {
-          // User chose to stay: re-push guard state to remain on current edit page
-          window.history.pushState(guardState, '', window.location.href);
-          hasHistoryGuardRef.current = true;
-        } else {
-          // User chose to leave: mark clean and proceed back
-          useBuilderStore.getState().setIsDirty(false);
-          window.history.back();
-        }
+        // Stay on the page for now: the header's dialog goes back two entries if the user leaves
+        window.history.pushState(guardState, '', window.location.href);
+        hasHistoryGuardRef.current = true;
+        useBuilderStore.getState().setIsBackPromptOpen(true);
       }
     };
 
@@ -213,15 +218,13 @@ function BuilderMainContainer({ children }: { children: React.ReactNode }) {
 }
 
 export function FormBuilder({ initialForm }: FormBuilderProps) {
-  const router = useRouter();
-  const pathname = usePathname();
   const searchParams = useSearchParams();
   const activeTab = searchParams.get('tab') || 'questions';
 
-  const routeStateRef = React.useRef({ activeTab, pathname });
+  const activeTabRef = React.useRef(activeTab);
   React.useEffect(() => {
-    routeStateRef.current = { activeTab, pathname };
-  }, [activeTab, pathname]);
+    activeTabRef.current = activeTab;
+  }, [activeTab]);
 
   // Reset workspace state on mount and unmount
   React.useEffect(() => {
@@ -321,10 +324,8 @@ export function FormBuilder({ initialForm }: FormBuilderProps) {
     const isValid = await methods.trigger();
     if (!isValid) {
       const hasSlugFormatError = Boolean(methods.getFieldState('slug').error);
-      const { activeTab: currentTab, pathname: currentPathname } =
-        routeStateRef.current;
-      if (hasSlugFormatError && currentTab !== 'settings') {
-        router.replace(`${currentPathname}?tab=settings`, { scroll: false });
+      if (hasSlugFormatError && activeTabRef.current !== 'settings') {
+        setBuilderTab('settings');
         return false;
       }
       if (!hasSlugFormatError) {
@@ -363,10 +364,8 @@ export function FormBuilder({ initialForm }: FormBuilderProps) {
           type: 'conflict',
           message: res.error,
         });
-        const { activeTab: currentTab, pathname: currentPathname } =
-          routeStateRef.current;
-        if (currentTab !== 'settings') {
-          router.replace(`${currentPathname}?tab=settings`, { scroll: false });
+        if (activeTabRef.current !== 'settings') {
+          setBuilderTab('settings');
         }
       } else {
         toast.error(res.error || 'Form kaydedilemedi.');
@@ -377,7 +376,7 @@ export function FormBuilder({ initialForm }: FormBuilderProps) {
       useBuilderStore.getState().setIsSaving(false);
     }
     return false;
-  }, [methods, initialForm.id, router]);
+  }, [methods, initialForm.id]);
 
   // Global keyboard shortcuts: Ctrl/Cmd + S (Save), Ctrl/Cmd + Z (Undo), Ctrl/Cmd + Shift + Z / Ctrl/Cmd + Y (Redo)
   React.useEffect(() => {
@@ -385,6 +384,9 @@ export function FormBuilder({ initialForm }: FormBuilderProps) {
       if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 's') {
         e.preventDefault();
         handleSave();
+      } else if (isTextField(e.target)) {
+        // Inside a text field, undo and redo belong to the browser
+        return;
       } else if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'z') {
         if (e.shiftKey) {
           e.preventDefault();
@@ -544,50 +546,67 @@ export function FormBuilder({ initialForm }: FormBuilderProps) {
     [methods, submissionCount],
   );
 
-  return (
-    <FormProvider {...methods}>
-      <FormHistoryObserver
-        watch={methods.watch}
-        getValues={methods.getValues}
-        previousSnapshotRef={previousSnapshotRef}
-        savedSnapshotRef={savedSnapshotRef}
-      />
-      <div className="flex h-dvh flex-col bg-background overflow-hidden">
-        {/* Top Header */}
-        <BuilderHeader
-          formId={initialForm.id}
-          submissionCount={initialForm._count?.submissions || 0}
-          onSave={handleSave}
-          onUndo={handleUndo}
-          onRedo={handleRedo}
-          onDiscard={handleDiscard}
+  // useForm re-renders this component on every field change, and FormProvider would give every
+  // useFormContext consumer a new value each time. Children subscribe to what they need instead.
+  return React.useMemo(
+    () => (
+      <FormProvider {...methods}>
+        <FormHistoryObserver
+          watch={methods.watch}
+          getValues={methods.getValues}
+          previousSnapshotRef={previousSnapshotRef}
+          savedSnapshotRef={savedSnapshotRef}
         />
+        <div className="flex h-dvh flex-col bg-background overflow-hidden">
+          {/* Top Header */}
+          <BuilderHeader
+            formId={initialForm.id}
+            submissionCount={initialForm._count?.submissions || 0}
+            onSave={handleSave}
+            onUndo={handleUndo}
+            onRedo={handleRedo}
+            onDiscard={handleDiscard}
+          />
 
-        {/* Builder Main Work Area */}
-        <BuilderMainContainer>
-          {activeTab === 'questions' && (
-            <>
-              <BuilderCanvas
-                onAddQuestion={handleAddQuestion}
-                onDuplicateQuestion={handleDuplicateQuestion}
-                onDeleteQuestion={handleDeleteQuestion}
-              />
-              <BuilderInspector
-                onDuplicateQuestion={handleDuplicateQuestion}
-                onDeleteQuestion={handleDeleteQuestion}
-              />
-            </>
-          )}
+          {/* Builder Main Work Area */}
+          <BuilderMainContainer>
+            {activeTab === 'questions' && (
+              <>
+                <BuilderCanvas
+                  onAddQuestion={handleAddQuestion}
+                  onDuplicateQuestion={handleDuplicateQuestion}
+                  onDeleteQuestion={handleDeleteQuestion}
+                />
+                <BuilderInspector
+                  onDuplicateQuestion={handleDuplicateQuestion}
+                  onDeleteQuestion={handleDeleteQuestion}
+                />
+              </>
+            )}
 
-          {activeTab === 'responses' && (
-            <ResponsesView formId={initialForm.id} />
-          )}
+            {activeTab === 'responses' && (
+              <ResponsesView formId={initialForm.id} />
+            )}
 
-          {activeTab === 'settings' && (
-            <BuilderSettings formId={initialForm.id} />
-          )}
-        </BuilderMainContainer>
-      </div>
-    </FormProvider>
+            {activeTab === 'settings' && (
+              <BuilderSettings formId={initialForm.id} />
+            )}
+          </BuilderMainContainer>
+        </div>
+      </FormProvider>
+    ),
+    [
+      methods,
+      activeTab,
+      initialForm.id,
+      initialForm._count?.submissions,
+      handleSave,
+      handleUndo,
+      handleRedo,
+      handleDiscard,
+      handleAddQuestion,
+      handleDuplicateQuestion,
+      handleDeleteQuestion,
+    ],
   );
 }

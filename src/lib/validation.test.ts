@@ -1,3 +1,4 @@
+import { normalizeSearchText } from "./search"
 import { describe, expect, it } from "vitest"
 import { escapeCSV } from "@/lib/csv"
 import { selectOrphanedUploads } from "@/lib/upload-cleanup-rules"
@@ -121,5 +122,14 @@ describe("escapeCSV", () => {
   it("escapes quotes and handles empty values", () => {
     expect(escapeCSV('a "b"')).toBe('"a ""b"""')
     expect(escapeCSV(null)).toBe('""')
+  })
+})
+
+describe("normalizeSearchText", () => {
+  it("matches Turkish text regardless of case and dotted or dotless i", () => {
+    expect(normalizeSearchText("  ANKET ")).toBe("anket")
+    expect(normalizeSearchText("IT Destek")).toBe(normalizeSearchText("it destek"))
+    expect(normalizeSearchText("İzin")).toBe("izin")
+    expect(normalizeSearchText("KATILIM")).toBe("katilim")
   })
 })

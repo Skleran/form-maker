@@ -1,23 +1,20 @@
-'use client';
-
 import Link from 'next/link';
 import { ThemeToggle } from '@/components/theme-toggle';
 import { buttonVariants } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import {
-  SlidersHorizontal,
-  Database,
-  Layers,
   ArrowRight,
-  ShieldCheck,
-  Smartphone,
   Eye,
+  FileSpreadsheet,
+  LayoutList,
+  ListChecks,
+  Smartphone,
+  Upload,
 } from 'lucide-react';
 import { dict } from '@/lib/dictionary';
 import { FormMakerLogo } from '@/components/formmaker-logo';
 
 export default function Home() {
-
   return (
     <div className="flex min-h-screen flex-col bg-background selection:bg-primary selection:text-primary-foreground">
       {/* Top Header */}
@@ -51,7 +48,6 @@ export default function Home() {
       {/* Hero Section */}
       <main className="flex-1">
         <section className="container mx-auto max-w-6xl px-4 py-16 sm:px-6 sm:py-24 text-center">
-
           <h1 className="text-4xl font-extrabold tracking-tight sm:text-5xl lg:text-6xl text-foreground max-w-3xl mx-auto">
             {dict.home.title}
           </h1>
@@ -73,42 +69,54 @@ export default function Home() {
           </div>
         </section>
 
-        {/* Architectural Highlights Grid */}
+        {/* Features */}
         <section className="container mx-auto max-w-6xl px-4 pb-20 sm:px-6">
           <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
             <Card className="p-6 transition-all hover:border-primary/50">
               <div className="flex size-10 items-center justify-center rounded-lg bg-primary/10 text-primary mb-4">
-                <Layers className="size-5" />
+                <LayoutList className="size-5" />
               </div>
               <h3 className="text-base font-semibold text-foreground mb-1">
-                {dict.home.features.stateSeparationTitle}
+                {dict.home.features.builderTitle}
               </h3>
               <p className="text-sm text-muted-foreground leading-relaxed">
-                {dict.home.features.stateSeparationDesc}
+                {dict.home.features.builderDesc}
               </p>
             </Card>
 
             <Card className="p-6 transition-all hover:border-primary/50">
               <div className="flex size-10 items-center justify-center rounded-lg bg-primary/10 text-primary mb-4">
-                <Database className="size-5" />
+                <ListChecks className="size-5" />
               </div>
               <h3 className="text-base font-semibold text-foreground mb-1">
-                {dict.home.features.postgresTitle}
+                {dict.home.features.fieldsTitle}
               </h3>
               <p className="text-sm text-muted-foreground leading-relaxed">
-                {dict.home.features.postgresDesc}
+                {dict.home.features.fieldsDesc}
               </p>
             </Card>
 
             <Card className="p-6 transition-all hover:border-primary/50">
               <div className="flex size-10 items-center justify-center rounded-lg bg-primary/10 text-primary mb-4">
-                <SlidersHorizontal className="size-5" />
+                <Upload className="size-5" />
               </div>
               <h3 className="text-base font-semibold text-foreground mb-1">
-                {dict.home.features.dynamicSchemaTitle}
+                {dict.home.features.filesTitle}
               </h3>
               <p className="text-sm text-muted-foreground leading-relaxed">
-                {dict.home.features.dynamicSchemaDesc}
+                {dict.home.features.filesDesc}
+              </p>
+            </Card>
+
+            <Card className="p-6 transition-all hover:border-primary/50">
+              <div className="flex size-10 items-center justify-center rounded-lg bg-primary/10 text-primary mb-4">
+                <FileSpreadsheet className="size-5" />
+              </div>
+              <h3 className="text-base font-semibold text-foreground mb-1">
+                {dict.home.features.responsesTitle}
+              </h3>
+              <p className="text-sm text-muted-foreground leading-relaxed">
+                {dict.home.features.responsesDesc}
               </p>
             </Card>
 
@@ -117,22 +125,10 @@ export default function Home() {
                 <Smartphone className="size-5" />
               </div>
               <h3 className="text-base font-semibold text-foreground mb-1">
-                {dict.home.features.multiDeviceTitle}
+                {dict.home.features.mobileTitle}
               </h3>
               <p className="text-sm text-muted-foreground leading-relaxed">
-                {dict.home.features.multiDeviceDesc}
-              </p>
-            </Card>
-
-            <Card className="p-6 transition-all hover:border-primary/50">
-              <div className="flex size-10 items-center justify-center rounded-lg bg-primary/10 text-primary mb-4">
-                <ShieldCheck className="size-5" />
-              </div>
-              <h3 className="text-base font-semibold text-foreground mb-1">
-                {dict.home.features.validationTitle}
-              </h3>
-              <p className="text-sm text-muted-foreground leading-relaxed">
-                {dict.home.features.validationDesc}
+                {dict.home.features.mobileDesc}
               </p>
             </Card>
 

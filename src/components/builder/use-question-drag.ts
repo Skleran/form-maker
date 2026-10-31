@@ -8,10 +8,7 @@ import type { QuestionType } from '@/types/form';
 
 export interface ActiveDragState {
   index: number;
-  pointerY: number;
-  pointerX: number;
   initialPointerY: number;
-  initialPointerX: number;
   cardRect: DOMRect;
   overIndex: number;
   questionLabel: string;
@@ -32,6 +29,7 @@ export function useQuestionDrag({
 }) {
   const scrollContainerRef = React.useRef<HTMLDivElement>(null);
   const cardRefs = React.useRef<(HTMLDivElement | null)[]>([]);
+  const ghostRef = React.useRef<HTMLDivElement>(null);
   const activeDragRef = React.useRef<ActiveDragState | null>(null);
   const [activeDrag, setActiveDrag] = React.useState<ActiveDragState | null>(
     null,
@@ -101,10 +99,7 @@ export function useQuestionDrag({
       latestDragPointerYRef.current = e.clientY;
       const initialDragState: ActiveDragState = {
         index,
-        pointerY: e.clientY,
-        pointerX: e.clientX,
         initialPointerY: e.clientY,
-        initialPointerX: e.clientX,
         cardRect: rect,
         overIndex: index,
         questionLabel:
@@ -124,6 +119,17 @@ export function useQuestionDrag({
     if (!isDragging) return;
 
     let animFrameId: number | null = null;
+
+    // State changes only when the drop position does, so moving the pointer doesn't re-render the canvas
+    const updateOverIndex = (clientY: number) => {
+      const currentDrag = activeDragRef.current;
+      if (!currentDrag) return;
+      const nextOver = calculateOverIndex(clientY, currentDrag.index);
+      if (nextOver === currentDrag.overIndex) return;
+      const nextState: ActiveDragState = { ...currentDrag, overIndex: nextOver };
+      activeDragRef.current = nextState;
+      setActiveDrag(nextState);
+    };
 
     const handleAutoScroll = () => {
       const container = scrollContainerRef.current;
@@ -173,17 +179,8 @@ export function useQuestionDrag({
         }
 
         // As elements scroll under the user's stationary finger, keep the drop slot updated in real time
-        if (didScroll && activeDragRef.current) {
-          const currentDrag = activeDragRef.current;
-          const nextOver = calculateOverIndex(latestClientY, currentDrag.index);
-          if (nextOver !== currentDrag.overIndex) {
-            const nextState: ActiveDragState = {
-              ...currentDrag,
-              overIndex: nextOver,
-            };
-            activeDragRef.current = nextState;
-            setActiveDrag(nextState);
-          }
+        if (didScroll) {
+          updateOverIndex(latestClientY);
         }
       }
       animFrameId = requestAnimationFrame(handleAutoScroll);
@@ -193,18 +190,11 @@ export function useQuestionDrag({
 
     const handleWindowPointerMove = (e: PointerEvent) => {
       latestDragPointerYRef.current = e.clientY;
-      setActiveDrag((prev) => {
-        if (!prev) return null;
-        const nextOver = calculateOverIndex(e.clientY, prev.index);
-        const nextState: ActiveDragState = {
-          ...prev,
-          pointerY: e.clientY,
-          pointerX: e.clientX,
-          overIndex: nextOver,
-        };
-        activeDragRef.current = nextState;
-        return nextState;
-      });
+      const currentDrag = activeDragRef.current;
+      if (currentDrag && ghostRef.current) {
+        ghostRef.current.style.transform = `translateY(${e.clientY - currentDrag.initialPointerY}px)`;
+      }
+      updateOverIndex(e.clientY);
     };
 
     const handleWindowPointerUp = () => {
@@ -232,6 +222,7 @@ export function useQuestionDrag({
 
   return {
     scrollContainerRef,
+    ghostRef,
     activeDrag,
     handleRegisterCardRef,
     handleMoveQuestion,

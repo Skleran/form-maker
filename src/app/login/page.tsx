@@ -70,18 +70,25 @@ function LoginForm() {
         <Card className="p-6 shadow-md bg-card border">
           <form onSubmit={handleSubmit} className="space-y-4">
             {error && (
-              <div className="flex items-center gap-2 p-3 text-xs rounded-lg border border-destructive/20 bg-destructive/10 text-destructive font-medium animate-in fade-in">
+              <div
+                role="alert"
+                className="flex items-center gap-2 p-3 text-xs rounded-lg border border-destructive/20 bg-destructive/10 text-destructive font-medium animate-in fade-in"
+              >
                 <AlertCircle className="size-4 shrink-0" />
                 <span>{error}</span>
               </div>
             )}
 
             <div className="space-y-1.5">
-              <label className="text-xs font-semibold text-foreground flex items-center gap-1.5">
+              <label
+                htmlFor="login-username"
+                className="text-xs font-semibold text-foreground flex items-center gap-1.5"
+              >
                 <User className="size-3.5 text-muted-foreground" />
                 <span>Kullanıcı Adı</span>
               </label>
               <Input
+                id="login-username"
                 type="text"
                 autoComplete="username"
                 required
@@ -94,12 +101,16 @@ function LoginForm() {
             </div>
 
             <div className="space-y-1.5">
-              <label className="text-xs font-semibold text-foreground flex items-center gap-1.5">
+              <label
+                htmlFor="login-password"
+                className="text-xs font-semibold text-foreground flex items-center gap-1.5"
+              >
                 <Lock className="size-3.5 text-muted-foreground" />
                 <span>Şifre</span>
               </label>
               <div className="relative">
                 <Input
+                  id="login-password"
                   type={showPassword ? 'text' : 'password'}
                   autoComplete="current-password"
                   required
@@ -113,6 +124,7 @@ function LoginForm() {
                   onClick={() => setShowPassword(!showPassword)}
                   className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground cursor-pointer transition-colors"
                   title={showPassword ? 'Şifreyi Gizle' : 'Şifreyi Göster'}
+                  aria-label={showPassword ? 'Şifreyi Gizle' : 'Şifreyi Göster'}
                 >
                   {showPassword ? (
                     <EyeOff className="size-4" />

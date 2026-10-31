@@ -4,14 +4,7 @@ import * as React from "react"
 import { Moon, Sun } from "lucide-react"
 import { useTheme } from "next-themes"
 import { Button } from "@/components/ui/button"
-
-function useHydrated(): boolean {
-  return React.useSyncExternalStore(
-    () => () => {},
-    () => true,
-    () => false
-  )
-}
+import { useHydrated } from "@/hooks/use-hydrated"
 
 export function ThemeToggle() {
   const { setTheme, theme, resolvedTheme } = useTheme()

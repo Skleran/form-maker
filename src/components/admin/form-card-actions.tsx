@@ -1,6 +1,5 @@
 'use client';
 
-import type * as React from 'react';
 import { Copy, Trash2, ExternalLink } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
@@ -18,9 +17,7 @@ export function FormCardActions({
   isPublished,
   onDeleteRequest,
 }: FormCardActionsProps) {
-  const handleCopy = async (e: React.MouseEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
+  const handleCopy = async () => {
     const url = `${window.location.origin}/forms/${slug}`;
     if (await copyText(url)) {
       toast.success(dict.dashboard.linkCopied);
@@ -29,16 +26,9 @@ export function FormCardActions({
     }
   };
 
-  const handleDeleteClick = (e: React.MouseEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    onDeleteRequest();
-  };
-
   return (
     <div
-      className="flex items-center gap-1"
-      onClick={(e) => e.stopPropagation()}
+      className="relative z-10 flex items-center gap-1"
     >
       {isPublished && (
         <a
@@ -65,7 +55,7 @@ export function FormCardActions({
       <Button
         variant="ghost"
         size="icon-xs"
-        onClick={handleDeleteClick}
+        onClick={onDeleteRequest}
         className="cursor-pointer text-muted-foreground hover:text-destructive"
         title={dict.dashboard.deleteFormTitle}
       >

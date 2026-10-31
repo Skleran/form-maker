@@ -1,7 +1,7 @@
 'use client';
 
 import * as React from 'react';
-import { useForm, Controller } from 'react-hook-form';
+import { useForm, Controller, type FieldErrors } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { toast } from 'sonner';
 import {
@@ -25,11 +25,20 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
 import { ThemeToggle } from '@/components/theme-toggle';
 import { buildDynamicFormSchema } from '@/lib/validations/dynamic-schema';
 import { submitFormResponse } from '@/actions/submission-actions';
 import type { QuestionFormItem, QuestionConfig } from '@/types/form';
 import { dict } from '@/lib/dictionary';
+import { useHydrated } from '@/hooks/use-hydrated';
 import { QuestionIcon } from '@/components/form/question-icon';
 import {
   formatAllowedFileTypes,
@@ -61,9 +70,13 @@ function PublicFileInput({
   value,
   onChange,
   onUploadStateChange,
+  labelledBy,
+  describedBy,
 }: {
   formId: string;
   questionId: string;
+  labelledBy: string;
+  describedBy?: string;
   config?: QuestionConfig;
   value: FileUploadValue | null;
   onChange: (val: FileUploadValue | null) => void;
@@ -210,7 +223,10 @@ function PublicFileInput({
 
   if (isUploading) {
     return (
-      <div className="flex flex-col items-center justify-center rounded-lg border-2 border-dashed border-primary/40 bg-primary/5 p-6 text-center space-y-3">
+      <div
+        role="status"
+        className="flex flex-col items-center justify-center rounded-lg border-2 border-dashed border-primary/40 bg-primary/5 p-6 text-center space-y-3"
+      >
         <Loader2 className="size-8 text-primary animate-spin" />
         <div className="space-y-1.5 w-full max-w-xs">
           <span className="text-xs font-semibold text-foreground">
@@ -254,6 +270,7 @@ function PublicFileInput({
             }}
             className="cursor-pointer text-muted-foreground hover:text-destructive"
             title={dict.publicForm.removeAttachment}
+            aria-label={dict.publicForm.removeAttachment}
           >
             <X className="size-3.5" />
           </Button>
@@ -273,14 +290,20 @@ function PublicFileInput({
     );
   }
 
+  const dropzoneTextId = `${labelledBy}-dropzone`;
+
   return (
-    <div
+    <button
+      type="button"
+      data-focus-target
       onDragOver={handleDragOver}
       onDragEnter={handleDragEnter}
       onDragLeave={handleDragLeave}
       onDrop={handleDrop}
       onClick={() => inputRef.current?.click()}
-      className={`flex flex-col items-center justify-center rounded-lg border-2 border-dashed p-6 text-center cursor-pointer transition-all ${
+      aria-labelledby={`${labelledBy} ${dropzoneTextId}`}
+      aria-describedby={describedBy}
+      className={`flex w-full flex-col items-center justify-center rounded-lg border-2 border-dashed p-6 text-center cursor-pointer transition-all outline-none focus-visible:ring-2 focus-visible:ring-ring ${
         isDragging
           ? 'border-primary bg-primary/10 ring-2 ring-primary/20 scale-[1.01]'
           : 'border-muted-foreground/30 bg-muted/10 hover:bg-muted/20 hover:border-primary/50'
@@ -291,7 +314,7 @@ function PublicFileInput({
           isDragging ? 'text-primary scale-110' : 'text-muted-foreground'
         }`}
       />
-      <span className="text-xs font-medium text-foreground">
+      <span id={dropzoneTextId} className="text-xs font-medium text-foreground">
         {isDragging
           ? 'Dosyayı eklemek için bırakın'
           : dict.publicForm.clickOrDrop}
@@ -312,8 +335,10 @@ function PublicFileInput({
         }}
         accept={getAcceptAttribute(config?.allowedMimeTypes)}
         className="hidden"
+        tabIndex={-1}
+        aria-hidden="true"
       />
-    </div>
+    </button>
   );
 }
 
@@ -334,9 +359,11 @@ export function PublicFormRenderer({
   form,
   isPreview = false,
 }: PublicFormRendererProps) {
+  const isHydrated = useHydrated();
   const [isSubmitted, setIsSubmitted] = React.useState(false);
   const [isSubmitting, setIsSubmitting] = React.useState(false);
   const [uploadingCount, setUploadingCount] = React.useState(0);
+  const [isClearDialogOpen, setIsClearDialogOpen] = React.useState(false);
 
   const handleUploadStateChange = React.useCallback((isUploading: boolean) => {
     setUploadingCount((prev) => Math.max(0, prev + (isUploading ? 1 : -1)));
@@ -353,9 +380,11 @@ export function PublicFormRenderer({
     handleSubmit,
     control,
     reset,
+    getValues,
     formState: { errors },
   } = useForm<Record<string, unknown>>({
     resolver: zodResolver(dynamicSchema),
+    shouldFocusError: false,
     defaultValues: form.questions.reduce(
       (acc, q) => {
         if (q.type === 'MULTIPLE_CHOICE') {
@@ -417,9 +446,32 @@ export function PublicFormRenderer({
     }
   };
 
+  // Goes to the first problem in page order, whichever kind of control it is
+  const onInvalid = (invalidFields: FieldErrors) => {
+    const first = form.questions.find((q) => invalidFields[q.id]);
+    if (!first) return;
+    document
+      .getElementById(`question-${first.id}`)
+      ?.querySelector<HTMLElement>(
+        'input:not([type=file]):not([type=hidden]), textarea, button, [data-focus-target]',
+      )
+      ?.focus();
+  };
+
   const handleReset = () => {
     reset();
     setIsSubmitted(false);
+  };
+
+  // Submitted files belong to the response, but these were never submitted
+  const handleClearForm = () => {
+    for (const q of form.questions) {
+      if (q.type !== 'FILE_UPLOAD') continue;
+      const file = getValues(q.id) as FileUploadValue | null;
+      if (file) deleteUploadedFile(file);
+    }
+    reset();
+    setIsClearDialogOpen(false);
   };
 
   if (isSubmitted) {
@@ -526,7 +578,8 @@ export function PublicFormRenderer({
         </div>
 
         <form
-          onSubmit={handleSubmit(onSubmit)}
+          onSubmit={handleSubmit(onSubmit, onInvalid)}
+          noValidate
           className="mx-auto max-w-2xl space-y-4"
         >
           {/* Honeypot: invisible to people, tempting to bots */}
@@ -571,10 +624,29 @@ export function PublicFormRenderer({
           {/* Dynamic Question Cards */}
           {form.questions.map((q) => {
             const fieldError = errors[q.id]?.message as string | undefined;
+            const labelId = `question-${q.id}-label`;
+            const inputId = `question-${q.id}-input`;
+            const descriptionId = `question-${q.id}-description`;
+            const errorId = `question-${q.id}-error`;
+            const describedBy =
+              [
+                q.config?.description ? descriptionId : null,
+                fieldError ? errorId : null,
+              ]
+                .filter(Boolean)
+                .join(' ') || undefined;
+            const isText = q.type === 'SHORT_TEXT' || q.type === 'LONG_TEXT';
+            const LabelTag = isText ? 'label' : 'span';
+            const fieldAria = {
+              'aria-describedby': describedBy,
+              'aria-invalid': Boolean(fieldError),
+              'aria-required': q.required,
+            };
 
             return (
               <Card
                 key={q.id}
+                id={`question-${q.id}`}
                 className={`p-6 bg-card shadow-sm border transition-all ${
                   fieldError
                     ? 'border-destructive ring-1 ring-destructive/40'
@@ -589,14 +661,26 @@ export function PublicFormRenderer({
                     </div>
                   )}
                   <div className="space-y-1 flex-1 min-w-0">
-                    <label className="text-base font-semibold text-foreground flex items-baseline gap-1">
+                    <LabelTag
+                      id={labelId}
+                      htmlFor={isText ? inputId : undefined}
+                      className="block text-base font-semibold text-foreground"
+                    >
                       <span>{q.label}</span>
                       {q.required && (
-                        <span className="text-destructive font-bold">*</span>
+                        <span
+                          aria-hidden="true"
+                          className="ml-1 text-destructive font-bold"
+                        >
+                          *
+                        </span>
                       )}
-                    </label>
+                    </LabelTag>
                     {q.config?.description && (
-                      <p className="text-xs text-muted-foreground">
+                      <p
+                        id={descriptionId}
+                        className="text-xs text-muted-foreground"
+                      >
                         {q.config.description}
                       </p>
                     )}
@@ -608,6 +692,8 @@ export function PublicFormRenderer({
                   {/* 1. Short Text */}
                   {q.type === 'SHORT_TEXT' && (
                     <Input
+                      id={inputId}
+                      {...fieldAria}
                       placeholder={
                         q.config?.placeholder ||
                         'Yanıtınız'
@@ -620,6 +706,8 @@ export function PublicFormRenderer({
                   {/* 2. Long Text */}
                   {q.type === 'LONG_TEXT' && (
                     <Textarea
+                      id={inputId}
+                      {...fieldAria}
                       rows={4}
                       placeholder={
                         q.config?.placeholder ||
@@ -632,7 +720,12 @@ export function PublicFormRenderer({
 
                   {/* 3. Single Choice (Radio) */}
                   {q.type === 'SINGLE_CHOICE' && (
-                    <div className="space-y-2.5">
+                    <div
+                      role="radiogroup"
+                      aria-labelledby={labelId}
+                      {...fieldAria}
+                      className="space-y-2.5"
+                    >
                       {q.options.map((opt) => (
                         <label
                           key={opt.id}
@@ -672,7 +765,12 @@ export function PublicFormRenderer({
                         };
 
                         return (
-                          <div className="space-y-2.5">
+                          <div
+                            role="group"
+                            aria-labelledby={labelId}
+                            aria-describedby={describedBy}
+                            className="space-y-2.5"
+                          >
                             {q.options.map((opt) => {
                               const isChecked = currentValues.includes(opt.id);
                               return (
@@ -712,7 +810,11 @@ export function PublicFormRenderer({
                             if (val) field.onChange(val);
                           }}
                         >
-                          <SelectTrigger className="w-full text-sm">
+                          <SelectTrigger
+                            aria-labelledby={labelId}
+                            {...fieldAria}
+                            className="w-full text-sm"
+                          >
                             <SelectValue
                               placeholder={
                                 q.config?.placeholder ||
@@ -758,6 +860,8 @@ export function PublicFormRenderer({
                           value={field.value as FileUploadValue | null}
                           onChange={(val) => field.onChange(val)}
                           onUploadStateChange={handleUploadStateChange}
+                          labelledBy={labelId}
+                          describedBy={describedBy}
                         />
                       )}
                     />
@@ -766,7 +870,10 @@ export function PublicFormRenderer({
 
                 {/* Validation error display */}
                 {fieldError && (
-                  <p className="mt-2 text-xs text-destructive font-medium">
+                  <p
+                    id={errorId}
+                    className="mt-2 text-xs text-destructive font-medium"
+                  >
                     {fieldError}
                   </p>
                 )}
@@ -778,7 +885,8 @@ export function PublicFormRenderer({
           <div className="flex items-center justify-between pt-2">
             <Button
               type="submit"
-              disabled={isSubmitting || uploadingCount > 0}
+              // Before hydration the browser would submit natively, putting the answers in the URL
+              disabled={!isHydrated || isSubmitting || uploadingCount > 0}
               className="cursor-pointer gap-2 shadow-sm font-medium px-6"
             >
               {isSubmitting || uploadingCount > 0 ? (
@@ -799,13 +907,8 @@ export function PublicFormRenderer({
               type="button"
               variant="ghost"
               size="sm"
-              onClick={() => {
-                const confirmMsg =
-                  'Tüm yanıtlar temizlensin mi? Bu işlem geri alınamaz.';
-                if (confirm(confirmMsg)) {
-                  reset();
-                }
-              }}
+              disabled={uploadingCount > 0}
+              onClick={() => setIsClearDialogOpen(true)}
               className="cursor-pointer text-muted-foreground hover:text-foreground text-xs"
             >
               Formu temizle
@@ -819,6 +922,33 @@ export function PublicFormRenderer({
           </footer>
         </form>
       </div>
+
+      <Dialog open={isClearDialogOpen} onOpenChange={setIsClearDialogOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Formu temizle</DialogTitle>
+            <DialogDescription>
+              Tüm yanıtlar temizlensin mi? Bu işlem geri alınamaz.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="gap-2 sm:gap-3">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setIsClearDialogOpen(false)}
+            >
+              İptal
+            </Button>
+            <Button
+              type="button"
+              variant="destructive"
+              onClick={handleClearForm}
+            >
+              Temizle
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

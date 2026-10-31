@@ -85,6 +85,7 @@ export function ResponseDetailDrawer({
                     variant="ghost"
                     size="icon-xs"
                     onClick={onClose}
+                    aria-label={dict.responses.close}
                     className="cursor-pointer text-muted-foreground hover:text-foreground"
                   >
                     <X className="size-4" />
@@ -224,12 +225,12 @@ export function ResponseDetailDrawer({
                                     {/* eslint-disable-next-line @next/next/no-img-element */}
                                     <img
                                       src={answer.fileUrl!}
-                                      alt={answer.valueText || 'Attached image'}
+                                      alt={answer.valueText || 'Eklenen görsel'}
                                       className="max-h-44 w-auto rounded object-contain shadow-sm cursor-pointer hover:opacity-95"
                                       onClick={() =>
                                         handleViewFile(answer.fileUrl!)
                                       }
-                                      title="Click to view full image in new tab"
+                                      title="Görseli yeni sekmede aç"
                                     />
                                   </div>
                                 )}

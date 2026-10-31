@@ -9,11 +9,13 @@ import {
   Layers,
   MessageSquare,
   Loader2,
+  Search,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { Badge } from '@/components/ui/badge';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import {
   Dialog,
   DialogContent,
@@ -28,6 +30,7 @@ import { CreateFormButton } from '@/components/admin/create-form-button';
 import { FormCardActions } from '@/components/admin/form-card-actions';
 import { deleteForm } from '@/actions/form-actions';
 import { dict } from '@/lib/dictionary';
+import { normalizeSearchText } from '@/lib/search';
 import { FormMakerLogo } from '../formmaker-logo';
 
 export interface DashboardFormItem {
@@ -58,11 +61,20 @@ export function FormsDashboardClient({
     title: string;
   } | null>(null);
   const [isDeleting, setIsDeleting] = React.useState(false);
+  const [search, setSearch] = React.useState('');
 
   const forms = React.useMemo(
     () => initialForms.filter((f) => !deletedIds.includes(f.id)),
     [initialForms, deletedIds],
   );
+
+  const visibleForms = React.useMemo(() => {
+    const query = normalizeSearchText(search);
+    if (!query) return forms;
+    return forms.filter((f) =>
+      normalizeSearchText(`${f.title} ${f.description ?? ''}`).includes(query),
+    );
+  }, [forms, search]);
 
   const totalSubmissions = forms.reduce(
     (acc, f) => acc + (f._count?.submissions || 0),
@@ -175,13 +187,28 @@ export function FormsDashboardClient({
         </div>
 
         {/* Section Heading */}
-        <div className="flex items-center justify-between">
-          <h2 className="text-base font-semibold text-foreground">
-            {dict.dashboard.allForms}
-          </h2>
-          <span className="text-xs text-muted-foreground">
-            {`${forms.length} form oluşturuldu`}
-          </span>
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div className="flex items-baseline gap-3">
+            <h2 className="text-base font-semibold text-foreground">
+              {dict.dashboard.allForms}
+            </h2>
+            <span className="text-xs text-muted-foreground">
+              {`${forms.length} form oluşturuldu`}
+            </span>
+          </div>
+          {forms.length > 0 && (
+            <div className="relative w-full sm:w-64">
+              <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 size-3.5 text-muted-foreground pointer-events-none" />
+              <Input
+                type="search"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                placeholder={dict.dashboard.search}
+                aria-label={dict.dashboard.search}
+                className="pl-8 text-sm"
+              />
+            </div>
+          )}
         </div>
 
         {/* Forms Grid */}
@@ -198,17 +225,20 @@ export function FormsDashboardClient({
             </p>
             <CreateFormButton />
           </Card>
+        ) : visibleForms.length === 0 ? (
+          <p className="py-12 text-center text-sm text-muted-foreground">
+            {dict.dashboard.noSearchResults}
+          </p>
         ) : (
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            {forms.map((form) => {
+            {visibleForms.map((form) => {
               const subCount = form._count?.submissions || 0;
               const qCount = form._count?.questions || 0;
 
               return (
                 <Card
                   key={form.id}
-                  onClick={() => router.push(`/admin/forms/${form.id}/edit`)}
-                  className="group relative flex flex-col justify-between p-5 bg-card border transition-all hover:border-primary/50 hover:shadow-md cursor-pointer hover:bg-muted/10 select-none"
+                  className="group relative flex flex-col justify-between p-5 bg-card border transition-all hover:border-primary/50 hover:shadow-md hover:bg-muted/10 focus-within:border-primary/50"
                 >
                   <div>
                     <div className="flex items-center justify-between gap-2 mb-2">
@@ -238,8 +268,7 @@ export function FormsDashboardClient({
                     <h3 className="font-semibold text-foreground text-base tracking-tight group-hover:text-primary transition-colors line-clamp-1">
                       <Link
                         href={`/admin/forms/${form.id}/edit`}
-                        onClick={(e) => e.stopPropagation()}
-                        className="focus:outline-none hover:underline"
+                        className="outline-none hover:underline after:absolute after:inset-0 after:rounded-xl focus-visible:after:ring-2 focus-visible:after:ring-ring"
                       >
                         {form.title ||
                           'Başlıksız Form'}

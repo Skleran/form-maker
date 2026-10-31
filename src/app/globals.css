@@ -139,6 +139,44 @@
   --sidebar-ring: oklch(0.556 0 0);
 }
 
+:root {
+  --skeleton-from: oklch(0 0 0 / 3.5%);
+  --skeleton-to: oklch(0 0 0 / 5.5%);
+}
+
+.dark {
+  --skeleton-from: oklch(1 0 0 / 3%);
+  --skeleton-to: oklch(1 0 0 / 5%);
+}
+
+@keyframes skeleton-pulse {
+  from {
+    background-color: var(--skeleton-from);
+  }
+  to {
+    background-color: var(--skeleton-to);
+  }
+}
+
+@keyframes skeleton-reveal {
+  from {
+    opacity: 0;
+  }
+}
+
+@utility skeleton-pulse {
+  background-color: var(--skeleton-from);
+  animation: skeleton-pulse 1.2s ease-in-out infinite alternate;
+  @media (prefers-reduced-motion: reduce) {
+    animation: none;
+  }
+}
+
+/* Stays invisible for 200 ms, so a fast load never flashes a skeleton. Layout is kept while hidden. */
+@utility skeleton-reveal {
+  animation: skeleton-reveal 120ms ease-out 200ms backwards;
+}
+
 @layer base {
   * {
     @apply border-border outline-ring/50;

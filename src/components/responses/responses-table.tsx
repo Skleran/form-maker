@@ -184,6 +184,7 @@ export function ResponsesTable({
               size="icon-xs"
               disabled={currentPage <= 1}
               onClick={() => onPageChange(currentPage - 1)}
+              aria-label="Önceki sayfa"
               className="cursor-pointer"
             >
               <ChevronLeft className="size-3.5" />
@@ -193,6 +194,7 @@ export function ResponsesTable({
               size="icon-xs"
               disabled={currentPage >= totalPages}
               onClick={() => onPageChange(currentPage + 1)}
+              aria-label="Sonraki sayfa"
               className="cursor-pointer"
             >
               <ChevronRight className="size-3.5" />

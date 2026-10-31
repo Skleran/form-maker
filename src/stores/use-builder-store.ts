@@ -11,6 +11,9 @@ export interface BuilderState {
   // Inspector sidebar drawer/sheet open state
   isInspectorOpen: boolean
 
+  // The browser's Back button was pressed with unsaved changes, so the header asks what to do
+  isBackPromptOpen: boolean
+
   // Transient save/sync status
   isSaving: boolean
   lastSavedAt: Date | null
@@ -35,6 +38,7 @@ export interface BuilderActions {
   deselectQuestion: () => void
   setIsInspectorOpen: (isOpen: boolean) => void
   toggleInspector: () => void
+  setIsBackPromptOpen: (isOpen: boolean) => void
   setIsSaving: (isSaving: boolean) => void
   setLastSavedAt: (date: Date | null) => void
   setIsDirty: (isDirty: boolean) => void
@@ -54,6 +58,7 @@ const initialState: BuilderState = {
   activeQuestionId: null,
   lastActiveQuestionId: null,
   isInspectorOpen: false,
+  isBackPromptOpen: false,
   isSaving: false,
   lastSavedAt: null,
   isDirty: false,
@@ -125,6 +130,9 @@ export const useBuilderStore = create<BuilderStore>((set) => ({
           : null,
       }
     }),
+
+  setIsBackPromptOpen: (isBackPromptOpen) =>
+    set((state) => (state.isBackPromptOpen === isBackPromptOpen ? state : { isBackPromptOpen })),
 
   setIsSaving: (isSaving) =>
     set((state) => (state.isSaving === isSaving ? state : { isSaving })),

@@ -43,7 +43,8 @@ src/app/
   page.tsx                landing page
   login/                  admin login
   forms/[slug]/           public form; admins get preview mode on drafts or ?preview=true
-  admin/forms/            dashboard
+  error.tsx               error page with retry for every route
+  admin/forms/(list)/     dashboard, in its own route group so its loading file doesn't wrap the builder
   admin/forms/[id]/edit/  builder; ?tab=questions|responses|settings
   api/health/             database check for the Docker healthcheck
   api/upload/             POST and DELETE attachments
@@ -53,6 +54,7 @@ src/components/
   builder/                form-builder (orchestrator), header, canvas (form-header-section, question-card, use-question-drag), inspector, settings, crop modal; question-types holds the shared type list
   public/                 public-form-renderer
   responses/              responses-view, table, detail drawer, CSV button
+  skeletons/              loading skeletons for each page
   admin/                  dashboard
   ui/                     shadcn components
 src/lib/
@@ -74,10 +76,13 @@ src/stores/use-builder-store.ts  builder UI state and undo/redo history
 **Auth.** One admin, with credentials from `ADMIN_USERNAME` / `ADMIN_PASSWORD`. The session is a stateless signed cookie lasting 7 days. The proxy only covers pages, so every admin server action and data function must call `requireAdmin()`, and every admin route handler `getAdminSession()`, itself. In production the server refuses to start (`instrumentation.ts`) if `AUTH_SECRET` or `ADMIN_PASSWORD` is missing or a known default. Other signed values use `signPayload` with their own purpose, so they can't pass as sessions.
 
 **Builder state.** react-hook-form owns the form data; Zustand holds UI state (selected question, dirty flag, history).
+- `FormBuilder` memoizes its returned tree, because `useForm` re-renders it on every field change and that would otherwise reach every `useFormContext` consumer. Don't read `formState` from context; use `useFormState`.
 - Components subscribe narrowly with `useWatch({ exact: true })` or `compute`, and many are wrapped in `React.memo`, so typing doesn't re-render the canvas. Keep this when editing the builder.
 - `useFieldArray` uses `keyName: '_rhfId'` so `field.id` stays the real question id.
 - New questions get client-generated `q_...` ids, which become their database ids through the upsert in `saveForm`.
 - The whole form saves at once inside a transaction, on Ctrl+S or the save button. There is no autosave.
+- Tabs switch with `setBuilderTab` (`history.replaceState`), with no server round trip. The form stays in memory, so switching tabs never asks about unsaved changes.
+- Ctrl+Z and Ctrl+Y in a text field are the browser's own undo; elsewhere they use the builder's history.
 
 **Deleting questions.** A removed question with answers is soft-deleted (`isDeleted`); one without answers is hard-deleted. Filter on `isDeleted: false` wherever current questions are needed. `_count.questions` does not filter.
 
@@ -95,6 +100,9 @@ src/stores/use-builder-store.ts  builder UI state and undo/redo history
 ## Conventions
 
 - Read the relevant guide in `node_modules/next/dist/docs/` before using a Next API. For example, `error.tsx` receives `retry` rather than `reset`, and middleware is `proxy.ts`.
+- Every route has a `loading.tsx` built from `components/skeletons/`, and none sits directly above other routes. A skeleton's root takes `skeleton-reveal` (a skeleton alone inside real content uses `InlineSkeleton`), and its colors come from `--skeleton-from` / `--skeleton-to`.
+- Confirmations use `Dialog`, not `window.confirm`. Menu items use the base text size, and color comes from `variant`, not `className`.
+- Icon-only buttons need `aria-label`. On the public form, every control is linked to its label, description and error, and focus moves to the first error on submit.
 - Language: the UI is Turkish only. Client text is either in `dict` from `@/lib/dictionary` or inline in Turkish. Server actions return hardcoded Turkish errors.
 - Base UI, not Radix: composition uses the `render` prop, not `asChild`. A `Button` rendered as a link needs `nativeButton={false}`.
 - Import `cn` from `@/lib/utils`.

@@ -126,6 +126,7 @@ export const BuilderCanvas = React.memo(function BuilderCanvas({
 
   const {
     scrollContainerRef,
+    ghostRef,
     activeDrag,
     handleRegisterCardRef,
     handleMoveQuestion,
@@ -199,17 +200,16 @@ export const BuilderCanvas = React.memo(function BuilderCanvas({
       {/* Floating Semi-Transparent Ghost View of Held Question (Google Forms Style) */}
       {activeDrag && (
         <div
+          ref={ghostRef}
           style={{
             position: 'fixed',
-            top:
-              activeDrag.pointerY -
-              (activeDrag.initialPointerY - activeDrag.cardRect.top),
+            top: activeDrag.cardRect.top,
             left: activeDrag.cardRect.left,
             width: activeDrag.cardRect.width,
             pointerEvents: 'none',
             zIndex: 9999,
           }}
-          className="pointer-events-none select-none rounded-xl border-2 border-primary/80 bg-card/95 shadow-2xl p-6 opacity-85 scale-[1.01] rotate-[0.5deg] transition-transform duration-75 backdrop-blur-xs"
+          className="pointer-events-none select-none rounded-xl border-2 border-primary/80 bg-card/95 shadow-2xl p-6 opacity-85 scale-[1.01] rotate-[0.5deg] backdrop-blur-xs"
         >
           <div className="flex items-center justify-between gap-3 mb-2">
             <div className="flex items-center gap-2.5 min-w-0">
