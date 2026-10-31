@@ -17,12 +17,12 @@ pnpm test             # Vitest; security logic is in src/lib/security.test.ts
 pnpm build            # prisma generate + next build
 ```
 
-There's no CI and no seed script: `prisma/seed.ts` exists but nothing wires it up. The project has no migrations; the schema is applied with `prisma db push`.
+There's no CI and no seed script: `prisma/seed.ts` exists but nothing wires it up. Schema changes go through Prisma migrations in `prisma/migrations/`; Docker applies them at startup with `prisma migrate deploy`. `scripts/backup.sh` backs up the Docker stack's database and uploads.
 
-**`.env` points at a remote Supabase database and storage bucket; assume it holds real data.** `.env.local` (git-ignored, see `.env.example`) overrides it for the app with the local database and turns Supabase off. The Prisma CLI reads only `.env`, so always pass the local URLs to it:
+**`.env` points at a remote Supabase database and storage bucket.** `.env.local` (git-ignored, see `.env.example`) overrides it for the app with the local database and turns Supabase off. The Prisma CLI reads only `.env`, so always pass the local URLs to it:
 
 ```bash
-DATABASE_URL="postgresql://formmaker:formmaker_dev@127.0.0.1:5433/formmaker" DIRECT_URL="postgresql://formmaker:formmaker_dev@127.0.0.1:5433/formmaker" npx prisma db push
+DATABASE_URL="postgresql://formmaker:formmaker_dev@127.0.0.1:5433/formmaker" DIRECT_URL="postgresql://formmaker:formmaker_dev@127.0.0.1:5433/formmaker" npx prisma migrate dev
 ```
 
 Test against local only. Don't touch Supabase without checking with the user first. Outside production the admin login falls back to `admin` / `admin123`.
@@ -88,7 +88,7 @@ src/stores/use-builder-store.ts  builder UI state and undo/redo history
 - Header images need an admin session, are checked by content, and stay public. They track `sessionUploadedFiles` so `saveForm` can delete abandoned ones.
 - Files live in `uploads/`, not `public/`, because Next serves `public/` directly with no checks.
 
-**Deployment.** The target is an in-house server running everything in Docker (`docker-compose.yml`: Postgres, the app in standalone mode, Caddy, local uploads on a volume, schema applied by `prisma db push` at startup). Design for that. Until the move, the live site is Vercel + Supabase at https://form.erdemkoyuncu.com (`vercel.json`), so treat the Supabase project in `.env` as production data. Local disk isn't writable on Vercel, so storage there needs `SUPABASE_SECRET_KEY`. The rate limiter holds counts in one process: correct on the in-house server, weak on Vercel for now.
+**Deployment.** The target is an in-house server running everything in Docker (`docker-compose.yml`: Postgres, the app in standalone mode, local uploads on a volume, migrations applied at startup, abandoned uploads cleaned up daily by the server process). The server probably runs DirectAdmin, whose web server owns ports 80/443 and would proxy a subdomain to `127.0.0.1:3000`, so Caddy is optional (`--profile caddy`). Design for that. Until the move, the live site is Vercel + Supabase at https://form.erdemkoyuncu.com (`vercel.json`), so treat the Supabase project in `.env` as production data. Local disk isn't writable on Vercel, so storage there needs `SUPABASE_SECRET_KEY`. The rate limiter holds counts in one process: correct on the in-house server, weak on Vercel for now.
 
 ## Conventions
 

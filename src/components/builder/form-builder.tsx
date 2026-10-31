@@ -89,6 +89,7 @@ const FormHistoryObserver = React.memo(function FormHistoryObserver({
   savedSnapshotRef: React.MutableRefObject<FormBuilderValues>;
 }) {
   const debounceTimerRef = React.useRef<NodeJS.Timeout | null>(null);
+  const hasHistoryGuardRef = React.useRef(false);
 
   const { language } = useLanguage();
 
@@ -164,13 +165,26 @@ const FormHistoryObserver = React.memo(function FormHistoryObserver({
     return () => window.removeEventListener('beforeunload', handleBeforeUnload);
   }, []);
 
+  // Going back after a save uses up the guard entry even though nothing asks for confirmation
+  React.useEffect(() => {
+    const handlePopState = () => {
+      hasHistoryGuardRef.current = false;
+    };
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, []);
+
   // Intercept browser back/forward buttons (popstate) when there are unsaved changes
   React.useEffect(() => {
     if (!isDirty) return;
 
-    // Push guard entry to history stack so browser back/forward buttons trigger popstate on the current page
+    // Push guard entry to history stack so browser back/forward buttons trigger popstate on the current page.
+    // An entry left by an earlier edit is still in place after a save, so only one is ever added.
     const guardState = { formMakerGuard: true };
-    window.history.pushState(guardState, '', window.location.href);
+    if (!hasHistoryGuardRef.current) {
+      window.history.pushState(guardState, '', window.location.href);
+      hasHistoryGuardRef.current = true;
+    }
 
     const handlePopState = () => {
       if (useBuilderStore.getState().isDirty) {
@@ -184,6 +198,7 @@ const FormHistoryObserver = React.memo(function FormHistoryObserver({
         if (!confirmLeave) {
           // User chose to stay: re-push guard state to remain on current edit page
           window.history.pushState(guardState, '', window.location.href);
+          hasHistoryGuardRef.current = true;
         } else {
           // User chose to leave: mark clean and proceed back
           useBuilderStore.getState().setIsDirty(false);
@@ -344,9 +359,9 @@ export function FormBuilder({ initialForm }: FormBuilderProps) {
   }, [methods]);
 
   // Save handler
-  const handleSave = React.useCallback(async () => {
+  const handleSave = React.useCallback(async (): Promise<boolean> => {
     const store = useBuilderStore.getState();
-    if (store.isSaving) return;
+    if (store.isSaving) return false;
 
     const isValid = await methods.trigger();
     if (!isValid) {
@@ -355,12 +370,17 @@ export function FormBuilder({ initialForm }: FormBuilderProps) {
         routeStateRef.current;
       if (hasSlugFormatError && currentTab !== 'settings') {
         router.replace(`${currentPathname}?tab=settings`, { scroll: false });
-        return;
+        return false;
       }
       if (!hasSlugFormatError) {
-        toast.error('Lütfen kaydetmeden önce formdaki hataları giderin.');
+        // Many fields don't show their own error, so say what's wrong
+        const firstIssue = formBuilderSchema.safeParse(methods.getValues()).error
+          ?.issues[0]?.message;
+        toast.error(
+          firstIssue || 'Lütfen kaydetmeden önce formdaki hataları giderin.',
+        );
       }
-      return;
+      return false;
     }
 
     store.setIsSaving(true);
@@ -380,6 +400,7 @@ export function FormBuilder({ initialForm }: FormBuilderProps) {
         nextStore.clearHistory();
         nextStore.clearSessionUploadedFiles();
         toast.success('Form başarıyla kaydedildi!');
+        return true;
       } else if (res.slugConflict) {
         const nextStore = useBuilderStore.getState();
         nextStore.setSlugConflict(res.slugConflict);
@@ -400,6 +421,7 @@ export function FormBuilder({ initialForm }: FormBuilderProps) {
     } finally {
       useBuilderStore.getState().setIsSaving(false);
     }
+    return false;
   }, [methods, initialForm.id, router]);
 
   // Global keyboard shortcuts: Ctrl/Cmd + S (Save), Ctrl/Cmd + Z (Undo), Ctrl/Cmd + Shift + Z / Ctrl/Cmd + Y (Redo)

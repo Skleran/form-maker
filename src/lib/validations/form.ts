@@ -45,22 +45,53 @@ export const headerImageCropSchema = z
   .nullable()
   .optional()
 
-export const formBuilderSchema = z.object({
-  title: z.string().min(1, "Form başlığı zorunludur"),
-  description: z.string(),
-  headerImage: z.string().nullable().optional(),
-  headerImageRaw: z.string().nullable().optional(),
-  headerImageCrop: headerImageCropSchema,
-  slug: z
-    .string()
-    .min(1, "Form bağlantı adresi (slug) zorunludur")
-    .regex(
-      /^[a-z0-9-]+$/,
-      "Bağlantı adresi yalnızca küçük harf, rakam ve tire (-) içerebilir"
-    ),
-  isPublished: z.boolean(),
-  questions: z.array(questionItemSchema),
-})
+const CHOICE_QUESTION_TYPES = ["SINGLE_CHOICE", "MULTIPLE_CHOICE", "DROPDOWN"]
+
+export const formBuilderSchema = z
+  .object({
+    title: z.string().min(1, "Form başlığı zorunludur"),
+    description: z.string(),
+    headerImage: z.string().nullable().optional(),
+    headerImageRaw: z.string().nullable().optional(),
+    headerImageCrop: headerImageCropSchema,
+    slug: z
+      .string()
+      .min(1, "Form bağlantı adresi (slug) zorunludur")
+      .regex(
+        /^[a-z0-9-]+$/,
+        "Bağlantı adresi yalnızca küçük harf, rakam ve tire (-) içerebilir"
+      ),
+    isPublished: z.boolean(),
+    questions: z.array(questionItemSchema),
+  })
+  .superRefine((form, ctx) => {
+    if (form.isPublished && form.questions.length === 0) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["questions"],
+        message: "Soru içermeyen bir form yayınlanamaz",
+      })
+    }
+
+    form.questions.forEach((question, index) => {
+      const { minLength, maxLength } = question.config
+      if (minLength && maxLength && minLength > maxLength) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ["questions", index, "config", "minLength"],
+          message: `${index + 1}. soruda en az karakter sayısı, en fazla karakter sayısından büyük olamaz`,
+        })
+      }
+
+      if (CHOICE_QUESTION_TYPES.includes(question.type) && question.options.length === 0) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ["questions", index, "options"],
+          message: `${index + 1}. soruya en az bir seçenek ekleyin`,
+        })
+      }
+    })
+  })
 
 export type FormBuilderValues = z.infer<typeof formBuilderSchema>
 export type QuestionItemValues = z.infer<typeof questionItemSchema>

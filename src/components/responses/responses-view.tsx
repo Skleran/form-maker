@@ -39,6 +39,7 @@ export function ResponsesView({ formId }: ResponsesViewProps) {
   const { dict, language } = useLanguage();
   const [data, setData] = React.useState<PaginatedResponsesResult | null>(null);
   const [isLoading, setIsLoading] = React.useState(true);
+  const [initialLoadFailed, setInitialLoadFailed] = React.useState(false);
   const [currentPage, setCurrentPage] = React.useState(1);
   const [selectedSubmission, setSelectedSubmission] =
     React.useState<FormSubmissionRow | null>(null);
@@ -55,29 +56,36 @@ export function ResponsesView({ formId }: ResponsesViewProps) {
         const res = await getFormResponses(formId, page, 10);
         if (res.success) {
           setData(res.data);
-          setCurrentPage(page);
+          setCurrentPage(res.data.currentPage);
         } else {
-          toast.error(res.error || 'Yanıtlar yüklenemedi');
+          toast.error(res.error || dict.responses.loadFailed);
         }
       } catch {
-        toast.error('Yanıtlar yüklenemedi');
+        toast.error(dict.responses.loadFailed);
       } finally {
         setIsLoading(false);
       }
     },
-    [formId],
+    [formId, dict.responses.loadFailed],
   );
 
   React.useEffect(() => {
     let ignore = false;
-    getFormResponses(formId, 1, 10).then((res) => {
-      if (!ignore) {
-        if (res.success && res.data) {
+    getFormResponses(formId, 1, 10)
+      .then((res) => {
+        if (ignore) return;
+        if (res.success) {
           setData(res.data);
+        } else {
+          setInitialLoadFailed(true);
         }
-        setIsLoading(false);
-      }
-    });
+      })
+      .catch(() => {
+        if (!ignore) setInitialLoadFailed(true);
+      })
+      .finally(() => {
+        if (!ignore) setIsLoading(false);
+      });
     return () => {
       ignore = true;
     };
@@ -117,6 +125,7 @@ export function ResponsesView({ formId }: ResponsesViewProps) {
         getFormResponses(formId, currentPage, 10).then((refreshRes) => {
           if (refreshRes.success && refreshRes.data) {
             setData(refreshRes.data);
+            setCurrentPage(refreshRes.data.currentPage);
           }
         });
       } else {
@@ -204,8 +213,8 @@ export function ResponsesView({ formId }: ResponsesViewProps) {
               <span>{dict.responses.latestActivity}</span>
             </div>
             <p className="text-xs font-medium text-foreground mt-2 truncate">
-              {data?.submissions[0]
-                ? new Date(data.submissions[0].submittedAt).toLocaleString(
+              {data?.latestSubmittedAt
+                ? new Date(data.latestSubmittedAt).toLocaleString(
                     locale,
                     {
                       month: 'short',
@@ -226,6 +235,10 @@ export function ResponsesView({ formId }: ResponsesViewProps) {
               <Loader2 className="size-6 animate-spin text-primary" />
               <span className="text-xs">{dict.responses.loadingResponses}</span>
             </div>
+          </div>
+        ) : !data && initialLoadFailed ? (
+          <div className="flex h-64 items-center justify-center rounded-lg border bg-card text-xs text-destructive">
+            {dict.responses.loadFailed}
           </div>
         ) : (
           <ResponsesTable

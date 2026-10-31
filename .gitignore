@@ -23,6 +23,7 @@
 # local uploads
 /public/uploads
 /uploads
+/backups
 
 # misc
 .DS_Store

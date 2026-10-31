@@ -1,0 +1,22 @@
+'use client';
+
+import { AlertTriangle } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { useLanguage } from '@/lib/i18n/language-context';
+
+export default function AdminError({ retry }: { retry: () => void }) {
+  const { dict } = useLanguage();
+
+  return (
+    <div className="flex min-h-screen flex-col items-center justify-center gap-3 p-6 text-center">
+      <AlertTriangle className="size-8 text-destructive" />
+      <h1 className="text-lg font-semibold text-foreground">
+        {dict.common.errorTitle}
+      </h1>
+      <p className="text-sm text-muted-foreground">{dict.common.errorDesc}</p>
+      <Button onClick={() => retry()} className="cursor-pointer">
+        {dict.common.retry}
+      </Button>
+    </div>
+  );
+}

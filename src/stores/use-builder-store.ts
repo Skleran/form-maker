@@ -174,7 +174,8 @@ export const useBuilderStore = create<BuilderStore>((set) => ({
       if (last && JSON.stringify(last) === JSON.stringify(currentState)) {
         return state
       }
-      const newPast = [...state.past, currentState].slice(-30)
+      // Copied because getValues() returns the live form object, which later edits would change
+      const newPast = [...state.past, structuredClone(currentState)].slice(-30)
       return {
         past: newPast,
         future: [],

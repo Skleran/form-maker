@@ -10,79 +10,65 @@ export function buildDynamicFormSchema(questions: QuestionFormItem[]) {
   for (const q of questions) {
     const key = q.id
     const label = q.label || "Bu alan"
+    const optionIds = new Set(q.options.map((option) => option.id))
 
     switch (q.type) {
-      case "SHORT_TEXT": {
-        let baseString = z.string()
-        if (q.config?.minLength && q.config.minLength > 0) {
-          baseString = baseString.min(
-            q.config.minLength,
-            `"${label}" en az ${q.config.minLength} karakter olmalıdır`
-          )
-        }
-        if (q.config?.maxLength && q.config.maxLength > 0) {
-          baseString = baseString.max(
-            q.config.maxLength,
-            `"${label}" en fazla ${q.config.maxLength} karakter olabilir`
-          )
-        }
-
-        if (q.required) {
-          shape[key] = baseString.trim().min(1, `"${label}" alanı zorunludur`)
-        } else {
-          shape[key] = baseString.optional().default("")
-        }
-        break
-      }
-
+      case "SHORT_TEXT":
       case "LONG_TEXT": {
-        let baseString = z.string()
-        if (q.config?.minLength && q.config.minLength > 0) {
-          baseString = baseString.min(
-            q.config.minLength,
-            `"${label}" en az ${q.config.minLength} karakter olmalıdır`
-          )
-        }
-        if (q.config?.maxLength && q.config.maxLength > 0) {
-          baseString = baseString.max(
-            q.config.maxLength,
-            `"${label}" en fazla ${q.config.maxLength} karakter olabilir`
-          )
-        }
+        const minLength = q.config?.minLength
+        const maxLength = q.config?.maxLength
 
-        if (q.required) {
-          shape[key] = baseString.trim().min(1, `"${label}" alanı zorunludur`)
-        } else {
-          shape[key] = baseString.optional().default("")
-        }
+        // Length limits apply only to an answer that was given, so an optional question can stay blank
+        const text = z
+          .string()
+          .trim()
+          .superRefine((value, ctx) => {
+            if (!value) {
+              if (q.required) {
+                ctx.addIssue({ code: z.ZodIssueCode.custom, message: `"${label}" alanı zorunludur` })
+              }
+              return
+            }
+            if (minLength && value.length < minLength) {
+              ctx.addIssue({
+                code: z.ZodIssueCode.custom,
+                message: `"${label}" en az ${minLength} karakter olmalıdır`,
+              })
+            }
+            if (maxLength && value.length > maxLength) {
+              ctx.addIssue({
+                code: z.ZodIssueCode.custom,
+                message: `"${label}" en fazla ${maxLength} karakter olabilir`,
+              })
+            }
+          })
+
+        shape[key] = q.required ? text : text.optional().default("")
         break
       }
 
-      case "SINGLE_CHOICE": {
+      case "SINGLE_CHOICE":
+      case "DROPDOWN": {
+        const invalidMessage = `Lütfen "${label}" için geçerli bir seçenek belirleyin`
+        const choice = z.string().refine((value) => !value || optionIds.has(value), invalidMessage)
+
         if (q.required) {
-          shape[key] = z.string().min(1, `Lütfen "${label}" için bir seçenek belirleyin`)
+          shape[key] = choice.refine(Boolean, `Lütfen "${label}" için bir seçenek belirleyin`)
         } else {
-          shape[key] = z.string().optional().default("")
+          shape[key] = choice.optional().default("")
         }
         break
       }
 
       case "MULTIPLE_CHOICE": {
-        if (q.required) {
-          shape[key] = z
-            .array(z.string())
-            .min(1, `Lütfen "${label}" için en az bir seçenek seçin`)
-        } else {
-          shape[key] = z.array(z.string()).default([])
-        }
-        break
-      }
+        const choices = z.array(
+          z.string().refine((value) => optionIds.has(value), `Lütfen "${label}" için geçerli bir seçenek belirleyin`)
+        )
 
-      case "DROPDOWN": {
         if (q.required) {
-          shape[key] = z.string().min(1, `Lütfen "${label}" için bir seçenek belirleyin`)
+          shape[key] = choices.min(1, `Lütfen "${label}" için en az bir seçenek seçin`)
         } else {
-          shape[key] = z.string().optional().default("")
+          shape[key] = choices.default([])
         }
         break
       }

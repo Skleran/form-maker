@@ -13,6 +13,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { deleteForm } from '@/actions/form-actions';
+import { copyText } from '@/lib/clipboard';
 import { useLanguage } from '@/lib/i18n/language-context';
 
 interface FormCardActionsProps {
@@ -32,13 +33,15 @@ export function FormCardActions({
   const [isDeleting, setIsDeleting] = React.useState(false);
   const [isDialogOpen, setIsDialogOpen] = React.useState(false);
 
-  const handleCopy = (e: React.MouseEvent) => {
+  const handleCopy = async (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    const origin = typeof window !== 'undefined' ? window.location.origin : '';
-    const url = `${origin}/forms/${slug}`;
-    navigator.clipboard.writeText(url);
-    toast.success(dict.dashboard.linkCopied);
+    const url = `${window.location.origin}/forms/${slug}`;
+    if (await copyText(url)) {
+      toast.success(dict.dashboard.linkCopied);
+    } else {
+      toast.error(dict.common.copyFailed);
+    }
   };
 
   const handleDeleteClick = (e: React.MouseEvent) => {

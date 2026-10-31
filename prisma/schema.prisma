@@ -35,7 +35,6 @@ model Form {
   questions   Question[]
   submissions Submission[]
 
-  @@index([slug])
   @@index([createdAt])
 }
 
@@ -69,8 +68,7 @@ model Submission {
   form               Form      @relation(fields: [formId], references: [id], onDelete: Cascade)
   answers            Answer[]
 
-  @@index([formId])
-  @@index([submittedAt])
+  @@index([formId, submittedAt(sort: Desc)])
 }
 
 model Answer {

@@ -21,7 +21,8 @@ export function ExportCsvButton({ formId, disabled }: ExportCsvButtonProps) {
       try {
         const res = await exportFormResponsesCSV(formId)
         if (res.success) {
-          const blob = new Blob([res.data.csv], { type: "text/csv;charset=utf-8;" })
+          // The byte order mark tells Excel this is UTF-8, so Turkish characters display correctly
+          const blob = new Blob(["﻿", res.data.csv], { type: "text/csv;charset=utf-8;" })
           const url = URL.createObjectURL(blob)
           const link = document.createElement("a")
           link.href = url

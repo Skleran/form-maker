@@ -17,11 +17,10 @@ export default async function FormEditPage({
 
   const result = await getFormById(id)
 
-  if (!result.success || !result.data) {
-    notFound()
+  if (!result.success) {
+    if (result.notFound) notFound()
+    throw new Error(result.error)
   }
 
-  const form = result.data
-
-  return <FormBuilder initialForm={form} />
+  return <FormBuilder initialForm={result.data} />
 }

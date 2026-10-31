@@ -52,12 +52,13 @@ import { LogoutButton } from '@/components/admin/logout-button';
 import { useLanguage } from '@/lib/i18n/language-context';
 import { useTheme } from 'next-themes';
 import { cn } from '@/lib/utils';
+import { copyText } from '@/lib/clipboard';
 import { Label } from '../ui/label';
 
 interface BuilderHeaderProps {
   formId?: string;
   submissionCount?: number;
-  onSave: () => Promise<void>;
+  onSave: () => Promise<boolean>;
   onUndo: () => void;
   onRedo: () => void;
   onDiscard: () => void;
@@ -180,8 +181,13 @@ export const BuilderHeader = React.memo(function BuilderHeader({
   };
 
   const handleSaveAndProceed = async () => {
-    await onSave();
+    const saved = await onSave();
     setShowUnsavedDialog(false);
+    // Stay on the page after a failed save, or the unsaved changes are lost
+    if (!saved) {
+      setPendingAction(null);
+      return;
+    }
     if (pendingAction) {
       pendingAction();
       setPendingAction(null);
@@ -199,16 +205,17 @@ export const BuilderHeader = React.memo(function BuilderHeader({
     ? (theme === 'system' ? resolvedTheme : theme) === 'dark'
     : false;
 
-  const handleCopyLink = () => {
-    const origin = typeof window !== 'undefined' ? window.location.origin : '';
-    const publicUrl = `${origin}/forms/${slug}`;
-    navigator.clipboard.writeText(publicUrl);
-    toast.success(dict.builder.header.shareToast);
+  const handleCopyLink = async () => {
+    const publicUrl = `${window.location.origin}/forms/${slug}`;
+    if (await copyText(publicUrl)) {
+      toast.success(dict.builder.header.shareToast);
+    } else {
+      toast.error(dict.common.copyFailed);
+    }
   };
 
   const handleNativeShare = async () => {
-    const origin = typeof window !== 'undefined' ? window.location.origin : '';
-    const publicUrl = `${origin}/forms/${slug}`;
+    const publicUrl = `${window.location.origin}/forms/${slug}`;
     const currentTitle = getValues('title');
     if (typeof navigator !== 'undefined' && navigator.share) {
       try {
@@ -223,13 +230,11 @@ export const BuilderHeader = React.memo(function BuilderHeader({
         });
       } catch (err: unknown) {
         if ((err as Error)?.name !== 'AbortError') {
-          await navigator.clipboard.writeText(publicUrl);
-          toast.success(dict.builder.header.shareToast);
+          await handleCopyLink();
         }
       }
     } else {
-      await navigator.clipboard.writeText(publicUrl);
-      toast.success(dict.builder.header.shareToast);
+      await handleCopyLink();
     }
   };
 

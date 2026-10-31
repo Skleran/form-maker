@@ -97,7 +97,8 @@ export function BuilderSettings({ formId }: BuilderSettingsProps) {
     let cancelled = false;
     const timer = setTimeout(async () => {
       const res = await checkSlugAvailability(formId, rawSlug);
-      if (cancelled) return;
+      // If the check itself failed, keep what's shown: saving still re-checks on the server
+      if (cancelled || res.available === null) return;
       if (!res.available && res.conflict) {
         setSlugConflict(res.conflict);
         setError('slug', {

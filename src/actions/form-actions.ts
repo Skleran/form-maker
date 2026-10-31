@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache"
 import { prisma } from "@/lib/prisma"
-import { formBuilderSchema, type FormBuilderValues } from "@/lib/validations/form"
+import { formBuilderSchema, type FormBuilderValues, type QuestionItemValues } from "@/lib/validations/form"
 import { Prisma, type QuestionType } from "@prisma/client"
 import { getAdminSession } from "@/lib/auth"
 import { deleteAttachments } from "@/lib/storage"
@@ -12,6 +12,9 @@ export interface SlugConflictInfo {
   conflictingFormTitle: string
   slug: string
 }
+
+// A save writes one row per question, so large forms need longer than Prisma's default 5 seconds
+const TRANSACTION_OPTIONS = { maxWait: 5000, timeout: 30000 }
 
 export type ActionResult<T = unknown> =
   | { success: true; data: T; error?: never; slugConflict?: never }
@@ -31,10 +34,11 @@ export async function checkSlugAvailability(
 ): Promise<
   | { available: true; conflict?: never }
   | { available: false; conflict: SlugConflictInfo }
+  | { available: null; conflict?: never } // Couldn't check: not the same as free
 > {
   const session = await getAdminSession()
   if (!session) {
-    return { available: true }
+    return { available: null }
   }
 
   const normalized = slug.trim()
@@ -68,7 +72,29 @@ export async function checkSlugAvailability(
 
     return { available: true }
   } catch {
-    return { available: true }
+    return { available: null }
+  }
+}
+
+/**
+ * Drops settings left over from a question's earlier type, which the builder keeps so that
+ * switching type and back loses nothing.
+ */
+function getStoredQuestionFields(question: QuestionItemValues) {
+  const { type, options, config } = question
+  const { placeholder, description, icon, minLength, maxLength, maxFileSizeMb, allowedMimeTypes } = config
+  const isChoice = type === "SINGLE_CHOICE" || type === "MULTIPLE_CHOICE" || type === "DROPDOWN"
+  const isText = type === "SHORT_TEXT" || type === "LONG_TEXT"
+
+  return {
+    options: isChoice ? options : [],
+    config: {
+      description,
+      icon,
+      ...(isText || type === "DROPDOWN" ? { placeholder } : {}),
+      ...(isText ? { minLength, maxLength } : {}),
+      ...(type === "FILE_UPLOAD" ? { maxFileSizeMb, allowedMimeTypes } : {}),
+    },
   }
 }
 
@@ -102,7 +128,7 @@ export async function listForms(): Promise<
       include: {
         _count: {
           select: {
-            questions: true,
+            questions: { where: { isDeleted: false } },
             submissions: true,
           },
         },
@@ -144,7 +170,7 @@ export async function getFormById(id: string) {
     })
 
     if (!form) {
-      return { success: false, error: "Form bulunamadı." } as const
+      return { success: false, error: "Form bulunamadı.", notFound: true } as const
     }
 
     return { success: true, data: form } as const
@@ -251,8 +277,16 @@ export async function saveForm(
       }
     }
 
-    const updated = await prisma.$transaction(async (tx) => {
-      const incomingIds = values.questions.map((q) => q.id).filter(Boolean)
+    const incomingIds = values.questions.map((q) => q.id)
+    const questionOfAnotherForm = await prisma.question.findFirst({
+      where: { id: { in: incomingIds }, formId: { not: formId } },
+      select: { id: true },
+    })
+    if (questionOfAnotherForm || new Set(incomingIds).size !== incomingIds.length) {
+      return { success: false, error: "Sorular kaydedilemedi: geçersiz soru kimliği." }
+    }
+
+    const { updated, obsoleteHeaders } = await prisma.$transaction(async (tx) => {
       const removedQuestions = await tx.question.findMany({
         where: {
           formId,
@@ -267,48 +301,30 @@ export async function saveForm(
         },
       })
 
-      for (const removedQ of removedQuestions) {
-        if (removedQ._count.answers > 0) {
-          // Soft-delete to preserve existing submission answers
-          await tx.question.update({
-            where: { id: removedQ.id },
-            data: { isDeleted: true },
-          })
-        } else {
-          await tx.question.delete({
-            where: { id: removedQ.id },
-          })
-        }
-      }
+      // Soft-delete questions with answers to preserve existing submissions
+      const withAnswers = removedQuestions.filter((q) => q._count.answers > 0).map((q) => q.id)
+      const withoutAnswers = removedQuestions.filter((q) => q._count.answers === 0).map((q) => q.id)
+      await tx.question.updateMany({ where: { id: { in: withAnswers } }, data: { isDeleted: true } })
+      await tx.question.deleteMany({ where: { id: { in: withoutAnswers } } })
 
       for (let idx = 0; idx < values.questions.length; idx++) {
         const q = values.questions[idx]
+        const fields = {
+          orderIndex: idx,
+          type: q.type as QuestionType,
+          label: q.label || "Başlıksız Soru",
+          required: Boolean(q.required),
+          isDeleted: false,
+          ...getStoredQuestionFields(q),
+        }
         await tx.question.upsert({
           where: { id: q.id },
-          create: {
-            id: q.id,
-            formId,
-            orderIndex: idx,
-            type: q.type as QuestionType,
-            label: q.label || "Başlıksız Soru",
-            required: Boolean(q.required),
-            options: q.options || [],
-            config: q.config || {},
-            isDeleted: false,
-          },
-          update: {
-            orderIndex: idx,
-            type: q.type as QuestionType,
-            label: q.label || "Başlıksız Soru",
-            required: Boolean(q.required),
-            options: q.options || [],
-            config: q.config || {},
-            isDeleted: false,
-          },
+          create: { id: q.id, formId, ...fields },
+          update: fields,
         })
       }
 
-      // 3. Clean up obsolete header images if header image changed, was re-cropped, or was removed
+      // 3. Work out which header images this save makes obsolete, if one changed, was re-cropped, or was removed
       const oldForm = await tx.form.findUnique({
         where: { id: formId },
         select: { headerImage: true, headerImageRaw: true },
@@ -350,12 +366,8 @@ export async function saveForm(
         }
       }
 
-      if (obsoleteHeaders.size > 0) {
-        await deleteAttachments(Array.from(obsoleteHeaders))
-      }
-
       // 4. Update Form
-      return tx.form.update({
+      const updated = await tx.form.update({
         where: { id: formId },
         data: {
           title: values.title,
@@ -370,7 +382,14 @@ export async function saveForm(
           isPublished: values.isPublished,
         },
       })
-    })
+
+      return { updated, obsoleteHeaders }
+    }, TRANSACTION_OPTIONS)
+
+    // Only after the commit: a failed save must not leave the form pointing at deleted files
+    if (obsoleteHeaders.size > 0) {
+      await deleteAttachments(Array.from(obsoleteHeaders))
+    }
 
     revalidatePath(`/admin/forms/${formId}/edit`)
     revalidatePath(`/forms/${values.slug}`)
@@ -381,6 +400,10 @@ export async function saveForm(
       data: { id: updated.id, updatedAt: updated.updatedAt },
     }
   } catch (error) {
+    // Another save claimed the slug between the check above and this write
+    if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002") {
+      return { success: false, error: "Bu kısa bağlantı (URL) başka bir form tarafından kullanılıyor." }
+    }
     console.error("Failed to save form:", error)
     return {
       success: false,
@@ -471,13 +494,14 @@ export async function deleteForm(formId: string): Promise<ActionResult<void>> {
       }
     }
 
-    if (filesToDelete.length > 0) {
-      await deleteAttachments(filesToDelete)
-    }
-
     await prisma.form.delete({
       where: { id: formId },
     })
+
+    // Only after the delete succeeds, so a failure can't leave records pointing at missing files
+    if (filesToDelete.length > 0) {
+      await deleteAttachments(filesToDelete)
+    }
 
     revalidatePath("/admin/forms")
     return { success: true, data: undefined }

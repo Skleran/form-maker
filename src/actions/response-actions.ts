@@ -4,7 +4,10 @@ import { revalidatePath } from "next/cache"
 import { headers } from "next/headers"
 import { prisma } from "@/lib/prisma"
 import { getAdminSession } from "@/lib/auth"
+import { escapeCSV } from "@/lib/csv"
 import { deleteAttachments } from "@/lib/storage"
+
+const MAX_PAGE_SIZE = 100
 
 export interface ResponseAnswerItem {
   id: string
@@ -40,6 +43,7 @@ export interface PaginatedResponsesResult {
   totalCount: number
   totalPages: number
   currentPage: number
+  latestSubmittedAt: Date | null
 }
 
 /**
@@ -87,15 +91,23 @@ export async function getFormResponses(
       return { success: false, error: "Form not found" }
     }
 
-    const totalCount = await prisma.submission.count({
+    const summary = await prisma.submission.aggregate({
       where: { formId },
+      _count: { _all: true },
+      _max: { submittedAt: true },
     })
+    const totalCount = summary._count._all
+
+    const safePageSize = Math.min(Math.max(1, Math.floor(pageSize) || 10), MAX_PAGE_SIZE)
+    const totalPages = Math.max(1, Math.ceil(totalCount / safePageSize))
+    // Deleting the last row on the last page leaves the requested page empty, so fall back to the last real one
+    const currentPage = Math.min(Math.max(1, Math.floor(page) || 1), totalPages)
 
     const rawSubmissions = await prisma.submission.findMany({
       where: { formId },
       orderBy: { submittedAt: "desc" },
-      skip: (page - 1) * pageSize,
-      take: pageSize,
+      skip: (currentPage - 1) * safePageSize,
+      take: safePageSize,
       include: {
         answers: {
           include: {
@@ -180,8 +192,9 @@ export async function getFormResponses(
         questions: Array.from(questionsMap.values()),
         submissions,
         totalCount,
-        totalPages: Math.max(1, Math.ceil(totalCount / pageSize)),
-        currentPage: page,
+        totalPages,
+        currentPage,
+        latestSubmittedAt: summary._max.submittedAt,
       },
     }
   } catch (error) {
@@ -219,13 +232,14 @@ export async function deleteSubmission(
       .map((a) => a.fileUrl)
       .filter((u): u is string => Boolean(u && !u.startsWith("data:")))
 
-    if (filesToDelete.length > 0) {
-      await deleteAttachments(filesToDelete)
-    }
-
     await prisma.submission.delete({
       where: { id: submissionId },
     })
+
+    // Only after the delete succeeds, so a failure can't leave records pointing at missing files
+    if (filesToDelete.length > 0) {
+      await deleteAttachments(filesToDelete)
+    }
 
     try {
       revalidatePath(`/admin/forms/${formId}/edit`)
@@ -243,16 +257,6 @@ export async function deleteSubmission(
       error: error instanceof Error ? error.message : "Failed to delete submission.",
     }
   }
-}
-
-/**
- * Helper to escape RFC 4180 CSV cell values
- */
-function escapeCSV(value: unknown): string {
-  if (value === null || value === undefined) return '""'
-  const str = String(value)
-  // Escape inner double quotes by doubling them
-  return `"${str.replace(/"/g, '""')}"`
 }
 
 /**

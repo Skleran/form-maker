@@ -27,7 +27,7 @@ services:
       postgres:
         condition: service_healthy
     ports:
-      # Loopback only: public traffic goes through Caddy on 80/443
+      # Loopback only: public traffic goes through a reverse proxy
       - "127.0.0.1:3000:3000"
     volumes:
       - uploads_data:/app/uploads
@@ -39,8 +39,13 @@ services:
       ADMIN_USERNAME: ${ADMIN_USERNAME:-admin}
       ADMIN_PASSWORD: ${ADMIN_PASSWORD:?Set ADMIN_PASSWORD in .env}
       AUTH_SECRET: ${AUTH_SECRET:?Set AUTH_SECRET in .env}
+      COOKIE_SECURE: ${COOKIE_SECURE:-}
 
+  # Optional: only for a machine where nothing else uses ports 80/443.
+  #   docker compose --profile caddy up -d
+  # On a server with its own web server (e.g. DirectAdmin), leave this off and proxy to 127.0.0.1:3000.
   caddy:
+    profiles: ["caddy"]
     image: caddy:2-alpine
     container_name: form-maker-proxy
     restart: unless-stopped

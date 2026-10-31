@@ -176,6 +176,26 @@ export async function createSignedAttachmentUrl(pathOrUrl: string, downloadName?
   return data.signedUrl
 }
 
+export function usesLocalStorage(): boolean {
+  return getStorageClient() === null
+}
+
+/**
+ * Lists the files on local disk with when each was last changed.
+ */
+export async function listLocalAttachments(): Promise<Array<{ path: string; modifiedMs: number }>> {
+  const files: Array<{ path: string; modifiedMs: number }> = []
+  for (const folder of ["submissions", "headers"] satisfies StorageFolder[]) {
+    const names = await fs.readdir(path.join(UPLOADS_ROOT, folder)).catch(() => [] as string[])
+    for (const name of names) {
+      const storagePath = `${folder}/${name}`
+      const stats = await fs.stat(getLocalFilePath(storagePath))
+      if (stats.isFile()) files.push({ path: storagePath, modifiedMs: stats.mtimeMs })
+    }
+  }
+  return files
+}
+
 /**
  * Deletes attachments from Supabase Storage and local disk. Anything that isn't a valid path is ignored.
  */
