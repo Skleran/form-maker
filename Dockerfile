@@ -30,6 +30,10 @@ ENV NODE_ENV=production
 ENV DATABASE_URL="postgresql://placeholder:placeholder@localhost:5432/placeholder"
 ENV DIRECT_URL="postgresql://placeholder:placeholder@localhost:5432/placeholder"
 
+# NEXT_PUBLIC_* values are fixed into the build, so this can't be set when the container starts
+ARG NEXT_PUBLIC_APP_URL
+ENV NEXT_PUBLIC_APP_URL=$NEXT_PUBLIC_APP_URL
+
 RUN npx prisma generate
 RUN pnpm build
 
@@ -46,7 +50,7 @@ RUN apk add --no-cache openssl libc6-compat
 RUN npm install -g prisma@6.19.3
 
 RUN addgroup --system --gid 1001 nodejs
-RUN adduser --system --uid 1001 nextjs
+RUN adduser --system --uid 1001 --ingroup nodejs nextjs
 
 # Prepare standalone static, public, and persistent upload folders (uploads stay outside public/)
 COPY --from=builder --chown=nextjs:nodejs /app/public ./public
