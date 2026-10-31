@@ -30,7 +30,6 @@ import { buildDynamicFormSchema } from '@/lib/validations/dynamic-schema';
 import { submitFormResponse } from '@/actions/submission-actions';
 import type { QuestionFormItem, QuestionConfig } from '@/types/form';
 import { useLanguage } from '@/lib/i18n/language-context';
-import { cn } from '@/lib/utils';
 import { QuestionIcon } from '@/components/form/question-icon';
 import {
   formatAllowedFileTypes,
@@ -44,17 +43,27 @@ interface FileUploadValue {
   name: string;
   size: number;
   type: string;
-  url?: string;
-  dataUrl?: string;
-  path?: string;
+  token: string;
+}
+
+function deleteUploadedFile(file: FileUploadValue) {
+  fetch('/api/upload', {
+    method: 'DELETE',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ token: file.token }),
+  }).catch((err) => console.warn('Failed to delete attachment:', err));
 }
 
 function PublicFileInput({
+  formId,
+  questionId,
   config,
   value,
   onChange,
   onUploadStateChange,
 }: {
+  formId: string;
+  questionId: string;
   config?: QuestionConfig;
   value: FileUploadValue | null;
   onChange: (val: FileUploadValue | null) => void;
@@ -66,7 +75,14 @@ function PublicFileInput({
   const [uploadProgress, setUploadProgress] = React.useState<number | null>(
     null,
   );
+  // Previews the picked file locally: uploaded files aren't readable by respondents
+  const [previewUrl, setPreviewUrl] = React.useState<string | null>(null);
   const inputRef = React.useRef<HTMLInputElement>(null);
+
+  React.useEffect(() => {
+    if (!previewUrl) return;
+    return () => URL.revokeObjectURL(previewUrl);
+  }, [previewUrl]);
 
   const processFile = (file: File) => {
     const maxMb = config?.maxFileSizeMb || 10;
@@ -93,16 +109,10 @@ function PublicFileInput({
 
     // If user replaces an already uploaded file, delete the old one from storage
     if (value) {
-      const oldTarget = value.path || value.url;
-      if (oldTarget && !oldTarget.startsWith('data:')) {
-        fetch(`/api/upload?path=${encodeURIComponent(oldTarget)}`, {
-          method: 'DELETE',
-        }).catch((err) =>
-          console.warn('Failed to delete replaced attachment:', err),
-        );
-      }
+      deleteUploadedFile(value);
     }
 
+    setPreviewUrl(null);
     setIsUploading(true);
     setUploadProgress(0);
     onUploadStateChange?.(true);
@@ -110,6 +120,8 @@ function PublicFileInput({
     const formData = new FormData();
     formData.append('file', file);
     formData.append('folder', 'submissions');
+    formData.append('formId', formId);
+    formData.append('questionId', questionId);
 
     const xhr = new XMLHttpRequest();
     xhr.open('POST', '/api/upload');
@@ -134,9 +146,11 @@ function PublicFileInput({
               name: res.data.name,
               size: res.data.size || file.size,
               type: res.data.type || file.type,
-              url: res.data.url,
-              path: res.data.path,
+              token: res.data.token,
             });
+            if (/^image\/(png|jpeg|webp|gif)$/.test(file.type)) {
+              setPreviewUrl(URL.createObjectURL(file));
+            }
             toast.success(
               dict.publicForm.attachedSuccess.replace('{name}', file.name),
             );
@@ -218,13 +232,6 @@ function PublicFileInput({
   }
 
   if (value) {
-    const isImage =
-      value.type.startsWith('image/') ||
-      Boolean(value.url?.match(/\.(png|jpe?g|webp|gif|svg)(\?.*)?$/i)) ||
-      Boolean(value.dataUrl?.startsWith('data:image/'));
-
-    const previewSrc = value.url || value.dataUrl;
-
     return (
       <div className="space-y-3">
         <div className="flex items-center justify-between rounded-lg border p-3 bg-muted/30">
@@ -242,17 +249,9 @@ function PublicFileInput({
             variant="ghost"
             size="icon-xs"
             onClick={() => {
-              if (value) {
-                const target = value.path || value.url;
-                if (target && !target.startsWith('data:')) {
-                  fetch(`/api/upload?path=${encodeURIComponent(target)}`, {
-                    method: 'DELETE',
-                  }).catch((err) =>
-                    console.warn('Failed to delete removed attachment:', err),
-                  );
-                }
-                onChange(null);
-              }
+              deleteUploadedFile(value);
+              setPreviewUrl(null);
+              onChange(null);
             }}
             className="cursor-pointer text-muted-foreground hover:text-destructive"
             title={dict.publicForm.removeAttachment}
@@ -261,11 +260,11 @@ function PublicFileInput({
           </Button>
         </div>
 
-        {isImage && previewSrc && (
+        {previewUrl && (
           <div className="overflow-hidden rounded-md border bg-muted/10 p-2 flex items-center justify-center max-h-48">
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
-              src={previewSrc}
+              src={previewUrl}
               alt={value.name}
               className="max-h-44 w-auto rounded object-contain shadow-sm"
             />
@@ -377,7 +376,16 @@ export function PublicFormRenderer({
     ),
   });
 
-  const onSubmit = async (values: Record<string, unknown>) => {
+  const onSubmit = async (
+    values: Record<string, unknown>,
+    event?: React.BaseSyntheticEvent,
+  ) => {
+    const honeypot = event
+      ? String(
+          new FormData(event.target as HTMLFormElement).get('website') ?? '',
+        )
+      : '';
+
     if (uploadingCount > 0) {
       toast.warning(
         language === 'tr'
@@ -397,9 +405,11 @@ export function PublicFormRenderer({
         return;
       }
 
-      const userAgent =
-        typeof navigator !== 'undefined' ? navigator.userAgent : undefined;
-      const res = await submitFormResponse(form.id, values, { userAgent });
+      const res = await submitFormResponse(
+        form.id,
+        values,
+        honeypot,
+      );
 
       if (res.success) {
         setIsSubmitted(true);
@@ -526,6 +536,16 @@ export function PublicFormRenderer({
           onSubmit={handleSubmit(onSubmit)}
           className="mx-auto max-w-2xl space-y-4"
         >
+          {/* Honeypot: invisible to people, tempting to bots */}
+          <input
+            type="text"
+            name="website"
+            tabIndex={-1}
+            autoComplete="off"
+            aria-hidden="true"
+            className="absolute -left-[9999px] size-px opacity-0"
+          />
+
           {/* Form Header Banner & Title Card */}
           <div className="space-y-4">
             {form.headerImage && (
@@ -739,6 +759,8 @@ export function PublicFormRenderer({
                       name={q.id}
                       render={({ field }) => (
                         <PublicFileInput
+                          formId={form.id}
+                          questionId={q.id}
                           config={q.config}
                           value={field.value as FileUploadValue | null}
                           onChange={(val) => field.onChange(val)}

@@ -71,6 +71,76 @@ export const MIME_PRESETS: MimePreset[] = [
   },
 ]
 
+const MIME_BY_EXTENSION: Record<string, string> = {
+  ".pdf": "application/pdf",
+  ".png": "image/png",
+  ".jpg": "image/jpeg",
+  ".jpeg": "image/jpeg",
+  ".webp": "image/webp",
+  ".gif": "image/gif",
+  ".svg": "image/svg+xml",
+  ".bmp": "image/bmp",
+  ".ico": "image/x-icon",
+  ".txt": "text/plain; charset=utf-8",
+  ".csv": "text/csv; charset=utf-8",
+  ".json": "application/json",
+  ".doc": "application/msword",
+  ".docx": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+  ".xls": "application/vnd.ms-excel",
+  ".xlsx": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+  ".zip": "application/zip",
+  ".rar": "application/x-rar-compressed",
+  ".7z": "application/x-7z-compressed",
+  ".mp4": "video/mp4",
+  ".mp3": "audio/mpeg",
+}
+
+// Content a browser would run if opened, plus programs an admin could launch by opening the download
+const BLOCKED_EXTENSIONS = new Set([
+  ".html", ".htm", ".xhtml", ".shtml", ".svg", ".svgz", ".xml", ".xsl", ".mht", ".mhtml", ".js", ".mjs",
+  ".exe", ".msi", ".bat", ".cmd", ".com", ".scr", ".ps1", ".vbs", ".jar", ".sh", ".dll", ".hta", ".lnk",
+])
+
+// Types shown in the browser rather than downloaded. Everything else is sent as an attachment.
+const INLINE_SAFE_MIME_TYPES = new Set([
+  "application/pdf",
+  "image/png",
+  "image/jpeg",
+  "image/webp",
+  "image/gif",
+])
+
+export function getFileExtension(fileName: string): string {
+  const dot = fileName.lastIndexOf(".")
+  return dot === -1 ? "" : fileName.slice(dot).toLowerCase()
+}
+
+export function getMimeTypeFromFilename(fileName: string): string {
+  return MIME_BY_EXTENSION[getFileExtension(fileName)] || "application/octet-stream"
+}
+
+export function isBlockedFileName(fileName: string): boolean {
+  return BLOCKED_EXTENSIONS.has(getFileExtension(fileName.trim().replace(/[.\s]+$/, "")))
+}
+
+export function isInlineSafeMimeType(mimeType: string): boolean {
+  return INLINE_SAFE_MIME_TYPES.has(mimeType)
+}
+
+/**
+ * Identifies an image from its first bytes, since a browser-supplied type and name can say anything.
+ */
+export function detectImageMimeType(bytes: Uint8Array): string | null {
+  const startsWith = (signature: number[], offset = 0) =>
+    signature.every((byte, i) => bytes[offset + i] === byte)
+
+  if (startsWith([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a])) return "image/png"
+  if (startsWith([0xff, 0xd8, 0xff])) return "image/jpeg"
+  if (startsWith([0x47, 0x49, 0x46, 0x38])) return "image/gif"
+  if (startsWith([0x52, 0x49, 0x46, 0x46]) && startsWith([0x57, 0x45, 0x42, 0x50], 8)) return "image/webp"
+  return null
+}
+
 /**
  * Maps raw MIME strings / preset values to clear, human-readable labels.
  */
@@ -187,7 +257,7 @@ export function getAcceptAttribute(allowedMimeTypes?: string[] | null): string |
  * Validates whether a file satisfies the configured allowed MIME types and extensions.
  */
 export function isFileTypeAllowed(
-  file: File,
+  file: { name: string; type: string },
   allowedMimeTypes?: string[] | null
 ): boolean {
   if (!allowedMimeTypes || allowedMimeTypes.length === 0) {

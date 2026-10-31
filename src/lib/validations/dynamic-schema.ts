@@ -92,9 +92,7 @@ export function buildDynamicFormSchema(questions: QuestionFormItem[]) {
           name: z.string(),
           size: z.number(),
           type: z.string(),
-          url: z.string().optional(),
-          dataUrl: z.string().optional(),
-          path: z.string().optional(),
+          token: z.string().min(1),
         })
 
         if (q.required) {

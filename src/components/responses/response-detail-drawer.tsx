@@ -95,79 +95,14 @@ export function ResponseDetailDrawer({
     }
   };
 
+  // fileUrl is always our admin file route, which decides how each file type is served
   const handleViewFile = (fileUrl: string) => {
-    if (fileUrl.startsWith('data:')) {
-      try {
-        const parts = fileUrl.split(',');
-        const mime =
-          parts[0].match(/:(.*?);/)?.[1] || 'application/octet-stream';
-        const bstr = atob(parts[1]);
-        let n = bstr.length;
-        const u8arr = new Uint8Array(n);
-        while (n--) {
-          u8arr[n] = bstr.charCodeAt(n);
-        }
-        const blob = new Blob([u8arr], { type: mime });
-        const blobUrl = URL.createObjectURL(blob);
-        window.open(blobUrl, '_blank');
-        return;
-      } catch (err) {
-        console.error('Failed to open blob URL:', err);
-      }
-    }
-    window.open(fileUrl, '_blank');
+    window.open(fileUrl, '_blank', 'noopener,noreferrer');
   };
 
-  const handleDownloadFile = async (fileUrl: string, fileName: string) => {
-    if (fileUrl.startsWith('data:')) {
-      try {
-        const parts = fileUrl.split(',');
-        const mime =
-          parts[0].match(/:(.*?);/)?.[1] || 'application/octet-stream';
-        const bstr = atob(parts[1]);
-        let n = bstr.length;
-        const u8arr = new Uint8Array(n);
-        while (n--) {
-          u8arr[n] = bstr.charCodeAt(n);
-        }
-        const blob = new Blob([u8arr], { type: mime });
-        const blobUrl = URL.createObjectURL(blob);
-        const link = document.createElement('a');
-        link.href = blobUrl;
-        link.download = fileName || 'attachment';
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-        URL.revokeObjectURL(blobUrl);
-        return;
-      } catch (err) {
-        console.error('Failed to download blob:', err);
-      }
-    }
-
-    // Try blob download to honor filename across origins
-    try {
-      const res = await fetch(fileUrl);
-      if (res.ok) {
-        const blob = await res.blob();
-        const blobUrl = URL.createObjectURL(blob);
-        const link = document.createElement('a');
-        link.href = blobUrl;
-        link.download = fileName || 'attachment';
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-        URL.revokeObjectURL(blobUrl);
-        return;
-      }
-    } catch {
-      // Fallback if cross-origin fetch is restricted
-    }
-
+  const handleDownloadFile = (fileUrl: string) => {
     const link = document.createElement('a');
-    link.href = fileUrl;
-    link.download = fileName || 'attachment';
-    link.target = '_blank';
+    link.href = `${fileUrl}?download=1`;
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -259,17 +194,9 @@ export function ResponseDetailDrawer({
                         answer.questionType === 'MULTIPLE_CHOICE';
                       const isImage =
                         Boolean(answer.fileUrl) &&
-                        (answer.fileUrl?.startsWith('data:image/') ||
-                          Boolean(
-                            answer.valueText?.match(
-                              /\.(png|jpe?g|webp|gif|svg)$/i,
-                            ),
-                          ) ||
-                          Boolean(
-                            answer.fileUrl?.match(
-                              /\.(png|jpe?g|webp|gif|svg)(\?.*)?$/i,
-                            ),
-                          ));
+                        Boolean(
+                          answer.valueText?.match(/\.(png|jpe?g|webp|gif)$/i),
+                        );
 
                       return (
                         <div
@@ -325,10 +252,7 @@ export function ResponseDetailDrawer({
                                         variant="secondary"
                                         size="xs"
                                         onClick={() =>
-                                          handleDownloadFile(
-                                            answer.fileUrl!,
-                                            answer.valueText || 'attachment',
-                                          )
+                                          handleDownloadFile(answer.fileUrl!)
                                         }
                                         className="cursor-pointer gap-1 text-[11px]"
                                         title={dict.responses.downloadFile}

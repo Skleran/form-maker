@@ -48,14 +48,14 @@ RUN npm install -g prisma@6.19.3
 RUN addgroup --system --gid 1001 nodejs
 RUN adduser --system --uid 1001 nextjs
 
-# Prepare standalone static, public, and persistent upload folders
+# Prepare standalone static, public, and persistent upload folders (uploads stay outside public/)
 COPY --from=builder --chown=nextjs:nodejs /app/public ./public
 COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
 COPY --from=builder --chown=nextjs:nodejs /app/prisma ./prisma
 
-RUN mkdir -p /app/public/uploads/submissions /app/public/uploads/headers && \
-    chown -R nextjs:nodejs /app/public
+RUN mkdir -p /app/uploads/submissions /app/uploads/headers && \
+    chown -R nextjs:nodejs /app/public /app/uploads
 
 USER nextjs
 

@@ -1,0 +1,26 @@
+# Local development database only. Keeps testing away from any remote database.
+#   docker compose -f docker-compose.dev.yml up -d
+# See "Local development" in .env.example for the matching .env.local values.
+name: form-maker-dev
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: form-maker-dev-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: formmaker
+      POSTGRES_PASSWORD: formmaker_dev
+      POSTGRES_DB: formmaker
+    ports:
+      - "127.0.0.1:5433:5432"
+    volumes:
+      - postgres_dev_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U formmaker -d formmaker"]
+      interval: 3s
+      timeout: 3s
+      retries: 20
+
+volumes:
+  postgres_dev_data:

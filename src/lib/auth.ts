@@ -17,11 +17,54 @@ export interface SessionPayload {
   exp: number
 }
 
+const DEV_AUTH_SECRET = "local-development-only-auth-secret"
+const DEV_ADMIN_PASSWORD = "admin123"
+const MIN_AUTH_SECRET_LENGTH = 32
+
+// Values that have shipped in this repo as defaults: anyone can read them, so they never count as configured
+const KNOWN_DEFAULT_SECRETS = new Set([
+  "in-house-form-maker-super-secret-key-32-chars-minimum",
+  "change_this_to_a_random_32_character_string",
+])
+const KNOWN_DEFAULT_PASSWORDS = new Set(["admin123", "changeme", "password"])
+
+function isProduction(): boolean {
+  return process.env.NODE_ENV === "production"
+}
+
+function getAuthSecretProblem(): string | null {
+  const secret = process.env.AUTH_SECRET
+  if (!secret) return "AUTH_SECRET is not set"
+  if (secret.length < MIN_AUTH_SECRET_LENGTH) {
+    return `AUTH_SECRET must be at least ${MIN_AUTH_SECRET_LENGTH} characters`
+  }
+  if (KNOWN_DEFAULT_SECRETS.has(secret)) return "AUTH_SECRET is a known default value"
+  return null
+}
+
+function getAdminPasswordProblem(): string | null {
+  const password = process.env.ADMIN_PASSWORD
+  if (!password) return "ADMIN_PASSWORD is not set"
+  if (KNOWN_DEFAULT_PASSWORDS.has(password)) return "ADMIN_PASSWORD is a known default value"
+  return null
+}
+
+/**
+ * Throws if production is missing safe auth settings. Called at server startup from instrumentation.ts.
+ */
+export function assertProductionAuthConfig(): void {
+  if (!isProduction()) return
+  const problems = [getAuthSecretProblem(), getAdminPasswordProblem()].filter(Boolean)
+  if (problems.length > 0) {
+    throw new Error(`Unsafe auth configuration: ${problems.join("; ")}`)
+  }
+}
+
 function getAuthSecret(): string {
-  return (
-    process.env.AUTH_SECRET ||
-    "in-house-form-maker-super-secret-key-32-chars-minimum"
-  )
+  if (!isProduction()) return process.env.AUTH_SECRET || DEV_AUTH_SECRET
+  const problem = getAuthSecretProblem()
+  if (problem) throw new Error(`Unsafe auth configuration: ${problem}`)
+  return process.env.AUTH_SECRET as string
 }
 
 async function getHmacKey(): Promise<CryptoKey> {
@@ -123,13 +166,78 @@ export async function verifySessionToken(token: string): Promise<SessionPayload 
 }
 
 /**
+ * Signs a payload for one purpose. The purpose is part of the signed text, and session tokens
+ * sign only a dot-free string, so a token issued for one use can't pass as another or as a session.
+ */
+export async function signPayload(purpose: string, payload: object): Promise<string> {
+  const encoder = new TextEncoder()
+  const payloadBase64 = base64UrlEncode(encoder.encode(JSON.stringify(payload)))
+  const key = await getHmacKey()
+  const signature = await crypto.subtle.sign(
+    "HMAC",
+    key,
+    encoder.encode(`${purpose}.${payloadBase64}`)
+  )
+  return `${payloadBase64}.${base64UrlEncode(new Uint8Array(signature))}`
+}
+
+/**
+ * Verifies a token from signPayload and returns its payload, or null if invalid.
+ */
+export async function verifyPayload(purpose: string, token: string): Promise<unknown | null> {
+  if (!token || typeof token !== "string") return null
+  const parts = token.split(".")
+  if (parts.length !== 2) return null
+
+  try {
+    const encoder = new TextEncoder()
+    const key = await getHmacKey()
+    const isValid = await crypto.subtle.verify(
+      "HMAC",
+      key,
+      base64UrlDecode(parts[1]) as unknown as BufferSource,
+      encoder.encode(`${purpose}.${parts[0]}`)
+    )
+    if (!isValid) return null
+    return JSON.parse(new TextDecoder().decode(base64UrlDecode(parts[0])))
+  } catch {
+    return null
+  }
+}
+
+async function sha256(text: string): Promise<Uint8Array> {
+  const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(text))
+  return new Uint8Array(digest)
+}
+
+// Hashing first gives equal-length inputs, so the comparison time reveals nothing about the value
+async function constantTimeEquals(a: string, b: string): Promise<boolean> {
+  const [hashA, hashB] = await Promise.all([sha256(a), sha256(b)])
+  let diff = 0
+  for (let i = 0; i < hashA.length; i++) {
+    diff |= hashA[i] ^ hashB[i]
+  }
+  return diff === 0
+}
+
+/**
  * Validates admin credentials against configured environment variables
  */
-export function validateAdminCredentials(username: string, password: string): boolean {
+export async function validateAdminCredentials(username: string, password: string): Promise<boolean> {
   const expectedUsername = process.env.ADMIN_USERNAME || "admin"
-  const expectedPassword = process.env.ADMIN_PASSWORD || "admin123"
+  const expectedPassword = isProduction()
+    ? getAdminPasswordProblem()
+      ? null
+      : (process.env.ADMIN_PASSWORD as string)
+    : process.env.ADMIN_PASSWORD || DEV_ADMIN_PASSWORD
 
-  return username.trim() === expectedUsername.trim() && password === expectedPassword
+  if (expectedPassword === null) return false
+
+  const [usernameMatches, passwordMatches] = await Promise.all([
+    constantTimeEquals(username.trim(), expectedUsername.trim()),
+    constantTimeEquals(password, expectedPassword),
+  ])
+  return usernameMatches && passwordMatches
 }
 
 /**

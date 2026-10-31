@@ -1,6 +1,9 @@
+import { randomUUID } from "crypto"
 import { createClient } from "@supabase/supabase-js"
 import fs from "fs/promises"
 import path from "path"
+
+export type StorageFolder = "submissions" | "headers"
 
 export interface UploadResult {
   url: string
@@ -11,20 +14,24 @@ export interface UploadResult {
 }
 
 export interface UploadAttachmentOptions {
-  fileBuffer: Buffer | Blob | Uint8Array
+  fileBuffer: Buffer
   fileName: string
   contentType: string
-  folder?: "submissions" | "headers"
+  folder: StorageFolder
 }
 
-export function getStorageClient() {
+const STORAGE_PATH_PATTERN = /^(submissions|headers)\/([^/\\\0]+)$/
+
+// Outside public/ on purpose: Next serves anything in public/ directly, with no auth and no route code
+const UPLOADS_ROOT = path.join(process.cwd(), "uploads")
+
+function getBucketName(): string {
+  return process.env.SUPABASE_STORAGE_BUCKET || "form-attachments"
+}
+
+function getStorageClient() {
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || ""
-  const supabaseKey =
-    process.env.SUPABASE_SECRET_KEY ||
-    process.env.SUPABASE_SERVICE_ROLE_KEY ||
-    process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY ||
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ||
-    ""
+  const supabaseKey = process.env.SUPABASE_SECRET_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY || ""
 
   if (!supabaseUrl || !supabaseKey) {
     return null
@@ -38,202 +45,139 @@ export function getStorageClient() {
   })
 }
 
+function validateStoragePath(candidate: string): string | null {
+  const match = candidate.match(STORAGE_PATH_PATTERN)
+  if (!match || match[2] === "." || match[2] === "..") return null
+  return candidate
+}
+
 /**
- * Extracts the storage relative path (e.g. "submissions/123_abc.pdf" or "headers/123_xyz.jpg")
- * from either a full Supabase URL, a local /uploads/ URL, or a relative path.
+ * Converts a stored path, a local /uploads/ URL, or a URL in our own Supabase bucket into a validated
+ * "folder/file" path. Returns null for anything else, so callers never touch a location they don't own.
  */
 export function extractStoragePath(pathOrUrl: string): string | null {
   if (!pathOrUrl || typeof pathOrUrl !== "string") return null
-  if (pathOrUrl.startsWith("data:")) return null
 
-  // If it's already a relative path
-  if (pathOrUrl.startsWith("submissions/") || pathOrUrl.startsWith("headers/")) {
-    return pathOrUrl
-  }
-
-  // If it's a local /uploads/ URL: "/uploads/submissions/..."
   if (pathOrUrl.startsWith("/uploads/")) {
-    return pathOrUrl.replace(/^\/uploads\//, "")
+    return validateStoragePath(pathOrUrl.slice("/uploads/".length))
   }
 
-  // If it's a Supabase public URL containing the bucket name
-  const bucketName = process.env.SUPABASE_STORAGE_BUCKET || "form-attachments"
-  const marker = `/${bucketName}/`
-  const index = pathOrUrl.indexOf(marker)
-  if (index !== -1) {
-    const rawPath = pathOrUrl.substring(index + marker.length)
-    return rawPath.split("?")[0]
+  if (/^https?:\/\//i.test(pathOrUrl)) {
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+    if (!supabaseUrl) return null
+    try {
+      const url = new URL(pathOrUrl)
+      if (url.origin !== new URL(supabaseUrl).origin) return null
+      const marker = `/${getBucketName()}/`
+      const index = url.pathname.indexOf(marker)
+      if (index === -1) return null
+      return validateStoragePath(url.pathname.slice(index + marker.length))
+    } catch {
+      return null
+    }
   }
 
-  // Fallback regex matching submissions/... or headers/...
-  const match = pathOrUrl.match(/(submissions|headers)\/[^?#\s]+/i)
-  if (match) {
-    return match[0]
-  }
-
-  return pathOrUrl
+  return validateStoragePath(pathOrUrl)
 }
 
 /**
- * Uploads a file buffer to Supabase Storage (bucket: form-attachments).
- * Falls back to local disk storage in public/uploads if Supabase credentials are not configured.
+ * Builds a storage file name. The extension comes from user input, so it's restricted too:
+ * an unfiltered one could contain slashes and escape the uploads folder.
  */
-export async function uploadAttachment(
-  optionsOrBuffer: Buffer | Blob | Uint8Array | UploadAttachmentOptions,
-  maybeFileName?: string,
-  maybeContentType?: string,
-  maybeFolder?: "submissions" | "headers"
-): Promise<{ success: true; data: UploadResult } | { success: false; error: string }> {
-  let fileBuffer: Buffer | Blob | Uint8Array
-  let fileName: string
-  let contentType: string
-  let folder: "submissions" | "headers" = "submissions"
+export function buildStorageFileName(fileName: string): string {
+  const dot = fileName.lastIndexOf(".")
+  const rawExt = dot === -1 ? "" : fileName.slice(dot)
+  const ext = /^\.[a-zA-Z0-9]{1,10}$/.test(rawExt) ? rawExt.toLowerCase() : ""
+  const rawBase = dot === -1 ? fileName : fileName.slice(0, dot)
+  const safeBase = rawBase.replace(/[^a-zA-Z0-9_-]/g, "_").slice(0, 50) || "file"
+  return `${randomUUID()}_${safeBase}${ext}`
+}
 
-  if (
-    typeof optionsOrBuffer === "object" &&
-    "fileBuffer" in optionsOrBuffer &&
-    "fileName" in optionsOrBuffer
-  ) {
-    fileBuffer = optionsOrBuffer.fileBuffer
-    fileName = optionsOrBuffer.fileName
-    contentType = optionsOrBuffer.contentType || "application/octet-stream"
-    folder = optionsOrBuffer.folder || "submissions"
-  } else {
-    fileBuffer = optionsOrBuffer as Buffer | Blob | Uint8Array
-    fileName = maybeFileName || "attachment"
-    contentType = maybeContentType || "application/octet-stream"
-    folder = maybeFolder || "submissions"
-  }
+function getLocalFilePath(storagePath: string): string {
+  return path.join(UPLOADS_ROOT, ...storagePath.split("/"))
+}
 
-  // Calculate byte size
-  let byteSize = 0
-  let rawBuffer: Buffer
-  if (Buffer.isBuffer(fileBuffer)) {
-    rawBuffer = fileBuffer
-    byteSize = fileBuffer.byteLength
-  } else if (fileBuffer instanceof Uint8Array) {
-    rawBuffer = Buffer.from(fileBuffer)
-    byteSize = fileBuffer.byteLength
-  } else if (fileBuffer instanceof Blob) {
-    const arrayBuf = await fileBuffer.arrayBuffer()
-    rawBuffer = Buffer.from(arrayBuf)
-    byteSize = arrayBuf.byteLength
-  } else {
-    rawBuffer = Buffer.from(fileBuffer as ArrayBuffer)
-    byteSize = rawBuffer.byteLength
-  }
-
-  // Clean filename and generate path
-  const ext = fileName.includes(".") ? fileName.slice(fileName.lastIndexOf(".")) : ""
-  const baseName = fileName.includes(".") ? fileName.slice(0, fileName.lastIndexOf(".")) : fileName
-  const safeBase = baseName.replace(/[^a-zA-Z0-9_-]/g, "_").slice(0, 50) || "file"
-  const uniqueId = `${Date.now()}_${Math.random().toString(36).substring(2, 8)}`
-  const safeFileName = `${safeBase}${ext}`
-  const filePath = `${folder}/${uniqueId}_${safeFileName}`
+/**
+ * Stores a file in Supabase Storage, or on local disk if Supabase isn't configured.
+ * Only header images get a public URL. A response file's `url` is its storage path,
+ * readable only through the admin file route.
+ */
+export async function uploadAttachment({
+  fileBuffer,
+  fileName,
+  contentType,
+  folder,
+}: UploadAttachmentOptions): Promise<{ success: true; data: UploadResult } | { success: false; error: string }> {
+  const storageFileName = buildStorageFileName(fileName)
+  const filePath = `${folder}/${storageFileName}`
+  const metadata = { path: filePath, name: fileName, size: fileBuffer.byteLength, type: contentType }
 
   const supabase = getStorageClient()
-  const bucketName = process.env.SUPABASE_STORAGE_BUCKET || "form-attachments"
-
-  // 1. Supabase Storage Upload
   if (supabase) {
     try {
-      const { data, error } = await supabase.storage
-        .from(bucketName)
-        .upload(filePath, rawBuffer, {
-          contentType,
-          upsert: false,
-        })
+      const bucket = supabase.storage.from(getBucketName())
+      const { error } = await bucket.upload(filePath, fileBuffer, { contentType, upsert: false })
 
       if (error) {
-        console.warn("Supabase storage upload error:", error.message)
-        return { success: false, error: error.message }
+        console.error("Supabase storage upload error:", error.message)
+        return { success: false, error: "Dosya yüklenemedi." }
       }
 
-      const { data: publicUrlData } = supabase.storage
-        .from(bucketName)
-        .getPublicUrl(data.path)
-
-      return {
-        success: true,
-        data: {
-          url: publicUrlData.publicUrl,
-          path: data.path,
-          name: fileName,
-          size: byteSize,
-          type: contentType,
-        },
-      }
+      const url = folder === "headers" ? bucket.getPublicUrl(filePath).data.publicUrl : filePath
+      return { success: true, data: { ...metadata, url } }
     } catch (err) {
       console.error("Supabase storage upload exception:", err)
-      return {
-        success: false,
-        error: err instanceof Error ? err.message : "Failed to upload file to Supabase",
-      }
+      return { success: false, error: "Dosya yüklenemedi." }
     }
   }
 
-  // 2. Local Disk Fallback (public/uploads/[folder]/...)
   try {
-    const uploadDir = path.join(process.cwd(), "public", "uploads", folder)
-    await fs.mkdir(uploadDir, { recursive: true })
-    const diskFileName = `${uniqueId}_${safeFileName}`
-    const diskPath = path.join(uploadDir, diskFileName)
-    await fs.writeFile(diskPath, rawBuffer)
+    const localPath = getLocalFilePath(filePath)
+    await fs.mkdir(path.dirname(localPath), { recursive: true })
+    await fs.writeFile(localPath, fileBuffer)
 
-    return {
-      success: true,
-      data: {
-        url: `/uploads/${folder}/${diskFileName}`,
-        path: `${folder}/${diskFileName}`,
-        name: fileName,
-        size: byteSize,
-        type: contentType,
-      },
-    }
+    const url = folder === "headers" ? `/uploads/${filePath}` : filePath
+    return { success: true, data: { ...metadata, url } }
   } catch (fsErr) {
-    console.error("Local disk storage fallback failed:", fsErr)
-    return {
-      success: false,
-      error:
-        "Dosya depolama alanı yapılandırılmamış ve yerel diske yazılamadı. Lütfen Supabase Storage API anahtarlarını yapılandırın.",
-    }
+    console.error("Local disk storage failed:", fsErr)
+    return { success: false, error: "Dosya yüklenemedi." }
   }
 }
 
 /**
- * Deletes an attachment from Supabase Storage and/or local disk.
- * Accepts either a storage relative path or a full URL.
+ * Reads a file from local disk. Returns null if the path is invalid or the file doesn't exist.
  */
-export async function deleteAttachment(pathOrUrl: string): Promise<boolean> {
-  const filePath = extractStoragePath(pathOrUrl)
-  if (!filePath) return false
-
-  const supabase = getStorageClient()
-  const bucketName = process.env.SUPABASE_STORAGE_BUCKET || "form-attachments"
-
-  let supabaseSuccess = false
-  if (supabase) {
-    try {
-      const { error } = await supabase.storage.from(bucketName).remove([filePath])
-      if (!error) supabaseSuccess = true
-    } catch (err) {
-      console.warn("Failed to delete from Supabase storage:", err)
-    }
-  }
-
+export async function readLocalAttachment(pathOrUrl: string): Promise<Buffer | null> {
+  const storagePath = extractStoragePath(pathOrUrl)
+  if (!storagePath) return null
   try {
-    const fullPath = path.join(process.cwd(), "public", "uploads", filePath)
-    await fs.unlink(fullPath)
-    return true
+    return await fs.readFile(getLocalFilePath(storagePath))
   } catch {
-    // File may not be on local disk
+    return null
   }
-
-  return supabaseSuccess
 }
 
 /**
- * Deletes multiple attachments from Supabase Storage and/or local disk in batch.
+ * Creates a one-minute link to a file in Supabase Storage, or returns null if Supabase isn't configured.
+ */
+export async function createSignedAttachmentUrl(pathOrUrl: string, downloadName?: string): Promise<string | null> {
+  const storagePath = extractStoragePath(pathOrUrl)
+  const supabase = getStorageClient()
+  if (!storagePath || !supabase) return null
+
+  const { data, error } = await supabase.storage
+    .from(getBucketName())
+    .createSignedUrl(storagePath, 60, downloadName ? { download: downloadName } : undefined)
+
+  if (error) {
+    console.error("Supabase signed URL error:", error.message)
+    return null
+  }
+  return data.signedUrl
+}
+
+/**
+ * Deletes attachments from Supabase Storage and local disk. Anything that isn't a valid path is ignored.
  */
 export async function deleteAttachments(pathsOrUrls: string[]): Promise<boolean> {
   const filePaths = pathsOrUrls
@@ -243,24 +187,17 @@ export async function deleteAttachments(pathsOrUrls: string[]): Promise<boolean>
   if (filePaths.length === 0) return true
 
   const supabase = getStorageClient()
-  const bucketName = process.env.SUPABASE_STORAGE_BUCKET || "form-attachments"
-
   if (supabase) {
     try {
-      await supabase.storage.from(bucketName).remove(filePaths)
+      await supabase.storage.from(getBucketName()).remove(filePaths)
     } catch (err) {
       console.warn("Failed to batch delete from Supabase storage:", err)
     }
   }
 
-  for (const fp of filePaths) {
-    try {
-      const fullPath = path.join(process.cwd(), "public", "uploads", fp)
-      await fs.unlink(fullPath)
-    } catch {
-      // Ignored
-    }
-  }
+  await Promise.all(
+    filePaths.map((filePath) => fs.unlink(getLocalFilePath(filePath)).catch(() => undefined))
+  )
 
   return true
 }

@@ -9,11 +9,12 @@ import { Input } from '@/components/ui/input';
 import { ThemeToggle } from '@/components/theme-toggle';
 import { loginAdmin } from '@/actions/auth-actions';
 import { FormMakerLogo } from '@/components/formmaker-logo';
+import { getSafeRedirectPath } from '@/lib/safe-redirect';
 
 function LoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const from = searchParams.get('from') || '/admin/forms';
+  const from = getSafeRedirectPath(searchParams.get('from'));
 
   const [username, setUsername] = React.useState('');
   const [password, setPassword] = React.useState('');

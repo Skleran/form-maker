@@ -43,6 +43,24 @@ export interface PaginatedResponsesResult {
 }
 
 /**
+ * The admin file route for an answer, or null if it has no file. The stored location never goes to
+ * the browser: older answers may hold a value chosen by the respondent, such as a javascript: URL.
+ */
+function getAnswerFileRoute(answer: {
+  id: string
+  fileUrl: string | null
+  valueText: string | null
+  valueJson: unknown
+}): string | null {
+  const json = answer.valueJson
+  const hasFile = Boolean(
+    answer.fileUrl || (json && typeof json === "object" && ("dataUrl" in json || "url" in json))
+  )
+  if (!hasFile) return null
+  return `/api/answers/${answer.id}/file/${encodeURIComponent(answer.valueText || "dosya")}`
+}
+
+/**
  * Retrieves paginated form submissions and answers for the responses dashboard
  */
 export async function getFormResponses(
@@ -93,11 +111,12 @@ export async function getFormResponses(
         const qId = a.questionId || a.id
         const label = a.question?.label || a.questionLabel || "Soru"
         const type = a.question?.type || a.questionType || "SHORT_TEXT"
+        const fileRoute = getAnswerFileRoute(a)
 
         answersMap[qId] = {
           text: a.valueText,
-          json: a.valueJson,
-          fileUrl: a.fileUrl,
+          json: fileRoute ? null : a.valueJson,
+          fileUrl: fileRoute,
         }
         return {
           id: a.id,
@@ -105,8 +124,8 @@ export async function getFormResponses(
           questionLabel: label,
           questionType: type,
           valueText: a.valueText,
-          valueJson: a.valueJson,
-          fileUrl: a.fileUrl,
+          valueJson: fileRoute ? null : a.valueJson,
+          fileUrl: fileRoute,
         }
       })
 
@@ -325,25 +344,13 @@ export async function exportFormResponsesCSV(
 
       for (const q of targetQuestions) {
         const ans = answerByQuestionKey.get(q.id)
-        const hasFile = Boolean(
-          ans?.fileUrl ||
-          (ans?.valueJson && typeof ans.valueJson === "object" && ("dataUrl" in ans.valueJson || "url" in ans.valueJson))
-        )
+        const fileRoute = ans ? getAnswerFileRoute(ans) : null
 
         if (!ans) {
           rowValues.push('""')
-        } else if (hasFile) {
-          const directHttpUrl =
-            ans.fileUrl?.startsWith("http://") || ans.fileUrl?.startsWith("https://")
-              ? ans.fileUrl
-              : null
-
-          if (directHttpUrl) {
-            rowValues.push(escapeCSV(directHttpUrl))
-          } else if (baseUrl) {
-            const fileName = ans.valueText || "dosya"
-            const downloadUrl = `${baseUrl}/api/answers/${ans.id}/file/${encodeURIComponent(fileName)}`
-            rowValues.push(escapeCSV(downloadUrl))
+        } else if (fileRoute) {
+          if (baseUrl) {
+            rowValues.push(escapeCSV(`${baseUrl}${fileRoute}`))
           } else {
             rowValues.push(escapeCSV(ans.valueText || "Dosya"))
           }

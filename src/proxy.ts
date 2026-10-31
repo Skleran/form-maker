@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server"
 import type { NextRequest } from "next/server"
 import { verifySessionToken, SESSION_COOKIE_NAME } from "@/lib/auth"
+import { getSafeRedirectPath } from "@/lib/safe-redirect"
 
 export async function proxy(request: NextRequest) {
   const { pathname, search } = request.nextUrl
@@ -22,7 +23,7 @@ export async function proxy(request: NextRequest) {
 
   if (pathname === "/login") {
     if (isAuth) {
-      const from = request.nextUrl.searchParams.get("from") || "/admin/forms"
+      const from = getSafeRedirectPath(request.nextUrl.searchParams.get("from"))
       return NextResponse.redirect(new URL(from, request.url))
     }
     return NextResponse.next()

@@ -67,6 +67,8 @@ const CARD_QUICK_ACTION_SELECTOR = [
   '[data-card-quick-action]',
 ].join(',');
 
+const HEADER_IMAGE_TYPES = ['image/png', 'image/jpeg', 'image/webp', 'image/gif'];
+
 interface BuilderCanvasProps {
   onDuplicateQuestion: (index: number) => void;
   onDeleteQuestion: (index: number) => void;
@@ -121,7 +123,7 @@ const FormHeaderSection = React.memo(function FormHeaderSection() {
       );
       return;
     }
-    if (!file.type.startsWith('image/')) {
+    if (!HEADER_IMAGE_TYPES.includes(file.type)) {
       toast.error(
         language === 'tr'
           ? 'Lütfen geçerli bir görsel dosyası seçin (PNG, JPG, WebP).'
@@ -142,7 +144,7 @@ const FormHeaderSection = React.memo(function FormHeaderSection() {
       <input
         type="file"
         ref={headerImageInputRef}
-        accept="image/*"
+        accept={HEADER_IMAGE_TYPES.join(',')}
         className="hidden"
         onChange={(e) => {
           const file = e.target.files?.[0];

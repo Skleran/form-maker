@@ -9,6 +9,10 @@ import {
   SESSION_COOKIE_NAME,
   SESSION_COOKIE_OPTIONS,
 } from "@/lib/auth"
+import { consumeRateLimit, getClientIp, resetRateLimit } from "@/lib/rate-limit"
+
+const LOGIN_RATE_LIMIT = 10
+const LOGIN_RATE_WINDOW_MS = 15 * 60 * 1000
 
 export interface AuthResult {
   success: boolean
@@ -33,7 +37,16 @@ export async function loginAdmin(credentials: {
       }
     }
 
-    const isValid = validateAdminCredentials(username, password)
+    const headerList = await headers()
+    const rateLimitKey = `login:${getClientIp(headerList)}`
+    if (!consumeRateLimit(rateLimitKey, LOGIN_RATE_LIMIT, LOGIN_RATE_WINDOW_MS)) {
+      return {
+        success: false,
+        error: "Çok fazla başarısız deneme. Lütfen birkaç dakika sonra tekrar deneyin.",
+      }
+    }
+
+    const isValid = await validateAdminCredentials(username, password)
     if (!isValid) {
       return {
         success: false,
@@ -41,9 +54,10 @@ export async function loginAdmin(credentials: {
       }
     }
 
+    resetRateLimit(rateLimitKey)
+
     const token = await createSessionToken(username)
     const cookieStore = await cookies()
-    const headerList = await headers()
 
     const forwardedProto = headerList.get("x-forwarded-proto")?.split(",")[0]?.trim()
     const origin = headerList.get("origin") || headerList.get("referer") || ""
