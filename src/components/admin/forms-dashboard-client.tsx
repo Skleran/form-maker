@@ -27,7 +27,7 @@ import { LogoutButton } from '@/components/admin/logout-button';
 import { CreateFormButton } from '@/components/admin/create-form-button';
 import { FormCardActions } from '@/components/admin/form-card-actions';
 import { deleteForm } from '@/actions/form-actions';
-import { useLanguage } from '@/lib/i18n/language-context';
+import { dict } from '@/lib/dictionary';
 import { FormMakerLogo } from '../formmaker-logo';
 
 export interface DashboardFormItem {
@@ -52,7 +52,6 @@ export function FormsDashboardClient({
   initialForms,
 }: FormsDashboardClientProps) {
   const router = useRouter();
-  const { dict, language } = useLanguage();
   const [deletedIds, setDeletedIds] = React.useState<string[]>([]);
   const [formToDelete, setFormToDelete] = React.useState<{
     id: string;
@@ -136,9 +135,7 @@ export function FormsDashboardClient({
               {dict.dashboard.title}
             </h1>
             <p className="text-xs text-muted-foreground mt-1">
-              {language === 'tr'
-                ? 'Tüm formlarınızı ve yanıtlarınızı tek bir yerden yönetin.'
-                : 'Manage all your dynamic forms and incoming responses in one place.'}
+              Tüm formlarınızı ve yanıtlarınızı tek bir yerden yönetin.
             </p>
           </div>
           <CreateFormButton />
@@ -183,9 +180,7 @@ export function FormsDashboardClient({
             {dict.dashboard.allForms}
           </h2>
           <span className="text-xs text-muted-foreground">
-            {language === 'tr'
-              ? `${forms.length} form oluşturuldu`
-              : `${forms.length} ${forms.length === 1 ? 'form' : 'forms'} created`}
+            {`${forms.length} form oluşturuldu`}
           </span>
         </div>
 
@@ -227,7 +222,6 @@ export function FormsDashboardClient({
                       </Badge>
 
                       <FormCardActions
-                        formId={form.id}
                         slug={form.slug}
                         isPublished={form.isPublished}
                         onDeleteRequest={() =>
@@ -235,9 +229,7 @@ export function FormsDashboardClient({
                             id: form.id,
                             title:
                               form.title ||
-                              (language === 'tr'
-                                ? 'Başlıksız Form'
-                                : 'Untitled Form'),
+                              'Başlıksız Form',
                           })
                         }
                       />
@@ -250,17 +242,13 @@ export function FormsDashboardClient({
                         className="focus:outline-none hover:underline"
                       >
                         {form.title ||
-                          (language === 'tr'
-                            ? 'Başlıksız Form'
-                            : 'Untitled Form')}
+                          'Başlıksız Form'}
                       </Link>
                     </h3>
 
                     <p className="text-xs text-muted-foreground mt-1 line-clamp-2 leading-relaxed">
                       {form.description ||
-                        (language === 'tr'
-                          ? 'Açıklama belirtilmemiş'
-                          : 'No description provided')}
+                        'Açıklama belirtilmemiş'}
                     </p>
                   </div>
 
@@ -269,11 +257,7 @@ export function FormsDashboardClient({
                       <Layers className="size-3.5 text-primary" />
                       <span>
                         {qCount}{' '}
-                        {language === 'tr'
-                          ? 'soru'
-                          : qCount === 1
-                            ? 'question'
-                            : 'questions'}
+                        soru
                       </span>
                     </span>
 
@@ -281,11 +265,7 @@ export function FormsDashboardClient({
                       <MessageSquare className="size-3.5 text-muted-foreground" />
                       <span>
                         {subCount}{' '}
-                        {language === 'tr'
-                          ? 'yanıt'
-                          : subCount === 1
-                            ? 'response'
-                            : 'responses'}
+                        yanıt
                       </span>
                     </span>
                   </div>
@@ -305,9 +285,7 @@ export function FormsDashboardClient({
           <DialogHeader>
             <DialogTitle>{dict.dashboard.deleteFormTitle}</DialogTitle>
             <DialogDescription>
-              {language === 'tr'
-                ? `"${formToDelete?.title}" formunu ve bu forma ait tüm soru ve yanıtları kalıcı olarak silmek istediğinizden emin misiniz? Bu işlem geri alınamaz.`
-                : `Are you sure you want to permanently delete "${formToDelete?.title}" and all its questions and responses? This action cannot be undone.`}
+              {`"${formToDelete?.title}" formunu ve bu forma ait tüm soru ve yanıtları kalıcı olarak silmek istediğinizden emin misiniz? Bu işlem geri alınamaz.`}
             </DialogDescription>
           </DialogHeader>
           <DialogFooter className="gap-2 sm:gap-3">
@@ -317,7 +295,7 @@ export function FormsDashboardClient({
               onClick={() => setFormToDelete(null)}
               disabled={isDeleting}
             >
-              {language === 'tr' ? 'İptal' : 'Cancel'}
+              İptal
             </Button>
             <Button
               type="button"
@@ -327,7 +305,7 @@ export function FormsDashboardClient({
               className="gap-1.5"
             >
               {isDeleting && <Loader2 className="size-3.5 animate-spin" />}
-              <span>{language === 'tr' ? 'Formu Sil' : 'Delete Form'}</span>
+              <span>Formu Sil</span>
             </Button>
           </DialogFooter>
         </DialogContent>

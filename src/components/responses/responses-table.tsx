@@ -23,7 +23,7 @@ import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Card } from "@/components/ui/card"
 import type { FormSubmissionRow } from "@/actions/response-actions"
-import { useLanguage } from "@/lib/i18n/language-context"
+import { dict } from "@/lib/dictionary"
 
 interface ResponsesTableProps {
   questions: Array<{ id: string; label: string; type: string }>
@@ -46,7 +46,6 @@ export function ResponsesTable({
   onInspect,
   onDelete,
 }: ResponsesTableProps) {
-  const { dict, language } = useLanguage()
   // Show first 3 questions as table preview columns
   const previewQuestions = questions.slice(0, 3)
 
@@ -66,7 +65,7 @@ export function ResponsesTable({
     )
   }
 
-  const locale = language === "tr" ? "tr-TR" : "en-US"
+  const locale = "tr-TR"
 
   return (
     <div className="space-y-4">
@@ -170,9 +169,7 @@ export function ResponsesTable({
       {/* Pagination Controls */}
       <div className="flex items-center justify-between px-2 text-xs text-muted-foreground">
         <div>
-          {language === "tr"
-            ? `${totalCount} yanıttan ${submissions.length} tanesi gösteriliyor`
-            : `Showing ${submissions.length} of ${totalCount} ${totalCount === 1 ? "submission" : "submissions"}`}
+          {`${totalCount} yanıttan ${submissions.length} tanesi gösteriliyor`}
         </div>
 
         <div className="flex items-center gap-2">

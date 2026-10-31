@@ -32,7 +32,7 @@ import {
 import { checkSlugAvailability, deleteForm } from '@/actions/form-actions';
 import { useBuilderStore } from '@/stores/use-builder-store';
 import type { FormBuilderValues } from '@/lib/validations/form';
-import { useLanguage } from '@/lib/i18n/language-context';
+import { dict } from '@/lib/dictionary';
 import { cn } from '@/lib/utils';
 
 interface BuilderSettingsProps {
@@ -41,7 +41,6 @@ interface BuilderSettingsProps {
 
 export function BuilderSettings({ formId }: BuilderSettingsProps) {
   const router = useRouter();
-  const { dict } = useLanguage();
   const { register, control, setValue, setError, clearErrors } =
     useFormContext<FormBuilderValues>();
   const { errors } = useFormState({

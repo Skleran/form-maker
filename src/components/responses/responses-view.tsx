@@ -28,7 +28,7 @@ import {
 } from '@/actions/response-actions';
 import { ResponsesTable } from './responses-table';
 import { ExportCsvButton } from './export-csv-button';
-import { useLanguage } from '@/lib/i18n/language-context';
+import { dict } from '@/lib/dictionary';
 import { ResponseDetailDrawer } from './response-detail-drawer';
 
 interface ResponsesViewProps {
@@ -36,7 +36,6 @@ interface ResponsesViewProps {
 }
 
 export function ResponsesView({ formId }: ResponsesViewProps) {
-  const { dict, language } = useLanguage();
   const [data, setData] = React.useState<PaginatedResponsesResult | null>(null);
   const [isLoading, setIsLoading] = React.useState(true);
   const [initialLoadFailed, setInitialLoadFailed] = React.useState(false);
@@ -66,7 +65,7 @@ export function ResponsesView({ formId }: ResponsesViewProps) {
         setIsLoading(false);
       }
     },
-    [formId, dict.responses.loadFailed],
+    [formId],
   );
 
   React.useEffect(() => {
@@ -147,7 +146,7 @@ export function ResponsesView({ formId }: ResponsesViewProps) {
     setIsSheetOpen(true);
   };
 
-  const locale = language === 'tr' ? 'tr-TR' : 'en-US';
+  const locale = 'tr-TR';
 
   return (
     <div className="flex-1 overflow-y-auto px-4 py-8 sm:px-8 bg-muted/15 min-h-[calc(100vh-3.5rem)]">
@@ -255,13 +254,11 @@ export function ResponsesView({ formId }: ResponsesViewProps) {
 
         {/* Detail Inspection Drawer */}
         <ResponseDetailDrawer
-          formId={formId}
           submission={selectedSubmission}
           isOpen={isSheetOpen}
           onClose={() => {
             setIsSheetOpen(false);
           }}
-          onDeleted={() => loadResponses(currentPage)}
           onDeleteRequest={(id) => setSubmissionToDelete(id)}
         />
 
@@ -284,7 +281,7 @@ export function ResponsesView({ formId }: ResponsesViewProps) {
                 onClick={() => setSubmissionToDelete(null)}
                 disabled={isDeleting}
               >
-                {language === 'tr' ? 'İptal' : 'Cancel'}
+                İptal
               </Button>
               <Button
                 type="button"
@@ -294,7 +291,7 @@ export function ResponsesView({ formId }: ResponsesViewProps) {
                 className="gap-1.5"
               >
                 {isDeleting && <Loader2 className="size-3.5 animate-spin" />}
-                <span>{language === 'tr' ? 'Sil' : 'Delete'}</span>
+                <span>Sil</span>
               </Button>
             </DialogFooter>
           </DialogContent>

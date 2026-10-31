@@ -7,24 +7,11 @@ import {
   ExternalLink,
   FileText,
   Laptop,
-  Loader2,
   Trash2,
   X,
 } from 'lucide-react';
-import { toast } from 'sonner';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog';
 import { Badge } from '@/components/ui/badge';
-import {
-  deleteSubmission,
-  type FormSubmissionRow,
-} from '@/actions/response-actions';
+import type { FormSubmissionRow } from '@/actions/response-actions';
 import { Button } from '@/components/ui/button';
 import {
   Drawer,
@@ -34,30 +21,21 @@ import {
   DrawerHeader,
   DrawerTitle,
 } from '@/components/ui/drawer';
-// import { RadioGroup } from "../ui/radio-group";
-import { useLanguage } from '@/lib/i18n/language-context';
+import { dict } from '@/lib/dictionary';
 
 interface ResponseDetailDrawerProps {
-  formId: string;
   submission: FormSubmissionRow | null;
   isOpen: boolean;
   onClose: () => void;
-  onDeleted?: () => void;
-  onDeleteRequest?: (submissionId: string) => void;
+  onDeleteRequest: (submissionId: string) => void;
 }
 
 export function ResponseDetailDrawer({
-  formId,
   submission,
   isOpen,
   onClose,
-  onDeleted,
   onDeleteRequest,
 }: ResponseDetailDrawerProps) {
-  const { dict, language } = useLanguage();
-  const [isDeleting, setIsDeleting] = React.useState(false);
-  const [isConfirmDialogOpen, setIsConfirmDialogOpen] = React.useState(false);
-
   // Retain the last valid submission so content remains visible during the closing slide animation
   const [cachedSubmission, setCachedSubmission] =
     React.useState<FormSubmissionRow | null>(submission);
@@ -68,31 +46,7 @@ export function ResponseDetailDrawer({
 
   const handleDelete = () => {
     if (!activeSubmission) return;
-    if (onDeleteRequest) {
-      onDeleteRequest(activeSubmission.id);
-      return;
-    }
-    setIsConfirmDialogOpen(true);
-  };
-
-  const handleConfirmDelete = async () => {
-    if (!activeSubmission) return;
-    setIsConfirmDialogOpen(false);
-    setIsDeleting(true);
-    try {
-      const res = await deleteSubmission(activeSubmission.id, formId);
-      if (res.success) {
-        toast.success(dict.responses.deleteSuccess);
-        onDeleted?.();
-        onClose();
-      } else {
-        toast.error(res.error || dict.responses.deleteFailed);
-      }
-    } catch {
-      toast.error(dict.responses.deleteFailed);
-    } finally {
-      setIsDeleting(false);
-    }
+    onDeleteRequest(activeSubmission.id);
   };
 
   // fileUrl is always our admin file route, which decides how each file type is served
@@ -108,9 +62,8 @@ export function ResponseDetailDrawer({
     document.body.removeChild(link);
   };
 
-  // const [open, setOpen] = React.useState(false);
 
-  const locale = language === 'tr' ? 'tr-TR' : 'en-US';
+  const locale = 'tr-TR';
 
   return (
     <>
@@ -173,7 +126,6 @@ export function ResponseDetailDrawer({
               </DrawerHeader>
 
               <div className="flex-1 scroll-fade overflow-y-auto p-4">
-                {/* <div className="flex-1 p-6 space-y-6"> */}
                 <div className="space-y-4">
                   <h4 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
                     {dict.responses.recordedAnswers.replace(
@@ -312,31 +264,18 @@ export function ResponseDetailDrawer({
                     })
                   )}
                 </div>
-                {/* </div> */}
               </div>
-
-              {/* <div className="p-4 border-t bg-muted/20 flex items-center justify-between">
-
-              </div> */}
               <DrawerFooter>
-                {' '}
                 <Button
                   variant="destructive"
-                  // size=""
                   onClick={handleDelete}
-                  disabled={isDeleting}
                   className="cursor-pointer gap-2 text-xs"
                 >
                   <Trash2 className="size-3.5" />
-                  <span>
-                    {isDeleting
-                      ? dict.common.deleting
-                      : dict.responses.deleteSubmission}
-                  </span>
+                  <span>{dict.responses.deleteSubmission}</span>
                 </Button>
                 <Button
                   variant="outline"
-                  // size="sm"
                   onClick={onClose}
                   className="cursor-pointer text-xs"
                 >
@@ -347,37 +286,6 @@ export function ResponseDetailDrawer({
           )}
         </DrawerContent>
       </Drawer>
-
-      <Dialog open={isConfirmDialogOpen} onOpenChange={setIsConfirmDialogOpen}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle>{dict.responses.deleteSubmission}</DialogTitle>
-            <DialogDescription>
-              {dict.responses.deleteConfirm}
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter className="gap-2 sm:gap-3">
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => setIsConfirmDialogOpen(false)}
-              disabled={isDeleting}
-            >
-              {language === 'tr' ? 'İptal' : 'Cancel'}
-            </Button>
-            <Button
-              type="button"
-              variant="destructive"
-              onClick={handleConfirmDelete}
-              disabled={isDeleting}
-              className="gap-1.5"
-            >
-              {isDeleting && <Loader2 className="size-3.5 animate-spin" />}
-              <span>{language === 'tr' ? 'Sil' : 'Delete'}</span>
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
     </>
   );
 }

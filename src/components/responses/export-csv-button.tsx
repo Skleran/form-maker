@@ -5,7 +5,7 @@ import { Download, Loader2 } from "lucide-react"
 import { toast } from "sonner"
 import { Button } from "@/components/ui/button"
 import { exportFormResponsesCSV } from "@/actions/response-actions"
-import { useLanguage } from "@/lib/i18n/language-context"
+import { dict } from "@/lib/dictionary"
 
 interface ExportCsvButtonProps {
   formId: string
@@ -13,7 +13,6 @@ interface ExportCsvButtonProps {
 }
 
 export function ExportCsvButton({ formId, disabled }: ExportCsvButtonProps) {
-  const { dict } = useLanguage()
   const [isExporting, startTransition] = React.useTransition()
 
   const handleExport = () => {

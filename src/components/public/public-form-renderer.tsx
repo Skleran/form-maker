@@ -29,7 +29,7 @@ import { ThemeToggle } from '@/components/theme-toggle';
 import { buildDynamicFormSchema } from '@/lib/validations/dynamic-schema';
 import { submitFormResponse } from '@/actions/submission-actions';
 import type { QuestionFormItem, QuestionConfig } from '@/types/form';
-import { useLanguage } from '@/lib/i18n/language-context';
+import { dict } from '@/lib/dictionary';
 import { QuestionIcon } from '@/components/form/question-icon';
 import {
   formatAllowedFileTypes,
@@ -69,7 +69,6 @@ function PublicFileInput({
   onChange: (val: FileUploadValue | null) => void;
   onUploadStateChange?: (isUploading: boolean) => void;
 }) {
-  const { dict, language } = useLanguage();
   const [isDragging, setIsDragging] = React.useState(false);
   const [isUploading, setIsUploading] = React.useState(false);
   const [uploadProgress, setUploadProgress] = React.useState<number | null>(
@@ -100,7 +99,7 @@ function PublicFileInput({
         toast.error(
           dict.publicForm.fileTypeNotAllowed.replace(
             '{types}',
-            formatAllowedFileTypes(config.allowedMimeTypes, language),
+            formatAllowedFileTypes(config.allowedMimeTypes),
           ),
         );
         return;
@@ -294,16 +293,13 @@ function PublicFileInput({
       />
       <span className="text-xs font-medium text-foreground">
         {isDragging
-          ? language === 'tr'
-            ? 'Dosyayı eklemek için bırakın'
-            : 'Drop file to attach'
+          ? 'Dosyayı eklemek için bırakın'
           : dict.publicForm.clickOrDrop}
       </span>
       <span className="text-[11px] text-muted-foreground mt-0.5">
         {formatFileLimitsDescription(
           config?.maxFileSizeMb,
           config?.allowedMimeTypes,
-          language,
         )}
       </span>
       <input
@@ -338,7 +334,6 @@ export function PublicFormRenderer({
   form,
   isPreview = false,
 }: PublicFormRendererProps) {
-  const { dict, language } = useLanguage();
   const [isSubmitted, setIsSubmitted] = React.useState(false);
   const [isSubmitting, setIsSubmitting] = React.useState(false);
   const [uploadingCount, setUploadingCount] = React.useState(0);
@@ -388,9 +383,7 @@ export function PublicFormRenderer({
 
     if (uploadingCount > 0) {
       toast.warning(
-        language === 'tr'
-          ? 'Lütfen dosya yüklemesinin tamamlanmasını bekleyin.'
-          : 'Please wait for file upload to complete.',
+        'Lütfen dosya yüklemesinin tamamlanmasını bekleyin.',
       );
       return;
     }
@@ -617,7 +610,7 @@ export function PublicFormRenderer({
                     <Input
                       placeholder={
                         q.config?.placeholder ||
-                        (language === 'tr' ? 'Yanıtınız' : 'Your answer')
+                        'Yanıtınız'
                       }
                       {...register(q.id)}
                       className="text-sm"
@@ -630,7 +623,7 @@ export function PublicFormRenderer({
                       rows={4}
                       placeholder={
                         q.config?.placeholder ||
-                        (language === 'tr' ? 'Yanıtınız' : 'Your answer')
+                        'Yanıtınız'
                       }
                       {...register(q.id)}
                       className="text-sm resize-none"
@@ -808,24 +801,20 @@ export function PublicFormRenderer({
               size="sm"
               onClick={() => {
                 const confirmMsg =
-                  language === 'tr'
-                    ? 'Tüm yanıtlar temizlensin mi? Bu işlem geri alınamaz.'
-                    : 'Clear all responses? This cannot be undone.';
+                  'Tüm yanıtlar temizlensin mi? Bu işlem geri alınamaz.';
                 if (confirm(confirmMsg)) {
                   reset();
                 }
               }}
               className="cursor-pointer text-muted-foreground hover:text-foreground text-xs"
             >
-              {language === 'tr' ? 'Formu temizle' : 'Clear form'}
+              Formu temizle
             </Button>
           </div>
 
           <footer className="text-center text-xs text-muted-foreground pt-8 pb-4">
             <p>
-              {language === 'tr'
-                ? 'Formlar aracılığıyla asla şifre veya hassas finansal bilgi göndermeyin.'
-                : 'Never submit passwords or sensitive financial information through forms.'}
+              Formlar aracılığıyla asla şifre veya hassas finansal bilgi göndermeyin.
             </p>
           </footer>
         </form>

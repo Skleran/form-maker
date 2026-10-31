@@ -1,7 +1,7 @@
 import { notFound } from 'next/navigation';
 import type { Metadata } from 'next';
 
-import { getPublicFormBySlug } from '@/actions/submission-actions';
+import { getPublicForm } from '@/lib/data/public-form';
 import { PublicFormRenderer } from '@/components/public/public-form-renderer';
 import { FormNotActive } from '@/components/public/form-not-active';
 import { getAdminSession } from '@/lib/auth';
@@ -15,15 +15,14 @@ export async function generateMetadata({
   params,
 }: PublicFormPageProps): Promise<Metadata> {
   const { slug } = await params;
-  const res = await getPublicFormBySlug(slug);
+  const form = await getPublicForm(slug);
 
-  if (!res.success || !res.data) {
+  if (!form) {
     return {
       title: 'Form Bulunamadı | FormMaker',
     };
   }
 
-  const form = res.data;
   const session = await getAdminSession();
   const isAdmin = Boolean(session);
 
@@ -70,13 +69,12 @@ export default async function PublicFormPage({
   const { preview } = await searchParams;
   const isPreviewRequested = preview === 'true';
 
-  const res = await getPublicFormBySlug(slug);
+  const form = await getPublicForm(slug);
 
-  if (!res.success || !res.data) {
+  if (!form) {
     notFound();
   }
 
-  const form = res.data;
   const session = await getAdminSession();
   const isAdmin = Boolean(session);
 

@@ -6,7 +6,6 @@ import { Check, Loader2, RotateCcw, X } from "lucide-react"
 import { toast } from "sonner"
 
 import { Button } from "@/components/ui/button"
-import { useLanguage } from "@/lib/i18n/language-context"
 
 export interface CropBox {
   x: number
@@ -42,7 +41,6 @@ export function HeaderImageCropModal({
   onClose,
   onSave,
 }: HeaderImageCropModalProps) {
-  const { language } = useLanguage()
   const imageRef = React.useRef<HTMLImageElement>(null)
   const containerRef = React.useRef<HTMLDivElement>(null)
 
@@ -341,9 +339,7 @@ export function HeaderImageCropModal({
     } catch (err) {
       console.error("Failed to upload header images:", err)
       toast.error(
-        language === "tr"
-          ? "Kapak görseli yüklenirken hata oluştu. Lütfen tekrar deneyin."
-          : "Failed to upload cover image. Please try again."
+        "Kapak görseli yüklenirken hata oluştu. Lütfen tekrar deneyin."
       )
     } finally {
       setIsUploading(false)
@@ -358,7 +354,7 @@ export function HeaderImageCropModal({
         {/* Header */}
         <div className="flex items-center justify-between px-5 py-3.5 border-b bg-muted/20 shrink-0">
           <h2 className="text-base font-semibold tracking-tight text-foreground">
-            {language === "tr" ? "Kapak Görseli Konumu" : "Cover Image Position"}
+            Kapak Görseli Konumu
           </h2>
           <Button
             type="button"
@@ -389,7 +385,7 @@ export function HeaderImageCropModal({
                   ? undefined
                   : "anonymous"
               }
-              alt={language === "tr" ? "Kırpılacak Görsel" : "Image to Crop"}
+              alt="Kırpılacak Görsel"
               onLoad={handleImageLoad}
               onError={() => setImageError(true)}
               className="max-h-[55vh] max-w-full w-auto h-auto block select-none pointer-events-none"
@@ -399,9 +395,7 @@ export function HeaderImageCropModal({
             {imageError && (
               <div className="p-8 text-center bg-card/90 flex flex-col items-center justify-center gap-2 min-h-[200px]">
                 <p className="text-sm font-medium text-destructive">
-                  {language === "tr"
-                    ? "Görsel yüklenemedi. Lütfen 'Görseli Değiştir' ile tekrar yükleyin."
-                    : "Image could not be loaded. Please re-upload using 'Change Image'."}
+                  {"Görsel yüklenemedi. Lütfen 'Görseli Değiştir' ile tekrar yükleyin."}
                 </p>
               </div>
             )}
@@ -511,10 +505,10 @@ export function HeaderImageCropModal({
                 }
               }}
               className="cursor-pointer gap-1.5 text-xs text-muted-foreground hover:text-foreground"
-              title={language === "tr" ? "Kırpma alanını ortala ve sıfırla" : "Reset crop area to center"}
+              title="Kırpma alanını ortala ve sıfırla"
             >
               <RotateCcw className="size-3" />
-              {language === "tr" ? "Sıfırla" : "Reset"}
+              Sıfırla
             </Button>
           </div>
 
@@ -526,7 +520,7 @@ export function HeaderImageCropModal({
               onClick={onClose}
               className="cursor-pointer text-xs"
             >
-              {language === "tr" ? "İptal" : "Cancel"}
+              İptal
             </Button>
             <Button
               type="button"
@@ -541,12 +535,8 @@ export function HeaderImageCropModal({
                 <Check className="size-3.5" />
               )}
               {isUploading
-                ? language === "tr"
-                  ? "Yükleniyor..."
-                  : "Uploading..."
-                : language === "tr"
-                ? "Kaydet"
-                : "Save"}
+                ? "Yükleniyor..."
+                : "Kaydet"}
             </Button>
           </div>
         </div>

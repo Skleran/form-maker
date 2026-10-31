@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache"
 import { prisma } from "@/lib/prisma"
 import { formBuilderSchema, type FormBuilderValues, type QuestionItemValues } from "@/lib/validations/form"
 import { Prisma, type QuestionType } from "@prisma/client"
-import { getAdminSession } from "@/lib/auth"
+import { getAdminSession, requireAdmin } from "@/lib/auth"
 import { deleteAttachments } from "@/lib/storage"
 
 export interface SlugConflictInfo {
@@ -99,98 +99,11 @@ function getStoredQuestionFields(question: QuestionItemValues) {
 }
 
 /**
- * Lists all forms for the admin overview dashboard with counts
- */
-export async function listForms(): Promise<
-  ActionResult<
-    Array<{
-      id: string
-      title: string
-      description: string | null
-      slug: string
-      isPublished: boolean
-      createdAt: Date
-      updatedAt: Date
-      _count: {
-        questions: number
-        submissions: number
-      }
-    }>
-  >
-> {
-  const session = await getAdminSession()
-  if (!session) {
-    return { success: false, error: "Yetkisiz erişim: Yönetici girişi gereklidir." }
-  }
-  try {
-    const forms = await prisma.form.findMany({
-      orderBy: { updatedAt: "desc" },
-      include: {
-        _count: {
-          select: {
-            questions: { where: { isDeleted: false } },
-            submissions: true,
-          },
-        },
-      },
-    })
-    return { success: true, data: forms }
-  } catch (error) {
-    console.error("Failed to list forms:", error)
-    return {
-      success: false,
-      error: error instanceof Error ? error.message : "Formlar yüklenemedi.",
-    }
-  }
-}
-
-/**
- * Retrieves a single form by ID along with its questions ordered by orderIndex
- */
-export async function getFormById(id: string) {
-  const session = await getAdminSession()
-  if (!session) {
-    return { success: false, error: "Yetkisiz erişim: Yönetici girişi gereklidir." } as const
-  }
-
-  try {
-    const form = await prisma.form.findUnique({
-      where: { id },
-      include: {
-        questions: {
-          where: { isDeleted: false },
-          orderBy: { orderIndex: "asc" },
-        },
-        _count: {
-          select: {
-            submissions: true,
-          },
-        },
-      },
-    })
-
-    if (!form) {
-      return { success: false, error: "Form bulunamadı.", notFound: true } as const
-    }
-
-    return { success: true, data: form } as const
-  } catch (error) {
-    console.error("Failed to fetch form by ID:", error)
-    return {
-      success: false,
-      error: error instanceof Error ? error.message : "Form yüklenemedi.",
-    } as const
-  }
-}
-
-/**
  * Creates a new blank form with default title and initial short text question
  */
 export async function createForm(customTitle?: string): Promise<ActionResult<{ id: string }>> {
-  const session = await getAdminSession()
-  if (!session) {
-    return { success: false, error: "Yetkisiz erişim: Yönetici girişi gereklidir." }
-  }
+  const denied = await requireAdmin()
+  if (denied) return denied
 
   try {
     const timestamp = Date.now().toString(36)
@@ -239,10 +152,8 @@ export async function saveForm(
   rawValues: FormBuilderValues,
   sessionUploadedFiles?: string[]
 ): Promise<ActionResult<{ id: string; updatedAt: Date }>> {
-  const session = await getAdminSession()
-  if (!session) {
-    return { success: false, error: "Yetkisiz erişim: Yönetici girişi gereklidir." }
-  }
+  const denied = await requireAdmin()
+  if (denied) return denied
 
   try {
     const parsed = formBuilderSchema.safeParse(rawValues)
@@ -419,10 +330,8 @@ export async function toggleFormPublish(
   formId: string,
   isPublished: boolean
 ): Promise<ActionResult<{ isPublished: boolean }>> {
-  const session = await getAdminSession()
-  if (!session) {
-    return { success: false, error: "Yetkisiz erişim: Yönetici girişi gereklidir." }
-  }
+  const denied = await requireAdmin()
+  if (denied) return denied
 
   try {
     const updated = await prisma.form.update({
@@ -449,10 +358,8 @@ export async function toggleFormPublish(
  * Deletes a form and all related questions and responses
  */
 export async function deleteForm(formId: string): Promise<ActionResult<void>> {
-  const session = await getAdminSession()
-  if (!session) {
-    return { success: false, error: "Yetkisiz erişim: Yönetici girişi gereklidir." }
-  }
+  const denied = await requireAdmin()
+  if (denied) return denied
 
   try {
     // 1. Fetch form header images and all answers with uploaded files

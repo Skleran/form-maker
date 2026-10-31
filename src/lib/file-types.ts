@@ -1,7 +1,6 @@
 export interface MimePreset {
   id: string
-  labelTr: string
-  labelEn: string
+  label: string
   value: string
   mimeTypes: string[]
   extensions: string[]
@@ -10,16 +9,14 @@ export interface MimePreset {
 export const MIME_PRESETS: MimePreset[] = [
   {
     id: "pdf",
-    labelTr: "PDF (.pdf)",
-    labelEn: "PDF (.pdf)",
+    label: "PDF (.pdf)",
     value: "application/pdf",
     mimeTypes: ["application/pdf"],
     extensions: [".pdf"],
   },
   {
     id: "images",
-    labelTr: "Görseller (PNG, JPG, WEBP)",
-    labelEn: "Images (PNG, JPG, WEBP)",
+    label: "Görseller (PNG, JPG, WEBP)",
     value: "image/*",
     mimeTypes: [
       "image/*",
@@ -35,8 +32,7 @@ export const MIME_PRESETS: MimePreset[] = [
   },
   {
     id: "word",
-    labelTr: "Word (.docx)",
-    labelEn: "Word (.docx)",
+    label: "Word (.docx)",
     value: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
     mimeTypes: [
       "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
@@ -46,8 +42,7 @@ export const MIME_PRESETS: MimePreset[] = [
   },
   {
     id: "spreadsheets",
-    labelTr: "Tablolar (.xlsx, .csv)",
-    labelEn: "Spreadsheets (.xlsx, .csv)",
+    label: "Tablolar (.xlsx, .csv)",
     value: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,text/csv",
     mimeTypes: [
       "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
@@ -58,8 +53,7 @@ export const MIME_PRESETS: MimePreset[] = [
   },
   {
     id: "zip",
-    labelTr: "ZIP (.zip)",
-    labelEn: "ZIP (.zip)",
+    label: "ZIP (.zip)",
     value: "application/zip",
     mimeTypes: [
       "application/zip",
@@ -146,12 +140,9 @@ export function detectImageMimeType(bytes: Uint8Array): string | null {
  */
 export function formatAllowedFileTypes(
   allowedMimeTypes?: string[] | null,
-  language: "tr" | "en" = "tr"
 ): string {
   if (!allowedMimeTypes || allowedMimeTypes.length === 0) {
-    return language === "tr"
-      ? "Tüm dosya formatları"
-      : "All file formats"
+    return "Tüm dosya formatları"
   }
 
   const labels: string[] = []
@@ -170,7 +161,7 @@ export function formatAllowedFileTypes(
     )
 
     if (matchedPreset) {
-      const label = language === "tr" ? matchedPreset.labelTr : matchedPreset.labelEn
+      const label = matchedPreset.label
       if (!labels.includes(label)) {
         labels.push(label)
       }
@@ -179,16 +170,16 @@ export function formatAllowedFileTypes(
 
     // 2. Custom or partial matches
     if (trimmed.startsWith("image/")) {
-      const label = language === "tr" ? "Görseller" : "Images"
+      const label = "Görseller"
       if (!labels.includes(label)) labels.push(label)
     } else if (trimmed.startsWith("video/")) {
-      const label = language === "tr" ? "Videolar" : "Videos"
+      const label = "Videolar"
       if (!labels.includes(label)) labels.push(label)
     } else if (trimmed.startsWith("audio/")) {
-      const label = language === "tr" ? "Ses Dosyaları" : "Audio"
+      const label = "Ses Dosyaları"
       if (!labels.includes(label)) labels.push(label)
     } else if (trimmed === "text/plain") {
-      const label = language === "tr" ? "Metin (.txt)" : "Text (.txt)"
+      const label = "Metin (.txt)"
       if (!labels.includes(label)) labels.push(label)
     } else if (trimmed.startsWith(".")) {
       if (!labels.includes(trimmed)) labels.push(trimmed)
@@ -208,20 +199,15 @@ export function formatAllowedFileTypes(
 export function formatFileLimitsDescription(
   maxMb?: number | null,
   allowedMimeTypes?: string[] | null,
-  language: "tr" | "en" = "tr"
 ): string {
   const max = maxMb || 10
-  const maxLabel = language === "tr" ? `Maksimum ${max} MB` : `Max ${max} MB`
+  const maxLabel = `Maksimum ${max} MB`
 
   if (!allowedMimeTypes || allowedMimeTypes.length === 0) {
-    const allAllowed =
-      language === "tr"
-        ? "Tüm dosya formatları kabul edilir"
-        : "All file formats accepted"
-    return `${maxLabel} • ${allAllowed}`
+    return `${maxLabel} • Tüm dosya formatları kabul edilir`
   }
 
-  const typesText = formatAllowedFileTypes(allowedMimeTypes, language)
+  const typesText = formatAllowedFileTypes(allowedMimeTypes)
   return `${maxLabel} • ${typesText}`
 }
 

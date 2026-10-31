@@ -6,11 +6,10 @@ import { Plus, Loader2 } from "lucide-react"
 import { toast } from "sonner"
 import { Button } from "@/components/ui/button"
 import { createForm } from "@/actions/form-actions"
-import { useLanguage } from "@/lib/i18n/language-context"
+import { dict } from "@/lib/dictionary"
 
 export function CreateFormButton() {
   const router = useRouter()
-  const { dict } = useLanguage()
   const [isPending, startTransition] = React.useTransition()
 
   const handleCreate = () => {

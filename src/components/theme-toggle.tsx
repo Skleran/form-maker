@@ -20,7 +20,7 @@ export function ThemeToggle() {
   if (!mounted) {
     return (
       <Button variant="ghost" size="icon" className="size-8" disabled>
-        <span className="sr-only">Toggle theme</span>
+        <span className="sr-only">Temayı değiştir</span>
       </Button>
     )
   }
@@ -34,14 +34,14 @@ export function ThemeToggle() {
       size="icon"
       className="size-8 cursor-pointer"
       onClick={() => setTheme(isDark ? "light" : "dark")}
-      title={`Switch to ${isDark ? "light" : "dark"} theme`}
+      title={`${isDark ? "Açık" : "Koyu"} temaya geç`}
     >
       {isDark ? (
         <Sun className="size-4 transition-all text-amber-400" />
       ) : (
         <Moon className="size-4 transition-all text-slate-700" />
       )}
-      <span className="sr-only">Toggle theme</span>
+      <span className="sr-only">Temayı değiştir</span>
     </Button>
   )
 }

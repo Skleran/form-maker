@@ -1,36 +1,68 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# FormMaker
 
-## Getting Started
+A self-hosted form builder with one admin. Build a form, publish it at `/forms/<slug>`, collect anonymous responses (including file uploads), then review them or export a CSV. The interface is in Turkish.
 
-First, run the development server:
+Built with Next.js 16, React 19, Prisma 6 and PostgreSQL.
+
+## Run it locally
+
+You need Node 22 or newer, pnpm and Docker.
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+pnpm install
+cp .env.example .env.local
+docker compose -f docker-compose.dev.yml up -d
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Set `DATABASE_URL` and `DIRECT_URL` in `.env.local` to the local database, and leave the Supabase values empty so uploads stay on disk:
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+```
+postgresql://formmaker:formmaker_dev@127.0.0.1:5433/formmaker
+```
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+The Prisma CLI reads only `.env`, so pass the same URL to it when you create the tables and, if you want, a sample form:
 
-## Learn More
+```bash
+DATABASE_URL="<local url>" DIRECT_URL="<local url>" npx prisma migrate deploy
+DATABASE_URL="<local url>" DIRECT_URL="<local url>" npx prisma db seed
+```
 
-To learn more about Next.js, take a look at the following resources:
+Then start the app:
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+```bash
+pnpm dev
+```
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+Sign in at http://localhost:3000/login. Outside production the login is `admin` / `admin123` unless you set `ADMIN_USERNAME` and `ADMIN_PASSWORD`.
 
-## Deploy on Vercel
+## Checks
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+```bash
+pnpm lint
+pnpm typecheck
+pnpm test
+pnpm build
+```
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+GitHub Actions runs these on every pull request and on pushes to `main`.
+
+## Deploy with Docker
+
+Copy `.env.example` to `.env` and fill in the production section. The server refuses to start if `AUTH_SECRET` or `ADMIN_PASSWORD` is missing or a known default.
+
+```bash
+docker compose up -d --build
+```
+
+This starts PostgreSQL and the app, applies migrations at startup, and keeps uploads on a Docker volume. The app listens on `127.0.0.1:3000`, so put a reverse proxy in front of it:
+
+- **The server already has a web server** (for example DirectAdmin): proxy a subdomain to `127.0.0.1:3000`, forward `X-Forwarded-Proto` and `X-Forwarded-For`, and set `COOKIE_SECURE=true`.
+- **Nothing else uses ports 80 and 443:** `docker compose --profile caddy up -d --build` adds Caddy, which handles HTTPS. Set `DOMAIN_NAME` first.
+
+`/api/health` reports whether the app can reach its database, and the Docker healthcheck uses it.
+
+`scripts/backup.sh` backs up the database and uploaded files; the script's comments explain how to schedule and restore it. Copy backups off the server too.
+
+## License
+
+See [LICENSE](LICENSE).

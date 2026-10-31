@@ -49,7 +49,7 @@ import { useBuilderStore } from '@/stores/use-builder-store';
 import type { FormBuilderValues } from '@/lib/validations/form';
 import { ThemeToggle } from '@/components/theme-toggle';
 import { LogoutButton } from '@/components/admin/logout-button';
-import { useLanguage } from '@/lib/i18n/language-context';
+import { dict } from '@/lib/dictionary';
 import { useTheme } from 'next-themes';
 import { cn } from '@/lib/utils';
 import { copyText } from '@/lib/clipboard';
@@ -65,7 +65,6 @@ interface BuilderHeaderProps {
 }
 
 const HeaderTitleDisplay = React.memo(function HeaderTitleDisplay() {
-  const { dict } = useLanguage();
   const { control } = useFormContext<FormBuilderValues>();
   const title = useWatch({
     control,
@@ -81,7 +80,6 @@ const HeaderTitleDisplay = React.memo(function HeaderTitleDisplay() {
 });
 
 const InspectorToggleButton = React.memo(function InspectorToggleButton() {
-  const { dict } = useLanguage();
   const isInspectorOpen = useBuilderStore((s) => s.isInspectorOpen);
   const toggleInspector = useBuilderStore((s) => s.toggleInspector);
 
@@ -106,6 +104,76 @@ const InspectorToggleButton = React.memo(function InspectorToggleButton() {
   );
 });
 
+const subscribeToNothing = () => () => {};
+
+const UndoRedoControls = React.memo(function UndoRedoControls({
+  onUndo,
+  onRedo,
+}: {
+  onUndo: () => void;
+  onRedo: () => void;
+}) {
+  const canUndo = useBuilderStore((s) => s.canUndo);
+  const canRedo = useBuilderStore((s) => s.canRedo);
+
+  return (
+    <div className="flex items-center rounded-lg border bg-muted/40 p-0.5 shrink-0">
+      <Tooltip>
+        <TooltipTrigger
+          render={
+            <Button
+              variant="ghost"
+              size="icon-xs"
+              onClick={onUndo}
+              disabled={!canUndo}
+              className="cursor-pointer text-muted-foreground hover:text-foreground disabled:opacity-30 h-7 w-7"
+            >
+              <Undo2 className="size-3.5" />
+            </Button>
+          }
+        />
+        <TooltipContent side="bottom">
+          {dict.builder.header.undoTooltip}
+        </TooltipContent>
+      </Tooltip>
+
+      <Tooltip>
+        <TooltipTrigger
+          render={
+            <Button
+              variant="ghost"
+              size="icon-xs"
+              onClick={onRedo}
+              disabled={!canRedo}
+              className="cursor-pointer text-muted-foreground hover:text-foreground disabled:opacity-30 h-7 w-7"
+            >
+              <Redo2 className="size-3.5" />
+            </Button>
+          }
+        />
+        <TooltipContent side="bottom">
+          {dict.builder.header.redoTooltip}
+        </TooltipContent>
+      </Tooltip>
+    </div>
+  );
+});
+
+function SaveButtonContent({ isSaving }: { isSaving: boolean }) {
+  return (
+    <>
+      {isSaving ? (
+        <Loader2 className="size-3.5 animate-spin" />
+      ) : (
+        <Save className="size-3.5" />
+      )}
+      <span>
+        {isSaving ? dict.builder.header.saving : dict.builder.header.save}
+      </span>
+    </>
+  );
+}
+
 export const BuilderHeader = React.memo(function BuilderHeader({
   submissionCount = 0,
   onSave,
@@ -116,7 +184,6 @@ export const BuilderHeader = React.memo(function BuilderHeader({
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
-  const { dict, language } = useLanguage();
 
   const { control, setValue, getValues } = useFormContext<FormBuilderValues>();
   const [slug, isPublished] = useWatch({
@@ -128,9 +195,6 @@ export const BuilderHeader = React.memo(function BuilderHeader({
   const isSaving = useBuilderStore((s) => s.isSaving);
   const lastSavedAt = useBuilderStore((s) => s.lastSavedAt);
   const isDirty = useBuilderStore((s) => s.isDirty);
-  const canUndo = useBuilderStore((s) => s.canUndo);
-  const canRedo = useBuilderStore((s) => s.canRedo);
-
   const currentTab = searchParams.get('tab') || 'questions';
 
   // Unsaved changes navigation interception dialog state
@@ -142,19 +206,19 @@ export const BuilderHeader = React.memo(function BuilderHeader({
   const handleTabChange = (value: string) => {
     if (value === currentTab) return;
 
+    const goToTab = () => {
+      const params = new URLSearchParams(searchParams.toString());
+      params.set('tab', value);
+      router.replace(`${pathname}?${params.toString()}`);
+    };
+
     if (isDirty) {
-      setPendingAction(() => () => {
-        const params = new URLSearchParams(searchParams.toString());
-        params.set('tab', value);
-        router.replace(`${pathname}?${params.toString()}`);
-      });
+      setPendingAction(() => goToTab);
       setShowUnsavedDialog(true);
       return;
     }
 
-    const params = new URLSearchParams(searchParams.toString());
-    params.set('tab', value);
-    router.replace(`${pathname}?${params.toString()}`);
+    goToTab();
   };
 
   const handleBackClick = (e: React.MouseEvent) => {
@@ -196,14 +260,23 @@ export const BuilderHeader = React.memo(function BuilderHeader({
     }
   };
 
-  const { setTheme, theme, resolvedTheme } = useTheme();
-  const [mounted, setMounted] = React.useState(false);
-  React.useEffect(() => {
-    setMounted(true);
-  }, []);
-  const isDark = mounted
-    ? (theme === 'system' ? resolvedTheme : theme) === 'dark'
-    : false;
+  const { setTheme, resolvedTheme } = useTheme();
+  // The theme is only known in the browser, so the server renders the light icon
+  const mounted = React.useSyncExternalStore(
+    subscribeToNothing,
+    () => true,
+    () => false,
+  );
+  const isDark = mounted && resolvedTheme === 'dark';
+
+  const handlePublishChange = (checked: boolean) => {
+    setValue('isPublished', checked, { shouldDirty: true });
+    toast.info(
+      checked
+        ? dict.builder.header.publishedToast
+        : dict.builder.header.draftToast,
+    );
+  };
 
   const handleCopyLink = async () => {
     const publicUrl = `${window.location.origin}/forms/${slug}`;
@@ -220,12 +293,10 @@ export const BuilderHeader = React.memo(function BuilderHeader({
     if (typeof navigator !== 'undefined' && navigator.share) {
       try {
         await navigator.share({
-          title: currentTitle || (language === 'tr' ? 'Form' : 'Form'),
+          title: currentTitle || 'Form',
           text:
             currentTitle ||
-            (language === 'tr'
-              ? 'Bu formu doldurun'
-              : 'Please fill out this form'),
+            'Bu formu doldurun',
           url: publicUrl,
         });
       } catch (err: unknown) {
@@ -263,7 +334,7 @@ export const BuilderHeader = React.memo(function BuilderHeader({
             {isDirty ? (
               <span className="inline-flex items-center gap-1.5 rounded-full bg-amber-500/10 px-2 py-0.5 text-[11px] font-medium text-amber-600 dark:text-amber-400 border border-amber-500/25 shrink-0 whitespace-nowrap">
                 <span className="size-1.5 rounded-full bg-amber-500 animate-pulse" />
-                <span>{language === 'tr' ? 'Kaydedilmedi' : 'Unsaved'}</span>
+                <span>Kaydedilmedi</span>
               </span>
             ) : (
               <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/10 px-2 py-0.5 text-[11px] font-medium text-emerald-600 dark:text-emerald-400 border border-emerald-500/25 shrink-0 whitespace-nowrap">
@@ -274,28 +345,7 @@ export const BuilderHeader = React.memo(function BuilderHeader({
           </div>
 
           {/* Undo / Redo */}
-          <div className="flex items-center rounded-lg border bg-muted/40 p-0.5 shrink-0">
-            <Button
-              variant="ghost"
-              size="icon-xs"
-              onClick={onUndo}
-              disabled={!canUndo}
-              className="cursor-pointer text-muted-foreground hover:text-foreground disabled:opacity-30 h-7 w-7"
-              title={dict.builder.header.undoTooltip}
-            >
-              <Undo2 className="size-3.5" />
-            </Button>
-            <Button
-              variant="ghost"
-              size="icon-xs"
-              onClick={onRedo}
-              disabled={!canRedo}
-              className="cursor-pointer text-muted-foreground hover:text-foreground disabled:opacity-30 h-7 w-7"
-              title={dict.builder.header.redoTooltip}
-            >
-              <Redo2 className="size-3.5" />
-            </Button>
-          </div>
+          <UndoRedoControls onUndo={onUndo} onRedo={onRedo} />
 
           {/* Save Button */}
           <Button
@@ -304,14 +354,7 @@ export const BuilderHeader = React.memo(function BuilderHeader({
             disabled={isSaving}
             className="cursor-pointer items-center gap-1 shadow-sm h-8 px-2.5 text-xs shrink-0"
           >
-            {isSaving ? (
-              <Loader2 className="size-3.5 animate-spin" />
-            ) : (
-              <Save className="size-3.5" />
-            )}
-            <span>
-              {isSaving ? dict.builder.header.saving : dict.builder.header.save}
-            </span>
+            <SaveButtonContent isSaving={isSaving} />
           </Button>
 
           {/* Dropdown Menu Trigger & Content */}
@@ -371,14 +414,7 @@ export const BuilderHeader = React.memo(function BuilderHeader({
                 <Switch
                   checked={isPublished}
                   id="publish-toggle"
-                  onCheckedChange={(checked) => {
-                    setValue('isPublished', checked, { shouldDirty: true });
-                    toast.info(
-                      checked
-                        ? dict.builder.header.publishedToast
-                        : dict.builder.header.draftToast,
-                    );
-                  }}
+                  onCheckedChange={handlePublishChange}
                 />
               </div>
 
@@ -454,7 +490,7 @@ export const BuilderHeader = React.memo(function BuilderHeader({
                   <Check className="size-3 text-emerald-500" />
                   {dict.builder.header.saved}{' '}
                   {lastSavedAt.toLocaleTimeString(
-                    language === 'tr' ? 'tr-TR' : 'en-US',
+                    'tr-TR',
                     {
                       hour: '2-digit',
                       minute: '2-digit',
@@ -472,45 +508,7 @@ export const BuilderHeader = React.memo(function BuilderHeader({
 
           {/* Center: Undo / Redo */}
           <div className="flex items-center">
-            <div className="flex items-center rounded-lg border bg-muted/40 p-0.5">
-              <Tooltip>
-                <TooltipTrigger
-                  render={
-                    <Button
-                      variant="ghost"
-                      size="icon-xs"
-                      onClick={onUndo}
-                      disabled={!canUndo}
-                      className="cursor-pointer text-muted-foreground hover:text-foreground disabled:opacity-30 h-7 w-7"
-                    >
-                      <Undo2 className="size-3.5" />
-                    </Button>
-                  }
-                />
-                <TooltipContent side="bottom">
-                  {dict.builder.header.undoTooltip}
-                </TooltipContent>
-              </Tooltip>
-
-              <Tooltip>
-                <TooltipTrigger
-                  render={
-                    <Button
-                      variant="ghost"
-                      size="icon-xs"
-                      onClick={onRedo}
-                      disabled={!canRedo}
-                      className="cursor-pointer text-muted-foreground hover:text-foreground disabled:opacity-30 h-7 w-7"
-                    >
-                      <Redo2 className="size-3.5" />
-                    </Button>
-                  }
-                />
-                <TooltipContent side="bottom">
-                  {dict.builder.header.redoTooltip}
-                </TooltipContent>
-              </Tooltip>
-            </div>
+            <UndoRedoControls onUndo={onUndo} onRedo={onRedo} />
           </div>
 
           {/* Right: Actions, Publish Switch, Inspector Toggle */}
@@ -534,14 +532,7 @@ export const BuilderHeader = React.memo(function BuilderHeader({
               <Switch
                 checked={isPublished}
                 id="desktop-publish-toggle"
-                onCheckedChange={(checked) => {
-                  setValue('isPublished', checked, { shouldDirty: true });
-                  toast.info(
-                    checked
-                      ? dict.builder.header.publishedToast
-                      : dict.builder.header.draftToast,
-                  );
-                }}
+                onCheckedChange={handlePublishChange}
                 title={
                   isPublished
                     ? dict.builder.header.publishedToast
@@ -605,16 +596,7 @@ export const BuilderHeader = React.memo(function BuilderHeader({
                     disabled={isSaving}
                     className="cursor-pointer items-center gap-1.5 shadow-sm"
                   >
-                    {isSaving ? (
-                      <Loader2 className="size-3.5 animate-spin" />
-                    ) : (
-                      <Save className="size-3.5" />
-                    )}
-                    <span>
-                      {isSaving
-                        ? dict.builder.header.saving
-                        : dict.builder.header.save}
-                    </span>
+                    <SaveButtonContent isSaving={isSaving} />
                   </Button>
                 }
               />

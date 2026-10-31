@@ -254,3 +254,11 @@ export async function getAdminSession(): Promise<SessionPayload | null> {
     return null
   }
 }
+
+/**
+ * Returns the result an action should send back when the caller isn't the admin, or null when they are
+ */
+export async function requireAdmin() {
+  if (await getAdminSession()) return null
+  return { success: false, error: "Yetkisiz erişim: Yönetici girişi gereklidir." } as const
+}

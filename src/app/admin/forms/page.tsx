@@ -1,4 +1,4 @@
-import { listForms } from "@/actions/form-actions"
+import { listForms } from "@/lib/data/forms"
 import { FormsDashboardClient } from "@/components/admin/forms-dashboard-client"
 
 export const dynamic = "force-dynamic"

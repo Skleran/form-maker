@@ -2,22 +2,14 @@ import { create } from "zustand"
 import type { FormBuilderValues } from "@/lib/validations/form"
 import type { SlugConflictInfo } from "@/actions/form-actions"
 
-export type PreviewDevice = "desktop" | "tablet" | "mobile"
-
 export interface BuilderState {
   // Active selected question for inspector panel
   activeQuestionId: string | null
   // Last non-null activeQuestionId retained so inspector exit animation keeps showing its fields without extra state sync
   lastActiveQuestionId: string | null
 
-  // Device preview simulation mode
-  previewDevice: PreviewDevice
-
   // Inspector sidebar drawer/sheet open state
   isInspectorOpen: boolean
-
-  // Live preview interactive modal/view toggle
-  isLivePreview: boolean
 
   // Transient save/sync status
   isSaving: boolean
@@ -41,11 +33,8 @@ export interface BuilderActions {
   setActiveQuestionId: (id: string | null) => void
   selectQuestion: (id: string) => void
   deselectQuestion: () => void
-  setPreviewDevice: (device: PreviewDevice) => void
   setIsInspectorOpen: (isOpen: boolean) => void
   toggleInspector: () => void
-  setIsLivePreview: (isLive: boolean) => void
-  toggleLivePreview: () => void
   setIsSaving: (isSaving: boolean) => void
   setLastSavedAt: (date: Date | null) => void
   setIsDirty: (isDirty: boolean) => void
@@ -64,9 +53,7 @@ export type BuilderStore = BuilderState & BuilderActions
 const initialState: BuilderState = {
   activeQuestionId: null,
   lastActiveQuestionId: null,
-  previewDevice: "desktop",
   isInspectorOpen: false,
-  isLivePreview: false,
   isSaving: false,
   lastSavedAt: null,
   isDirty: false,
@@ -114,9 +101,6 @@ export const useBuilderStore = create<BuilderStore>((set) => ({
       }
     }),
 
-  setPreviewDevice: (device) =>
-    set((state) => (state.previewDevice === device ? state : { previewDevice: device })),
-
   setIsInspectorOpen: (isOpen) =>
     set((state) => {
       const nextActiveId = isOpen
@@ -141,11 +125,6 @@ export const useBuilderStore = create<BuilderStore>((set) => ({
           : null,
       }
     }),
-
-  setIsLivePreview: (isLive) =>
-    set((state) => (state.isLivePreview === isLive ? state : { isLivePreview: isLive })),
-
-  toggleLivePreview: () => set((state) => ({ isLivePreview: !state.isLivePreview })),
 
   setIsSaving: (isSaving) =>
     set((state) => (state.isSaving === isSaving ? state : { isSaving })),

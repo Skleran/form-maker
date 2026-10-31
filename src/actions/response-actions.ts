@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache"
 import { headers } from "next/headers"
 import { prisma } from "@/lib/prisma"
-import { getAdminSession } from "@/lib/auth"
+import { requireAdmin } from "@/lib/auth"
 import { escapeCSV } from "@/lib/csv"
 import { deleteAttachments } from "@/lib/storage"
 
@@ -72,10 +72,8 @@ export async function getFormResponses(
   page: number = 1,
   pageSize: number = 10
 ): Promise<{ success: true; data: PaginatedResponsesResult } | { success: false; error: string }> {
-  const session = await getAdminSession()
-  if (!session) {
-    return { success: false, error: "Yetkisiz erişim: Yönetici girişi gereklidir." }
-  }
+  const denied = await requireAdmin()
+  if (denied) return denied
 
   try {
     const form = await prisma.form.findUnique({
@@ -213,10 +211,8 @@ export async function deleteSubmission(
   submissionId: string,
   formId: string
 ): Promise<{ success: boolean; error?: string }> {
-  const session = await getAdminSession()
-  if (!session) {
-    return { success: false, error: "Yetkisiz erişim: Yönetici girişi gereklidir." }
-  }
+  const denied = await requireAdmin()
+  if (denied) return denied
 
   try {
     // 1. Find all answers with uploaded files for this submission
@@ -265,10 +261,8 @@ export async function deleteSubmission(
 export async function exportFormResponsesCSV(
   formId: string
 ): Promise<{ success: true; data: { csv: string; filename: string } } | { success: false; error: string }> {
-  const session = await getAdminSession()
-  if (!session) {
-    return { success: false, error: "Yetkisiz erişim: Yönetici girişi gereklidir." }
-  }
+  const denied = await requireAdmin()
+  if (denied) return denied
 
   try {
     const form = await prisma.form.findUnique({

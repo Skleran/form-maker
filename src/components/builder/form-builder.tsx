@@ -23,7 +23,6 @@ import { BuilderCanvas } from './builder-canvas';
 import { BuilderInspector } from './builder-inspector';
 import { BuilderSettings } from './builder-settings';
 import { ResponsesView } from '@/components/responses/responses-view';
-import { useLanguage } from '@/lib/i18n/language-context';
 
 interface InitialFormData {
   id: string;
@@ -76,29 +75,25 @@ function isFormValuesEqual(
 const FormHistoryObserver = React.memo(function FormHistoryObserver({
   watch,
   getValues,
-  isApplyingHistoryRef,
-  isInitialMountRef,
   previousSnapshotRef,
   savedSnapshotRef,
 }: {
   watch: UseFormWatch<FormBuilderValues>;
   getValues: UseFormGetValues<FormBuilderValues>;
-  isApplyingHistoryRef: React.MutableRefObject<boolean>;
-  isInitialMountRef: React.MutableRefObject<boolean>;
   previousSnapshotRef: React.MutableRefObject<FormBuilderValues>;
   savedSnapshotRef: React.MutableRefObject<FormBuilderValues>;
 }) {
   const debounceTimerRef = React.useRef<NodeJS.Timeout | null>(null);
   const hasHistoryGuardRef = React.useRef(false);
 
-  const { language } = useLanguage();
 
   const isDirty = useBuilderStore((s) => s.isDirty);
 
   // Subscribe to RHF changes via callback without triggering React re-renders on every keystroke
   React.useEffect(() => {
-    const subscription = watch(() => {
-      if (isInitialMountRef.current || isApplyingHistoryRef.current) return;
+    const subscription = watch((_, { name }) => {
+      // Only edits name a field. Resets (undo, redo, discard, save) set the dirty state themselves.
+      if (!name) return;
 
       // Mark dirty immediately on first edit without full-form JSON.stringify per keystroke
       if (!useBuilderStore.getState().isDirty) {
@@ -110,7 +105,6 @@ const FormHistoryObserver = React.memo(function FormHistoryObserver({
       }
 
       debounceTimerRef.current = setTimeout(() => {
-        if (isInitialMountRef.current || isApplyingHistoryRef.current) return;
         const currentValues = getValues();
 
         // Reconcile dirty state with saved snapshot once typing settles
@@ -147,8 +141,6 @@ const FormHistoryObserver = React.memo(function FormHistoryObserver({
   }, [
     watch,
     getValues,
-    isInitialMountRef,
-    isApplyingHistoryRef,
     previousSnapshotRef,
     savedSnapshotRef,
   ]);
@@ -189,9 +181,7 @@ const FormHistoryObserver = React.memo(function FormHistoryObserver({
     const handlePopState = () => {
       if (useBuilderStore.getState().isDirty) {
         const message =
-          language === 'tr'
-            ? 'Kaydedilmemiş değişiklikleriniz var. Sayfadan ayrılmak istediğinizden emin misiniz?\n\nYaptığınız değişiklikler kaybolacaktır.'
-            : 'You have unsaved changes. Are you sure you want to leave?\n\nYour changes will be lost.';
+          'Kaydedilmemiş değişiklikleriniz var. Sayfadan ayrılmak istediğinizden emin misiniz?\n\nYaptığınız değişiklikler kaybolacaktır.';
 
         const confirmLeave = window.confirm(message);
 
@@ -211,7 +201,7 @@ const FormHistoryObserver = React.memo(function FormHistoryObserver({
     return () => {
       window.removeEventListener('popstate', handlePopState);
     };
-  }, [isDirty, language]);
+  }, [isDirty]);
 
   return null;
 });
@@ -279,84 +269,49 @@ export function FormBuilder({ initialForm }: FormBuilderProps) {
   );
 
   // History tracking refs
-  const isApplyingHistoryRef = React.useRef(false);
-  const isInitialMountRef = React.useRef(true);
   const previousSnapshotRef = React.useRef<FormBuilderValues>(
     cloneFormSnapshot(initialValues),
   );
 
-  // Ensure history is clean on mount and track mount completion
+  // Ensure history is clean on mount
   React.useEffect(() => {
     useBuilderStore.getState().clearHistory();
-    const timer = setTimeout(() => {
-      isInitialMountRef.current = false;
-    }, 400);
-    return () => clearTimeout(timer);
   }, []);
 
-  // Undo action handler
-  const handleUndo = React.useCallback(() => {
-    const store = useBuilderStore.getState();
-    const current = cloneFormSnapshot(methods.getValues());
-    const previous = store.undo(current);
-    if (previous) {
-      isApplyingHistoryRef.current = true;
-      const clonedPrevious = cloneFormSnapshot(previous);
-      methods.reset(clonedPrevious, { keepDefaultValues: true });
-      previousSnapshotRef.current = cloneFormSnapshot(clonedPrevious);
-      const isNowDirty = !isFormValuesEqual(
-        clonedPrevious,
-        savedSnapshotRef.current,
-      );
-      store.setIsDirty(isNowDirty);
-      if (clonedPrevious.questions.length > 0) {
-        const stillExists = clonedPrevious.questions.some(
+  // Puts the form back to a snapshot from the undo or redo stack
+  const applyHistorySnapshot = React.useCallback(
+    (snapshot: FormBuilderValues, message: string) => {
+      const store = useBuilderStore.getState();
+      const restored = cloneFormSnapshot(snapshot);
+      methods.reset(restored, { keepDefaultValues: true });
+      previousSnapshotRef.current = cloneFormSnapshot(restored);
+      store.setIsDirty(!isFormValuesEqual(restored, savedSnapshotRef.current));
+      if (restored.questions.length > 0) {
+        const stillExists = restored.questions.some(
           (q) => q.id === store.activeQuestionId,
         );
         if (!stillExists) {
-          store.setActiveQuestionId(clonedPrevious.questions[0].id);
+          store.setActiveQuestionId(restored.questions[0].id);
         }
       } else {
         store.setActiveQuestionId(null);
       }
-      toast.info('Geri alma işlemi yapıldı');
-      setTimeout(() => {
-        isApplyingHistoryRef.current = false;
-      }, 100);
-    }
-  }, [methods]);
+      toast.info(message);
+    },
+    [methods],
+  );
 
-  // Redo action handler
-  const handleRedo = React.useCallback(() => {
-    const store = useBuilderStore.getState();
+  const handleUndo = React.useCallback(() => {
     const current = cloneFormSnapshot(methods.getValues());
-    const next = store.redo(current);
-    if (next) {
-      isApplyingHistoryRef.current = true;
-      const clonedNext = cloneFormSnapshot(next);
-      methods.reset(clonedNext, { keepDefaultValues: true });
-      previousSnapshotRef.current = cloneFormSnapshot(clonedNext);
-      const isNowDirty = !isFormValuesEqual(
-        clonedNext,
-        savedSnapshotRef.current,
-      );
-      store.setIsDirty(isNowDirty);
-      if (clonedNext.questions.length > 0) {
-        const stillExists = clonedNext.questions.some(
-          (q) => q.id === store.activeQuestionId,
-        );
-        if (!stillExists) {
-          store.setActiveQuestionId(clonedNext.questions[0].id);
-        }
-      } else {
-        store.setActiveQuestionId(null);
-      }
-      toast.info('Yineleme işlemi yapıldı');
-      setTimeout(() => {
-        isApplyingHistoryRef.current = false;
-      }, 100);
-    }
-  }, [methods]);
+    const previous = useBuilderStore.getState().undo(current);
+    if (previous) applyHistorySnapshot(previous, 'Geri alma işlemi yapıldı');
+  }, [methods, applyHistorySnapshot]);
+
+  const handleRedo = React.useCallback(() => {
+    const current = cloneFormSnapshot(methods.getValues());
+    const next = useBuilderStore.getState().redo(current);
+    if (next) applyHistorySnapshot(next, 'Yineleme işlemi yapıldı');
+  }, [methods, applyHistorySnapshot]);
 
   // Save handler
   const handleSave = React.useCallback(async (): Promise<boolean> => {
@@ -468,7 +423,6 @@ export function FormBuilder({ initialForm }: FormBuilderProps) {
       }).catch(console.error);
     }
 
-    isApplyingHistoryRef.current = true;
     methods.reset(target);
     methods.clearErrors();
     previousSnapshotRef.current = cloneFormSnapshot(target);
@@ -482,9 +436,6 @@ export function FormBuilder({ initialForm }: FormBuilderProps) {
       store.setActiveQuestionId(null);
     }
     toast.info('Kaydedilmemiş değişiklikler geri alındı');
-    setTimeout(() => {
-      isApplyingHistoryRef.current = false;
-    }, 100);
   }, [initialValues, methods]);
 
   // Question manipulation helpers
@@ -598,8 +549,6 @@ export function FormBuilder({ initialForm }: FormBuilderProps) {
       <FormHistoryObserver
         watch={methods.watch}
         getValues={methods.getValues}
-        isApplyingHistoryRef={isApplyingHistoryRef}
-        isInitialMountRef={isInitialMountRef}
         previousSnapshotRef={previousSnapshotRef}
         savedSnapshotRef={savedSnapshotRef}
       />

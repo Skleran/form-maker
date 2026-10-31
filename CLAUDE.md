@@ -2,7 +2,7 @@
 
 # FormMaker
 
-Self-hosted form builder with one admin: build a form, publish it at `/forms/<slug>`, collect anonymous responses (including file uploads), then review them or export CSV. The UI is Turkish. `ARCHITECTURE.md` and `README.md` are out of date, so trust the code over them.
+Self-hosted form builder with one admin: build a form, publish it at `/forms/<slug>`, collect anonymous responses (including file uploads), then review them or export CSV. The UI is Turkish.
 
 Stack: Next.js 16 (App Router, Turbopack), React 19, Prisma 6 + PostgreSQL, shadcn/ui (base-nova) on Base UI, Tailwind 4, react-hook-form + Zod 3, Zustand, pnpm.
 
@@ -17,7 +17,7 @@ pnpm test             # Vitest; security logic is in src/lib/security.test.ts
 pnpm build            # prisma generate + next build
 ```
 
-There's no CI and no seed script: `prisma/seed.ts` exists but nothing wires it up. Schema changes go through Prisma migrations in `prisma/migrations/`; Docker applies them at startup with `prisma migrate deploy`. `scripts/backup.sh` backs up the Docker stack's database and uploads.
+CI (`.github/workflows/ci.yml`) runs lint, types, tests and build. `npx prisma db seed` adds a sample form; like every Prisma command it targets `.env` (the live database) unless you pass the local URLs. Schema changes go through Prisma migrations in `prisma/migrations/`; Docker applies them at startup with `prisma migrate deploy`. `scripts/backup.sh` backs up the Docker stack's database and uploads.
 
 **`.env` points at a remote Supabase database and storage bucket.** `.env.local` (git-ignored, see `.env.example`) overrides it for the app with the local database and turns Supabase off. The Prisma CLI reads only `.env`, so always pass the local URLs to it:
 
@@ -34,10 +34,10 @@ On Windows, `pnpm build` can fail with EPERM while a dev server is running, beca
 ```
 prisma/schema.prisma      Form > Question > Answer; Submission > Answer
 src/proxy.ts              Next 16's middleware: guards /admin/* and /login only
-src/actions/              Server actions, used for reads as well as writes
+src/actions/              Server actions: writes, plus reads the browser must call
   auth-actions            login / logout
-  form-actions            list, get, create, save, publish, delete, slug check
-  submission-actions      public form fetch + submit
+  form-actions            create, save, publish, delete, slug check
+  submission-actions      public submit
   response-actions        paginated responses, delete, CSV export
 src/app/
   page.tsx                landing page
@@ -45,17 +45,19 @@ src/app/
   forms/[slug]/           public form; admins get preview mode on drafts or ?preview=true
   admin/forms/            dashboard
   admin/forms/[id]/edit/  builder; ?tab=questions|responses|settings
+  api/health/             database check for the Docker healthcheck
   api/upload/             POST and DELETE attachments
   api/uploads/[...path]/  public, header images only (next.config rewrites /uploads/* here)
   api/answers/[answerId]/file/  admin-only route for response files
 src/components/
-  builder/                form-builder (orchestrator), header, canvas, inspector, settings, crop modal
+  builder/                form-builder (orchestrator), header, canvas (form-header-section, question-card, use-question-drag), inspector, settings, crop modal; question-types holds the shared type list
   public/                 public-form-renderer
   responses/              responses-view, table, detail drawer, CSV button
   admin/                  dashboard
   ui/                     shadcn components
 src/lib/
-  auth.ts                 HMAC-signed session cookie (WebCrypto, so it runs in the proxy)
+  auth.ts                 HMAC-signed session cookie (WebCrypto, so it runs in the proxy); requireAdmin
+  data/                   reads for server components (forms, public-form), not callable from the browser
   storage.ts              Supabase Storage, falling back to uploads/ on disk; validates every path
   upload-token.ts         signed proof of an accepted upload
   rate-limit.ts           in-memory limiter (per process; suits the in-house server)
@@ -63,13 +65,13 @@ src/lib/
   file-types.ts           MIME presets, file type matching, blocked and inline-safe types
   validations/form.ts     builder schema
   validations/dynamic-schema.ts  per-form answer schema, shared by client and server
-  i18n/                   translations and language context
+  dictionary.ts           all UI text (Turkish)
 src/stores/use-builder-store.ts  builder UI state and undo/redo history
 ```
 
 ## How things work
 
-**Auth.** One admin, with credentials from `ADMIN_USERNAME` / `ADMIN_PASSWORD`. The session is a stateless signed cookie lasting 7 days. The proxy only covers pages, so every admin server action and route handler must call `getAdminSession()` itself. In production the server refuses to start (`instrumentation.ts`) if `AUTH_SECRET` or `ADMIN_PASSWORD` is missing or a known default. Other signed values use `signPayload` with their own purpose, so they can't pass as sessions.
+**Auth.** One admin, with credentials from `ADMIN_USERNAME` / `ADMIN_PASSWORD`. The session is a stateless signed cookie lasting 7 days. The proxy only covers pages, so every admin server action and data function must call `requireAdmin()`, and every admin route handler `getAdminSession()`, itself. In production the server refuses to start (`instrumentation.ts`) if `AUTH_SECRET` or `ADMIN_PASSWORD` is missing or a known default. Other signed values use `signPayload` with their own purpose, so they can't pass as sessions.
 
 **Builder state.** react-hook-form owns the form data; Zustand holds UI state (selected question, dirty flag, history).
 - Components subscribe narrowly with `useWatch({ exact: true })` or `compute`, and many are wrapped in `React.memo`, so typing doesn't re-render the canvas. Keep this when editing the builder.
@@ -93,12 +95,13 @@ src/stores/use-builder-store.ts  builder UI state and undo/redo history
 ## Conventions
 
 - Read the relevant guide in `node_modules/next/dist/docs/` before using a Next API. For example, `error.tsx` receives `retry` rather than `reset`, and middleware is `proxy.ts`.
-- Language: the UI is Turkish and `getSnapshot` in `language-context.tsx` is locked to `"tr"`, so the English strings never show and `LanguageToggle` isn't rendered. Client text goes through `dict` from `useLanguage()`. Server actions return hardcoded Turkish errors.
+- Language: the UI is Turkish only. Client text is either in `dict` from `@/lib/dictionary` or inline in Turkish. Server actions return hardcoded Turkish errors.
 - Base UI, not Radix: composition uses the `render` prop, not `asChild`. A `Button` rendered as a link needs `nativeButton={false}`.
-- `cn` imports differ: most `components/ui/*` files use the `cn` package and everything else uses `@/lib/utils`. Match the file you're editing.
-- Style differs by folder and there's no formatter config: `components/builder`, `public`, `admin` and most of `app` use single quotes and semicolons; `lib`, `actions`, `stores` and most of `components/ui` use double quotes and no semicolons. Match the file.
+- Import `cn` from `@/lib/utils`.
+- Style differs by folder and there's no formatter: `components/builder`, `public`, `admin` and most of `app` use single quotes and semicolons; `lib`, `actions`, `stores` and most of `components/ui` use double quotes and no semicolons. Match the file.
 - Server action results are `{ success: true, data } | { success: false, error }`.
-- New UI text goes in `translations.ts`, not in new `language === 'tr' ? ... : ...` branches.
+- Prefer `lib/dictionary.ts` for new UI text, especially text used in more than one place.
+- Reads for server components go in `lib/data/`, not server actions, which are public endpoints. `getFormResponses` stays an action because the responses tab calls it from the browser.
 
 ## Current work
 

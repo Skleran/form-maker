@@ -2,10 +2,9 @@
 
 import { AlertTriangle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { useLanguage } from '@/lib/i18n/language-context';
+import { dict } from '@/lib/dictionary';
 
 export default function AdminError({ retry }: { retry: () => void }) {
-  const { dict } = useLanguage();
 
   return (
     <div className="flex min-h-screen flex-col items-center justify-center gap-3 p-6 text-center">

@@ -3,16 +3,11 @@
 import * as React from 'react';
 import { useFormContext, useWatch } from 'react-hook-form';
 import {
-  AlignLeft,
-  CheckSquare,
   ChevronDown,
   ChevronUp,
   Copy,
-  FileUp,
-  Radio,
   SlidersHorizontal,
   Trash2,
-  Type,
   X,
 } from 'lucide-react';
 
@@ -39,19 +34,14 @@ import { useIsMobile } from '@/hooks/use-mobile';
 import { useBuilderStore } from '@/stores/use-builder-store';
 import type { FormBuilderValues } from '@/lib/validations/form';
 import type { QuestionType } from '@/types/form';
-import { useLanguage } from '@/lib/i18n/language-context';
+import { QUESTION_TYPES, useChangeQuestionType } from './question-types';
+import { dict } from '@/lib/dictionary';
 import { QUESTION_ICON_OPTIONS } from '@/components/form/question-icon';
 import { Label } from '../ui/label';
 
 interface BuilderInspectorProps {
   onDuplicateQuestion: (index: number) => void;
   onDeleteQuestion: (index: number) => void;
-}
-
-interface QuestionTypeItem {
-  value: QuestionType;
-  label: string;
-  icon: React.ComponentType<{ className?: string }>;
 }
 
 interface MimePresetItem {
@@ -72,15 +62,37 @@ const ICON_SELECT_ITEMS = QUESTION_ICON_OPTIONS.map((opt) => {
   );
 });
 
+const TYPE_SELECT_ITEMS = QUESTION_TYPES.map((t) => {
+  const Icon = t.icon;
+  return (
+    <SelectItem key={t.value} value={t.value} className="text-xs">
+      <div className="flex items-center gap-2">
+        <Icon className="size-3.5 text-muted-foreground" />
+        <span>{t.label}</span>
+      </div>
+    </SelectItem>
+  );
+});
+
+function renderSelectedType(val: string | null) {
+  const selected = QUESTION_TYPES.find((t) => t.value === val);
+  if (!selected) return dict.builder.inspector.selectType;
+  const Icon = selected.icon;
+  return (
+    <span className="flex items-center gap-1.5 truncate">
+      <Icon className="size-3.5 text-muted-foreground shrink-0" />
+      <span className="truncate">{selected.label}</span>
+    </span>
+  );
+}
+
 const InspectorTypeSelect = React.memo(function InspectorTypeSelect({
   activeIndex,
-  questionTypesList,
 }: {
   activeIndex: number;
-  questionTypesList: QuestionTypeItem[];
 }) {
-  const { dict, language } = useLanguage();
-  const { control, setValue, getValues } = useFormContext<FormBuilderValues>();
+  const { control } = useFormContext<FormBuilderValues>();
+  const changeType = useChangeQuestionType(activeIndex);
 
   const questionType = useWatch({
     control,
@@ -90,56 +102,9 @@ const InspectorTypeSelect = React.memo(function InspectorTypeSelect({
 
   const handleValueChange = React.useCallback(
     (val: string | null) => {
-      if (!val) return;
-      const typedVal = val as QuestionType;
-      setValue(`questions.${activeIndex}.type`, typedVal, {
-        shouldDirty: true,
-      });
-      const currentOptions = getValues(`questions.${activeIndex}.options`);
-      if (
-        ['SINGLE_CHOICE', 'MULTIPLE_CHOICE', 'DROPDOWN'].includes(typedVal) &&
-        (!currentOptions || currentOptions.length === 0)
-      ) {
-        setValue(`questions.${activeIndex}.options`, [
-          {
-            id: `opt_${Date.now()}_1`,
-            label: language === 'tr' ? 'Seçenek 1' : 'Option 1',
-          },
-        ]);
-      }
+      if (val) changeType(val as QuestionType);
     },
-    [activeIndex, getValues, language, setValue],
-  );
-
-  const renderSelectedValue = React.useCallback(
-    (val: string | null) => {
-      const selected = questionTypesList.find((t) => t.value === val);
-      if (!selected) return dict.builder.inspector.selectType;
-      const Icon = selected.icon;
-      return (
-        <span className="flex items-center gap-1.5 truncate">
-          <Icon className="size-3.5 text-muted-foreground shrink-0" />
-          <span className="truncate">{selected.label}</span>
-        </span>
-      );
-    },
-    [questionTypesList, dict.builder.inspector.selectType],
-  );
-
-  const selectItems = React.useMemo(
-    () =>
-      questionTypesList.map((t) => {
-        const Icon = t.icon;
-        return (
-          <SelectItem key={t.value} value={t.value} className="text-xs">
-            <div className="flex items-center gap-2">
-              <Icon className="size-3.5 text-muted-foreground" />
-              <span>{t.label}</span>
-            </div>
-          </SelectItem>
-        );
-      }),
-    [questionTypesList],
+    [changeType],
   );
 
   return (
@@ -153,10 +118,10 @@ const InspectorTypeSelect = React.memo(function InspectorTypeSelect({
       >
         <SelectTrigger className="w-full h-8 text-xs">
           <SelectValue placeholder={dict.builder.inspector.selectType}>
-            {renderSelectedValue}
+            {renderSelectedType}
           </SelectValue>
         </SelectTrigger>
-        <SelectContent>{selectItems}</SelectContent>
+        <SelectContent>{TYPE_SELECT_ITEMS}</SelectContent>
       </Select>
     </div>
   );
@@ -167,7 +132,6 @@ const InspectorIconSelect = React.memo(function InspectorIconSelect({
 }: {
   activeIndex: number;
 }) {
-  const { language } = useLanguage();
   const { control, setValue } = useFormContext<FormBuilderValues>();
 
   const currentIcon = useWatch({
@@ -195,9 +159,9 @@ const InspectorIconSelect = React.memo(function InspectorIconSelect({
   const renderSelectedValue = React.useCallback(
     (val: string | null) => {
       if (!val || val === 'none')
-        return language === 'tr' ? 'Yok (İkonsuz)' : 'None (No icon)';
+        return 'Yok (İkonsuz)';
       const iconOpt = QUESTION_ICON_OPTIONS.find((item) => item.value === val);
-      if (!iconOpt) return language === 'tr' ? 'Yok (İkonsuz)' : 'None';
+      if (!iconOpt) return 'Yok (İkonsuz)';
       const Icon = iconOpt.icon;
       return (
         <span className="flex items-center gap-1.5 truncate">
@@ -206,14 +170,14 @@ const InspectorIconSelect = React.memo(function InspectorIconSelect({
         </span>
       );
     },
-    [language],
+    [],
   );
 
   return (
     <div className="space-y-1">
       <div className="flex items-center justify-between">
         <label className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
-          {language === 'tr' ? 'Soru İkonu' : 'Question Icon'}
+          Soru İkonu
         </label>
         {currentIcon && (
           <button
@@ -221,16 +185,14 @@ const InspectorIconSelect = React.memo(function InspectorIconSelect({
             onClick={handleRemoveIcon}
             className="text-[10px] text-muted-foreground hover:text-destructive underline cursor-pointer"
           >
-            {language === 'tr' ? 'Kaldır' : 'Remove'}
+            Kaldır
           </button>
         )}
       </div>
       <Select value={currentIcon || 'none'} onValueChange={handleValueChange}>
         <SelectTrigger className="w-full h-8 text-xs">
           <SelectValue
-            placeholder={
-              language === 'tr' ? 'İkon seçin...' : 'Select icon...'
-            }
+            placeholder="İkon seçin..."
           >
             {renderSelectedValue}
           </SelectValue>
@@ -238,7 +200,7 @@ const InspectorIconSelect = React.memo(function InspectorIconSelect({
         <SelectContent className="max-h-56">
           <SelectItem value="none" className="text-xs">
             <span className="text-muted-foreground">
-              {language === 'tr' ? 'Yok (İkonsuz)' : 'None (No icon)'}
+              Yok (İkonsuz)
             </span>
           </SelectItem>
           {ICON_SELECT_ITEMS}
@@ -253,7 +215,6 @@ const InspectorRequiredSwitch = React.memo(function InspectorRequiredSwitch({
 }: {
   activeIndex: number;
 }) {
-  const { dict } = useLanguage();
   const { control, setValue } = useFormContext<FormBuilderValues>();
 
   const required = useWatch({
@@ -303,7 +264,6 @@ const InspectorDescriptionField = React.memo(
     activeIndex: number;
     questionId: string;
   }) {
-    const { dict } = useLanguage();
     const { register } = useFormContext<FormBuilderValues>();
 
     return (
@@ -329,7 +289,6 @@ const InspectorTextLimitsFields = React.memo(
   }: {
     activeIndex: number;
   }) {
-    const { language } = useLanguage();
     const { control, setValue } = useFormContext<FormBuilderValues>();
 
     const [minLength, maxLength] = useWatch({
@@ -344,17 +303,17 @@ const InspectorTextLimitsFields = React.memo(
     return (
       <div className="space-y-1">
         <label className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
-          {language === 'tr' ? 'Metin Sınırları' : 'Text Limits'}
+          Metin Sınırları
         </label>
         <div className="grid grid-cols-2 gap-2">
           <div className="space-y-0.5">
             <span className="text-[10px] text-muted-foreground">
-              {language === 'tr' ? 'Min karakter' : 'Min chars'}
+              Min karakter
             </span>
             <Input
               type="number"
               min={0}
-              placeholder={language === 'tr' ? 'Yok' : 'None'}
+              placeholder="Yok"
               value={minLength ?? ''}
               onChange={(e) => {
                 const val =
@@ -368,12 +327,12 @@ const InspectorTextLimitsFields = React.memo(
           </div>
           <div className="space-y-0.5">
             <span className="text-[10px] text-muted-foreground">
-              {language === 'tr' ? 'Maks karakter' : 'Max chars'}
+              Maks karakter
             </span>
             <Input
               type="number"
               min={1}
-              placeholder={language === 'tr' ? 'Yok' : 'None'}
+              placeholder="Yok"
               value={maxLength ?? ''}
               onChange={(e) => {
                 const val =
@@ -399,7 +358,6 @@ const InspectorFileUploadFields = React.memo(
     activeIndex: number;
     allowedMimePresets: MimePresetItem[];
   }) {
-    const { dict, language } = useLanguage();
     const { control, setValue } = useFormContext<FormBuilderValues>();
 
     const [maxFileSizeMb, allowedMimeTypes] = useWatch({
@@ -444,7 +402,7 @@ const InspectorFileUploadFields = React.memo(
                 5 MB
               </SelectItem>
               <SelectItem value="10" className="text-xs">
-                10 MB ({language === 'tr' ? 'Varsayılan' : 'Default'})
+                10 MB (Varsayılan)
               </SelectItem>
               <SelectItem value="25" className="text-xs">
                 25 MB
@@ -505,7 +463,6 @@ const InspectorTypeDependentFields = React.memo(
     questionId: string;
     allowedMimePresets: MimePresetItem[];
   }) {
-    const { dict } = useLanguage();
     const { control, register } = useFormContext<FormBuilderValues>();
 
     const questionType = useWatch({
@@ -554,7 +511,6 @@ export const BuilderInspector = React.memo(function BuilderInspector({
   onDuplicateQuestion,
   onDeleteQuestion,
 }: BuilderInspectorProps) {
-  const { dict, language } = useLanguage();
   const isMobile = useIsMobile();
   const activeQuestionId = useBuilderStore((s) => s.activeQuestionId);
   const lastActiveQuestionId = useBuilderStore((s) => s.lastActiveQuestionId);
@@ -584,42 +540,6 @@ export const BuilderInspector = React.memo(function BuilderInspector({
     [questionIdsKey],
   );
 
-  const questionTypesList = React.useMemo<QuestionTypeItem[]>(
-    () => [
-      {
-        value: 'SHORT_TEXT',
-        label: dict.builder.canvas.questionTypes.SHORT_TEXT,
-        icon: Type,
-      },
-      {
-        value: 'LONG_TEXT',
-        label: dict.builder.canvas.questionTypes.LONG_TEXT,
-        icon: AlignLeft,
-      },
-      {
-        value: 'SINGLE_CHOICE',
-        label: dict.builder.canvas.questionTypes.SINGLE_CHOICE,
-        icon: Radio,
-      },
-      {
-        value: 'MULTIPLE_CHOICE',
-        label: dict.builder.canvas.questionTypes.MULTIPLE_CHOICE,
-        icon: CheckSquare,
-      },
-      {
-        value: 'DROPDOWN',
-        label: dict.builder.canvas.questionTypes.DROPDOWN,
-        icon: ChevronDown,
-      },
-      {
-        value: 'FILE_UPLOAD',
-        label: dict.builder.canvas.questionTypes.FILE_UPLOAD,
-        icon: FileUp,
-      },
-    ],
-    [dict],
-  );
-
   const allowedMimePresets = React.useMemo<MimePresetItem[]>(
     () => [
       {
@@ -642,7 +562,7 @@ export const BuilderInspector = React.memo(function BuilderInspector({
         value: 'application/zip',
       },
     ],
-    [dict],
+    [],
   );
 
   const resolvedIndex = React.useMemo(() => {
@@ -719,10 +639,7 @@ export const BuilderInspector = React.memo(function BuilderInspector({
     return (
       <div className="space-y-3.5">
         {/* Field Type Selector */}
-        <InspectorTypeSelect
-          activeIndex={activeIndex}
-          questionTypesList={questionTypesList}
-        />
+        <InspectorTypeSelect activeIndex={activeIndex} />
 
         {/* Question Icon Selector */}
         <InspectorIconSelect activeIndex={activeIndex} />
@@ -750,7 +667,7 @@ export const BuilderInspector = React.memo(function BuilderInspector({
         {/* Quick Actions */}
         <div className="space-y-1.5 pt-0.5">
           <label className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
-            {language === 'tr' ? 'Kart İşlemleri' : 'Card Actions'}
+            Kart İşlemleri
           </label>
           <div className="grid grid-cols-2 gap-2">
             <Button
@@ -779,9 +696,7 @@ export const BuilderInspector = React.memo(function BuilderInspector({
         {/* Meta Info */}
         <div className="rounded border border-border/50 bg-muted/20 px-2.5 py-1.5 text-[10px] text-muted-foreground flex items-center justify-between font-mono">
           <span>
-            {language === 'tr'
-              ? `Sıra #${activeIndex + 1}`
-              : `Position #${activeIndex + 1}`}
+            {`Sıra #${activeIndex + 1}`}
           </span>
           <span className="truncate max-w-[120px]">
             {activeQuestionIdForRender}
@@ -832,9 +747,7 @@ export const BuilderInspector = React.memo(function BuilderInspector({
                   disabled={activeIndex <= 0}
                   onClick={handlePrevQuestion}
                   className="cursor-pointer text-muted-foreground hover:text-foreground h-7 w-7"
-                  title={
-                    language === 'tr' ? 'Önceki soru' : 'Previous question'
-                  }
+                  title="Önceki soru"
                 >
                   <ChevronUp className="size-4" />
                 </Button>
@@ -844,7 +757,7 @@ export const BuilderInspector = React.memo(function BuilderInspector({
                   disabled={activeIndex >= totalQuestions - 1}
                   onClick={handleNextQuestion}
                   className="cursor-pointer text-muted-foreground hover:text-foreground h-7 w-7"
-                  title={language === 'tr' ? 'Sonraki soru' : 'Next question'}
+                  title="Sonraki soru"
                 >
                   <ChevronDown className="size-4" />
                 </Button>
@@ -862,7 +775,7 @@ export const BuilderInspector = React.memo(function BuilderInspector({
               }
             >
               <X className="size-4" />
-              <span className="sr-only">Close</span>
+              <span className="sr-only">Kapat</span>
             </DrawerClose>
           </div>
         </DrawerHeader>

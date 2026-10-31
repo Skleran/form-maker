@@ -47,7 +47,9 @@ ENV PORT=3000
 ENV HOSTNAME="0.0.0.0"
 
 RUN apk add --no-cache openssl libc6-compat
-RUN npm install -g prisma@6.19.3
+# Same Prisma version as the app, for `prisma migrate deploy` at startup
+COPY --from=builder /app/package.json /tmp/app-package.json
+RUN npm install -g prisma@$(node -p "require('/tmp/app-package.json').dependencies.prisma") && rm /tmp/app-package.json
 
 RUN addgroup --system --gid 1001 nodejs
 RUN adduser --system --uid 1001 --ingroup nodejs nextjs

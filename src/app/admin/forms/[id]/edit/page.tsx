@@ -1,5 +1,5 @@
 import { notFound } from "next/navigation"
-import { getFormById } from "@/actions/form-actions"
+import { getFormById } from "@/lib/data/forms"
 import { FormBuilder } from "@/components/builder/form-builder"
 
 interface FormEditPageProps {
@@ -18,7 +18,7 @@ export default async function FormEditPage({
   const result = await getFormById(id)
 
   if (!result.success) {
-    if (result.notFound) notFound()
+    if ("notFound" in result) notFound()
     throw new Error(result.error)
   }
 

@@ -1,22 +1,19 @@
 import type { Metadata } from 'next';
-import { Geist, Geist_Mono, Inter } from 'next/font/google';
+import { Geist_Mono, Inter } from 'next/font/google';
 import './globals.css';
 import { cn } from '@/lib/utils';
 import { ThemeProvider } from '@/components/theme-provider';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import { Toaster } from '@/components/ui/sonner';
-import { LanguageProvider } from '@/lib/i18n/language-context';
 
-const inter = Inter({ subsets: ['latin'], variable: '--font-sans' });
-
-const geistSans = Geist({
-  variable: '--font-geist-sans',
-  subsets: ['latin'],
+const inter = Inter({
+  subsets: ['latin', 'latin-ext'],
+  variable: '--font-inter',
 });
 
 const geistMono = Geist_Mono({
   variable: '--font-geist-mono',
-  subsets: ['latin'],
+  subsets: ['latin', 'latin-ext'],
 });
 
 const siteUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
@@ -50,7 +47,6 @@ export default function RootLayout({
       suppressHydrationWarning
       className={cn(
         'h-full antialiased',
-        geistSans.variable,
         geistMono.variable,
         inter.variable,
         'font-sans',
@@ -66,12 +62,10 @@ export default function RootLayout({
           enableSystem
           disableTransitionOnChange
         >
-          <LanguageProvider>
-            <TooltipProvider>
-              {children}
-              <Toaster position="bottom-right" richColors />
-            </TooltipProvider>
-          </LanguageProvider>
+          <TooltipProvider>
+            {children}
+            <Toaster position="bottom-right" richColors />
+          </TooltipProvider>
         </ThemeProvider>
       </body>
     </html>

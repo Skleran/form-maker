@@ -5,14 +5,13 @@ import { AlertCircle, ArrowLeft } from "lucide-react"
 import { Card } from "@/components/ui/card"
 import { buttonVariants } from "@/components/ui/button"
 import { ThemeToggle } from "@/components/theme-toggle"
-import { useLanguage } from "@/lib/i18n/language-context"
+import { dict } from "@/lib/dictionary"
 
 interface FormNotActiveProps {
   title: string
 }
 
 export function FormNotActive({ title }: FormNotActiveProps) {
-  const { dict } = useLanguage()
 
   return (
     <div className="flex min-h-screen flex-col items-center justify-center bg-muted/20 px-4 py-12 relative">

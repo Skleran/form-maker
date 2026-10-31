@@ -12,12 +12,11 @@ import {
 import { Button, buttonVariants } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { ThemeToggle } from '@/components/theme-toggle';
-import { useLanguage } from '@/lib/i18n/language-context';
+import { dict } from '@/lib/dictionary';
 import { FormMakerLogo } from '@/components/formmaker-logo';
 
 export default function NotFound() {
   const router = useRouter();
-  const { dict } = useLanguage();
 
   return (
     <div className="flex min-h-screen flex-col items-center justify-center bg-muted/20 px-4 py-12 relative selection:bg-primary selection:text-primary-foreground">

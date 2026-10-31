@@ -5,7 +5,6 @@ import { redirect } from "next/navigation"
 import {
   validateAdminCredentials,
   createSessionToken,
-  verifySessionToken,
   SESSION_COOKIE_NAME,
   SESSION_COOKIE_OPTIONS,
 } from "@/lib/auth"
@@ -94,24 +93,4 @@ export async function logoutAdmin(): Promise<void> {
   const cookieStore = await cookies()
   cookieStore.delete(SESSION_COOKIE_NAME)
   redirect("/login")
-}
-
-/**
- * Checks current session state
- */
-export async function checkAdminAuth(): Promise<{ isAuthenticated: boolean; username?: string }> {
-  try {
-    const cookieStore = await cookies()
-    const token = cookieStore.get(SESSION_COOKIE_NAME)?.value
-    if (!token) {
-      return { isAuthenticated: false }
-    }
-    const session = await verifySessionToken(token)
-    if (!session) {
-      return { isAuthenticated: false }
-    }
-    return { isAuthenticated: true, username: session.sub }
-  } catch {
-    return { isAuthenticated: false }
-  }
 }

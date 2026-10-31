@@ -4,7 +4,7 @@ const prisma = new PrismaClient()
 
 async function main() {
   const existing = await prisma.form.findFirst({
-    where: { slug: "product-feedback" },
+    where: { slug: "urun-geri-bildirim" },
   })
 
   if (existing) {
@@ -14,82 +14,82 @@ async function main() {
 
   const form = await prisma.form.create({
     data: {
-      title: "Product Feedback & Experience Survey",
+      title: "Ürün Geri Bildirim Anketi",
       description:
-        "Help us improve our service by providing your feedback. Takes about 2 minutes to complete.",
-      slug: "product-feedback",
+        "Geri bildiriminizle hizmetimizi geliştirmemize yardımcı olun. Yaklaşık 2 dakika sürer.",
+      slug: "urun-geri-bildirim",
       isPublished: true,
       questions: {
         create: [
           {
             orderIndex: 0,
             type: "SHORT_TEXT",
-            label: "What is your full name?",
+            label: "Adınız ve soyadınız nedir?",
             required: true,
             config: {
-              placeholder: "e.g. Jane Doe",
-              description: "Please enter your first and last name",
+              placeholder: "Örn. Ayşe Yılmaz",
+              description: "Lütfen adınızı ve soyadınızı girin",
             },
           },
           {
             orderIndex: 1,
             type: "SINGLE_CHOICE",
-            label: "How would you rate your overall experience?",
+            label: "Genel deneyiminizi nasıl değerlendirirsiniz?",
             required: true,
             options: [
-              { id: "opt_1", label: "Outstanding" },
-              { id: "opt_2", label: "Good" },
-              { id: "opt_3", label: "Average" },
-              { id: "opt_4", label: "Needs Improvement" },
+              { id: "opt_1", label: "Mükemmel" },
+              { id: "opt_2", label: "İyi" },
+              { id: "opt_3", label: "Orta" },
+              { id: "opt_4", label: "Geliştirilmeli" },
             ],
             config: {},
           },
           {
             orderIndex: 2,
             type: "MULTIPLE_CHOICE",
-            label: "Which features do you find most valuable?",
+            label: "En çok hangi özellikleri faydalı buluyorsunuz?",
             required: false,
             options: [
-              { id: "feat_1", label: "Interactive Canvas & Live Inspector" },
-              { id: "feat_2", label: "Dynamic Zod Schema Validation" },
-              { id: "feat_3", label: "Multi-Device Viewport Simulation" },
-              { id: "feat_4", label: "Dark & Light Theme Support" },
+              { id: "feat_1", label: "Sürükle-bırak form oluşturucu" },
+              { id: "feat_2", label: "Yanıt doğrulama" },
+              { id: "feat_3", label: "CSV dışa aktarma" },
+              { id: "feat_4", label: "Açık ve koyu tema" },
             ],
             config: {
-              description: "Select all features that apply to your workflow",
+              description: "Geçerli olanların tümünü seçin",
             },
           },
           {
             orderIndex: 3,
             type: "DROPDOWN",
-            label: "How frequently do you create or administer forms?",
+            label: "Ne sıklıkla form oluşturuyorsunuz?",
             required: false,
             options: [
-              { id: "freq_1", label: "Daily" },
-              { id: "freq_2", label: "Weekly" },
-              { id: "freq_3", label: "Monthly" },
-              { id: "freq_4", label: "A few times a year" },
+              { id: "freq_1", label: "Her gün" },
+              { id: "freq_2", label: "Haftada bir" },
+              { id: "freq_3", label: "Ayda bir" },
+              { id: "freq_4", label: "Yılda birkaç kez" },
             ],
             config: {},
           },
           {
             orderIndex: 4,
             type: "FILE_UPLOAD",
-            label: "Attach screenshots or supporting documentation (optional)",
+            label: "Ekran görüntüsü veya belge ekleyin (isteğe bağlı)",
             required: false,
             config: {
               maxFileSizeMb: 10,
               allowedMimeTypes: ["application/pdf", "image/*"],
-              description: "PDF or image files up to 10MB",
+              description: "En fazla 10 MB, PDF veya görsel",
             },
           },
           {
             orderIndex: 5,
             type: "LONG_TEXT",
-            label: "Any additional suggestions or comments?",
+            label: "Eklemek istediğiniz öneri veya yorum var mı?",
             required: false,
             config: {
-              placeholder: "Write your suggestions or ideas here...",
+              placeholder: "Önerilerinizi buraya yazın...",
             },
           },
         ],

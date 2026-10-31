@@ -13,11 +13,10 @@ import {
   Smartphone,
   Eye,
 } from 'lucide-react';
-import { useLanguage } from '@/lib/i18n/language-context';
+import { dict } from '@/lib/dictionary';
 import { FormMakerLogo } from '@/components/formmaker-logo';
 
 export default function Home() {
-  const { dict } = useLanguage();
 
   return (
     <div className="flex min-h-screen flex-col bg-background selection:bg-primary selection:text-primary-foreground">
@@ -31,9 +30,6 @@ export default function Home() {
             <span className="font-semibold tracking-tight text-foreground">
               FormMaker
             </span>
-            {/* <span className="rounded-full bg-muted px-2 py-0.5 text-xs font-medium text-muted-foreground border">
-              {dict.nav.brandSubtitle}
-            </span> */}
           </div>
 
           <div className="flex items-center gap-2 sm:gap-3">
@@ -55,10 +51,6 @@ export default function Home() {
       {/* Hero Section */}
       <main className="flex-1">
         <section className="container mx-auto max-w-6xl px-4 py-16 sm:px-6 sm:py-24 text-center">
-          {/* <div className="mx-auto inline-flex items-center gap-2 rounded-full border bg-muted/50 px-3 py-1 text-xs font-medium text-muted-foreground mb-6">
-            <span className="flex size-1.5 rounded-full bg-emerald-500 animate-pulse" />
-            {dict.home.statusBadge}
-          </div> */}
 
           <h1 className="text-4xl font-extrabold tracking-tight sm:text-5xl lg:text-6xl text-foreground max-w-3xl mx-auto">
             {dict.home.title}
@@ -78,18 +70,6 @@ export default function Home() {
               {dict.home.openDashboard}
               <ArrowRight className="ml-2 size-4" />
             </Link>
-            {/* <a
-              href="https://github.com/prisma/prisma"
-              target="_blank"
-              rel="noreferrer"
-              className={buttonVariants({
-                variant: "outline",
-                size: "lg",
-                className: "h-10 px-6 font-medium",
-              })}
-            >
-              {dict.home.prismaReady}
-            </a> */}
           </div>
         </section>
 

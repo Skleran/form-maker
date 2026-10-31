@@ -5,7 +5,6 @@ import { headers } from "next/headers"
 import { prisma } from "@/lib/prisma"
 import { buildDynamicFormSchema } from "@/lib/validations/dynamic-schema"
 import type { QuestionFormItem } from "@/types/form"
-import { getAdminSession } from "@/lib/auth"
 import { consumeRateLimit, getClientIp } from "@/lib/rate-limit"
 import { verifyUploadToken, type UploadClaims } from "@/lib/upload-token"
 
@@ -16,54 +15,6 @@ export type SubmissionResult =
 const SUBMIT_RATE_LIMIT = 30
 const SUBMIT_RATE_WINDOW_MS = 10 * 60 * 1000
 const MAX_USER_AGENT_LENGTH = 512
-
-/**
- * Retrieves a published form by slug for the public renderer
- */
-export async function getPublicFormBySlug(slug: string) {
-  try {
-    const form = await prisma.form.findUnique({
-      where: { slug },
-      include: {
-        questions: {
-          where: { isDeleted: false },
-          orderBy: { orderIndex: "asc" },
-        },
-      },
-    })
-
-    if (!form) {
-      return { success: false, error: "Form bulunamadı." } as const
-    }
-
-    const session = await getAdminSession()
-    const isAdmin = Boolean(session)
-    const questionsToReturn = !form.isPublished && !isAdmin ? [] : form.questions
-
-    return {
-      success: true,
-      data: {
-        ...form,
-        questions: questionsToReturn.map((q) => ({
-          id: q.id,
-          formId: q.formId,
-          orderIndex: q.orderIndex,
-          type: q.type,
-          label: q.label,
-          required: q.required,
-          options: (q.options as Array<{ id: string; label: string }>) || [],
-          config: (q.config as Record<string, unknown>) || {},
-        })),
-      },
-    } as const
-  } catch (error) {
-    console.error("Failed to fetch public form:", error)
-    return {
-      success: false,
-      error: "Form yüklenirken hata oluştu.",
-    } as const
-  }
-}
 
 /**
  * Validates and records respondent answers into PostgreSQL
