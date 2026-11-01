@@ -4,7 +4,7 @@
 
 Self-hosted form builder with one admin: build a form, publish it at `/forms/<slug>`, collect anonymous responses (including file uploads), then review them or export CSV. The UI is Turkish.
 
-Stack: Next.js 16 (App Router, Turbopack), React 19, Prisma 6 + PostgreSQL, shadcn/ui (base-nova) on Base UI, Tailwind 4, react-hook-form + Zod 3, Zustand, pnpm.
+Stack: Next.js 16 (App Router, Turbopack), React 19, Prisma 6 + PostgreSQL, shadcn/ui (base-nova) on Base UI, Tailwind 4, react-hook-form + Zod 4, Zustand, pnpm.
 
 ## Commands
 

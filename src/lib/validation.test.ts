@@ -54,6 +54,12 @@ describe("choice answers", () => {
     expect(parses(q, ["a", "made-up"])).toBe(false)
     expect(parses({ ...q, required: true }, [])).toBe(false)
   })
+
+  it("multiple choice rejects an oversized array without checking each element", () => {
+    const q = question({ type: "MULTIPLE_CHOICE", options })
+    const result = buildDynamicFormSchema([q]).safeParse({ q: Array(1000).fill("made-up") })
+    expect(result.error?.issues).toHaveLength(1)
+  })
 })
 
 describe("builder rules", () => {
