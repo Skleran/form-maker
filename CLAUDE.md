@@ -15,7 +15,10 @@ pnpm lint             # ESLint
 pnpm typecheck        # tsc --noEmit
 pnpm test             # Vitest; security logic is in src/lib/security.test.ts
 pnpm build            # prisma generate + next build
+pnpm test:e2e         # Playwright; stop any dev server first, because it rebuilds .next
 ```
+
+`pnpm test:e2e` needs Docker. It starts a throwaway Postgres on port 5434 (`docker-compose.e2e.yml`), then `e2e/start-server.mjs` wipes that database, applies the migrations, builds the app and runs the standalone server on port 3100. `e2e/env.mjs` overrides every live setting, so tests never reach Supabase, and uploads stay inside `.next/standalone`.
 
 CI (`.github/workflows/ci.yml`) runs lint, types, tests and build. `npx prisma db seed` adds a sample form; like every Prisma command it targets `.env` (the live database) unless you pass the local URLs. Schema changes go through Prisma migrations in `prisma/migrations/`; Docker applies them at startup with `prisma migrate deploy`. `scripts/backup.sh` backs up the Docker stack's database and uploads.
 
