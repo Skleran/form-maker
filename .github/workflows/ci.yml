@@ -39,7 +39,7 @@ jobs:
       - run: pnpm exec playwright install --with-deps chromium
       # e2e/env.mjs replaces the placeholder URLs above with the throwaway database
       - run: pnpm test:e2e
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         if: failure()
         with:
           name: playwright-results
