@@ -2,15 +2,8 @@
 
 import * as React from 'react';
 import { toast } from 'sonner';
-import {
-  Calendar,
-  Layers,
-  Loader2,
-  MessageSquare,
-  RefreshCw,
-} from 'lucide-react';
+import { Loader2, RefreshCw } from 'lucide-react';
 
-import { Card } from '@/components/ui/card';
 import {
   InlineSkeleton,
   ResponsesTableSkeleton,
@@ -123,7 +116,6 @@ export function ResponsesView({ formId }: ResponsesViewProps) {
     try {
       const res = await deleteSubmission(idToDelete, formId);
       if (res.success) {
-        toast.success(dict.responses.deleteSuccess);
         // Background sync to keep pagination totals fresh
         getFormResponses(formId, currentPage, 10).then((refreshRes) => {
           if (refreshRes.success && refreshRes.data) {
@@ -153,17 +145,34 @@ export function ResponsesView({ formId }: ResponsesViewProps) {
   const locale = 'tr-TR';
 
   return (
-    <div className="flex-1 overflow-y-auto px-4 py-8 sm:px-8 bg-muted/15 min-h-[calc(100vh-3.5rem)]">
+    <div className="flex-1 overflow-y-auto px-4 py-8 sm:px-8 bg-background min-h-[calc(100vh-3.5rem)]">
       <div className="mx-auto max-w-5xl space-y-6">
         {/* Top Header & Actions */}
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
           <div>
-            <h2 className="text-xl font-bold tracking-tight text-foreground">
+            <h2 className="text-xl font-semibold tracking-tight text-foreground">
               {dict.responses.title}
             </h2>
-            <p className="text-xs text-muted-foreground mt-0.5">
-              {dict.responses.subtitle}
-            </p>
+            {!data && isLoading ? (
+              <InlineSkeleton className="h-4 w-56 mt-1.5" />
+            ) : (
+              <p className="text-sm tabular-nums text-muted-foreground mt-1">
+                {dict.responses.summary
+                  .replace('{responses}', String(data?.totalCount ?? 0))
+                  .replace('{questions}', String(data?.questions.length ?? 0))}
+                {' · '}
+                {data?.latestSubmittedAt
+                  ? `${dict.responses.latestActivity}: ${new Date(
+                      data.latestSubmittedAt,
+                    ).toLocaleString(locale, {
+                      month: 'short',
+                      day: 'numeric',
+                      hour: '2-digit',
+                      minute: '2-digit',
+                    })}`
+                  : dict.responses.noSubmissionsYet}
+              </p>
+            )}
           </div>
 
           <div className="flex items-center gap-2 self-end sm:self-auto">
@@ -173,7 +182,6 @@ export function ResponsesView({ formId }: ResponsesViewProps) {
               onClick={() => loadResponses(currentPage)}
               disabled={isLoading}
               className="cursor-pointer gap-1.5 text-xs font-medium"
-              title={dict.responses.refresh}
             >
               <RefreshCw
                 className={`size-3.5 ${isLoading ? 'animate-spin' : ''}`}
@@ -186,61 +194,6 @@ export function ResponsesView({ formId }: ResponsesViewProps) {
               disabled={!data || data.totalCount === 0}
             />
           </div>
-        </div>
-
-        {/* Aggregate Stats Cards */}
-        <div className="grid gap-4 grid-cols-2 sm:grid-cols-3">
-          <Card className="p-4 bg-card border shadow-sm">
-            <div className="flex items-center gap-2 text-xs font-medium text-muted-foreground">
-              <MessageSquare className="size-3.5 text-primary" />
-              <span>{dict.responses.totalResponses}</span>
-            </div>
-            {data || !isLoading ? (
-              <p className="text-2xl font-bold text-foreground mt-1">
-                {data?.totalCount ?? 0}
-              </p>
-            ) : (
-              <InlineSkeleton className="h-8 w-12 mt-1" />
-            )}
-          </Card>
-
-          <Card className="p-4 bg-card border shadow-sm">
-            <div className="flex items-center gap-2 text-xs font-medium text-muted-foreground">
-              <Layers className="size-3.5 text-primary" />
-              <span>{dict.responses.questionFields}</span>
-            </div>
-            {data || !isLoading ? (
-              <p className="text-2xl font-bold text-foreground mt-1">
-                {data?.questions.length ?? 0}
-              </p>
-            ) : (
-              <InlineSkeleton className="h-8 w-12 mt-1" />
-            )}
-          </Card>
-
-          <Card className="p-4 bg-card border shadow-sm col-span-2 sm:col-span-1">
-            <div className="flex items-center gap-2 text-xs font-medium text-muted-foreground">
-              <Calendar className="size-3.5 text-primary" />
-              <span>{dict.responses.latestActivity}</span>
-            </div>
-            {!data && isLoading ? (
-              <InlineSkeleton className="h-4 w-28 mt-2" />
-            ) : (
-            <p className="text-xs font-medium text-foreground mt-2 truncate">
-              {data?.latestSubmittedAt
-                ? new Date(data.latestSubmittedAt).toLocaleString(
-                    locale,
-                    {
-                      month: 'short',
-                      day: 'numeric',
-                      hour: '2-digit',
-                      minute: '2-digit',
-                    },
-                  )
-                : dict.responses.noSubmissionsYet}
-            </p>
-            )}
-          </Card>
         </div>
 
         {/* Responses Table / Loading */}

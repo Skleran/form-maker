@@ -30,7 +30,7 @@ const AddQuestionFooter = React.memo(function AddQuestionFooter({
       <Button
         onClick={() => onAddQuestion('SHORT_TEXT')}
         size="sm"
-        className="cursor-pointer gap-2 shadow-sm font-medium w-full sm:w-auto"
+        className="cursor-pointer gap-2 font-medium w-full sm:w-auto"
       >
         <Plus className="size-4" />
         {dict.builder.canvas.addQuestion}
@@ -147,7 +147,7 @@ export const BuilderCanvas = React.memo(function BuilderCanvas({
   return (
     <div
       ref={scrollContainerRef}
-      className="flex-1 overflow-y-auto bg-muted/30 p-4 md:p-8"
+      className="flex-1 overflow-y-auto bg-background p-4 md:p-8"
       onClick={handleBackgroundClick}
     >
       <CanvasSlideContainer onClick={handleBackgroundClick}>
@@ -209,29 +209,29 @@ export const BuilderCanvas = React.memo(function BuilderCanvas({
             pointerEvents: 'none',
             zIndex: 9999,
           }}
-          className="pointer-events-none select-none rounded-xl border-2 border-primary/80 bg-card/95 shadow-2xl p-6 opacity-85 scale-[1.01] rotate-[0.5deg] backdrop-blur-xs"
+          className="pointer-events-none select-none rounded-xl border border-foreground/60 bg-card p-5 shadow-lg"
         >
           <div className="flex items-center justify-between gap-3 mb-2">
             <div className="flex items-center gap-2.5 min-w-0">
-              <span className="text-xs font-bold text-primary px-2 py-0.5 rounded-full bg-primary/10 shrink-0">
-                #{activeDrag.index + 1}
+              <span className="font-mono text-xs tabular-nums text-muted-foreground shrink-0">
+                {String(activeDrag.index + 1).padStart(2, '0')}
               </span>
-              <span className="font-semibold text-base truncate text-foreground">
+              <span className="font-medium truncate text-foreground">
                 {activeDrag.questionLabel || 'Başlıksız Soru'}
               </span>
             </div>
-            <span className="text-xs font-medium text-muted-foreground bg-muted px-2 py-0.5 rounded shrink-0">
+            <span className="text-xs text-muted-foreground shrink-0">
               {QUESTION_TYPES.find(
                 (t) => t.value === activeDrag.questionType,
               )?.label || activeDrag.questionType}
             </span>
           </div>
           <div className="flex items-center justify-between text-xs text-muted-foreground border-t pt-2 mt-2">
-            <span className="flex items-center gap-1.5 text-primary font-medium">
-              <GripHorizontal className="size-4 animate-pulse" />
-              Sürükleniyor...
+            <span className="flex items-center gap-1.5">
+              <GripHorizontal aria-hidden="true" className="size-4" />
+              Sürükleniyor…
             </span>
-            <span className="text-primary font-semibold">
+            <span className="tabular-nums text-foreground">
               {`Hedef Konum: #${activeDrag.overIndex + 1}`}
             </span>
           </div>

@@ -13,9 +13,8 @@ function undoButton(page: Page) {
 }
 
 async function save(page: Page) {
-  const toast = page.getByText("Form başarıyla kaydedildi!")
   await page.getByRole("button", { name: dict.builder.header.save, exact: true }).click()
-  await expect(toast).toBeVisible()
+  await expect(page.getByRole("button", { name: dict.builder.header.saved, exact: true })).toBeVisible()
 }
 
 async function expectSavedLabel(page: Page, label: string) {

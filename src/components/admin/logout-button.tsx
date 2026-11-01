@@ -34,7 +34,7 @@ export function LogoutButton({
       onClick={handleLogout}
       disabled={isPending}
       className={`cursor-pointer text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors ${className}`}
-      title="Çıkış Yap"
+      aria-label="Çıkış Yap"
     >
       {isPending ? (
         <Loader2 className="size-4 animate-spin text-destructive" />

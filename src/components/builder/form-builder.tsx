@@ -283,7 +283,7 @@ export function FormBuilder({ initialForm }: FormBuilderProps) {
 
   // Puts the form back to a snapshot from the undo or redo stack
   const applyHistorySnapshot = React.useCallback(
-    (snapshot: FormBuilderValues, message: string) => {
+    (snapshot: FormBuilderValues) => {
       const store = useBuilderStore.getState();
       const restored = cloneFormSnapshot(snapshot);
       // Memoized inputs don't register again after a reset, so they must keep their registrations:
@@ -301,7 +301,6 @@ export function FormBuilder({ initialForm }: FormBuilderProps) {
       } else {
         store.setActiveQuestionId(null);
       }
-      toast.info(message);
     },
     [methods],
   );
@@ -309,13 +308,13 @@ export function FormBuilder({ initialForm }: FormBuilderProps) {
   const handleUndo = React.useCallback(() => {
     const current = cloneFormSnapshot(methods.getValues());
     const previous = useBuilderStore.getState().undo(current);
-    if (previous) applyHistorySnapshot(previous, 'Geri alma işlemi yapıldı');
+    if (previous) applyHistorySnapshot(previous);
   }, [methods, applyHistorySnapshot]);
 
   const handleRedo = React.useCallback(() => {
     const current = cloneFormSnapshot(methods.getValues());
     const next = useBuilderStore.getState().redo(current);
-    if (next) applyHistorySnapshot(next, 'Yineleme işlemi yapıldı');
+    if (next) applyHistorySnapshot(next);
   }, [methods, applyHistorySnapshot]);
 
   // Save handler
@@ -357,7 +356,6 @@ export function FormBuilder({ initialForm }: FormBuilderProps) {
         previousSnapshotRef.current = cloneFormSnapshot(values);
         nextStore.clearHistory();
         nextStore.clearSessionUploadedFiles();
-        toast.success('Form başarıyla kaydedildi!');
         return true;
       } else if (res.slugConflict) {
         const nextStore = useBuilderStore.getState();
@@ -439,7 +437,6 @@ export function FormBuilder({ initialForm }: FormBuilderProps) {
     } else {
       store.setActiveQuestionId(null);
     }
-    toast.info('Kaydedilmemiş değişiklikler geri alındı');
   }, [initialValues, methods]);
 
   // Question manipulation helpers
@@ -511,7 +508,6 @@ export function FormBuilder({ initialForm }: FormBuilderProps) {
       previousSnapshotRef.current = cloneFormSnapshot(methods.getValues());
       store.setIsDirty(true);
       store.setActiveQuestionId(newId);
-      toast.info('Soru çoğaltıldı');
     },
     [methods],
   );
@@ -537,12 +533,11 @@ export function FormBuilder({ initialForm }: FormBuilderProps) {
         store.deselectQuestion();
       }
 
+      // The question disappearing shows the rest, but not that its old answers are kept
       if (submissionCount > 0) {
         toast.info(
           'Soru kaldırıldı. Bu soruya verilmiş eski yanıtlar yanıtlarda arşiv olarak korunacaktır.',
         );
-      } else {
-        toast.info('Soru kaldırıldı');
       }
     },
     [methods, submissionCount],

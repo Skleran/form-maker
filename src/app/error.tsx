@@ -1,21 +1,21 @@
 'use client';
 
-import { AlertTriangle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { dict } from '@/lib/dictionary';
 
 export default function ErrorPage({ retry }: { retry: () => void }) {
 
   return (
-    <div className="flex min-h-screen flex-col items-center justify-center gap-3 p-6 text-center">
-      <AlertTriangle className="size-8 text-destructive" />
-      <h1 className="text-lg font-semibold text-foreground">
+    <main className="mx-auto flex min-h-screen w-full max-w-xl flex-col justify-center bg-background px-4 py-12 sm:px-6">
+      <h1 className="text-2xl font-semibold tracking-tight text-foreground sm:text-3xl">
         {dict.common.errorTitle}
       </h1>
-      <p className="text-sm text-muted-foreground">{dict.common.errorDesc}</p>
-      <Button onClick={() => retry()} className="cursor-pointer">
-        {dict.common.retry}
-      </Button>
-    </div>
+      <p className="mt-2 text-muted-foreground">{dict.common.errorDesc}</p>
+      <div className="mt-8">
+        <Button onClick={() => retry()} className="h-9 cursor-pointer">
+          {dict.common.retry}
+        </Button>
+      </div>
+    </main>
   );
 }

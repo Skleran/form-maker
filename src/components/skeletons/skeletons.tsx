@@ -1,6 +1,5 @@
 import { Card } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
-import { cn } from '@/lib/utils';
 import { dict } from '@/lib/dictionary';
 
 function LoadingStatus() {
@@ -23,66 +22,49 @@ export function InlineSkeleton({ className }: { className?: string }) {
   );
 }
 
-export function StatCardsSkeleton() {
-  return (
-    <div className="grid gap-4 grid-cols-2 sm:grid-cols-3">
-      {[0, 1, 2].map((i) => (
-        <Card
-          key={i}
-          className={cn(
-            'p-4 bg-card border shadow-xs',
-            i === 2 && 'col-span-2 sm:col-span-1',
-          )}
-        >
-          <Skeleton className="h-4 w-28" />
-          <Skeleton className="h-8 w-12 mt-1" />
-        </Card>
-      ))}
-    </div>
-  );
-}
-
 export function DashboardSkeleton() {
   return (
     <div className="skeleton-reveal flex min-h-screen flex-col bg-background">
       <LoadingStatus />
       <div className="sticky top-0 z-30 flex h-14 items-center justify-between border-b bg-background/90 px-4 sm:px-6">
-        <Skeleton className="h-5 w-48" />
-        <div className="flex items-center gap-2 sm:gap-3">
+        <Skeleton className="h-5 w-40" />
+        <div className="flex items-center gap-1">
           <Skeleton className="size-8" />
-          <Skeleton className="h-8 w-24" />
+          <Skeleton className="h-8 w-20" />
         </div>
       </div>
 
-      <div className="flex-1 p-4 sm:p-8 max-w-6xl w-full mx-auto space-y-8">
-        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 pb-2 border-b">
+      <div className="flex-1 w-full max-w-5xl mx-auto px-4 py-8 sm:px-6 sm:py-10">
+        <div className="flex flex-wrap items-end justify-between gap-4">
           <div>
-            <Skeleton className="h-8 w-44" />
-            <Skeleton className="h-4 w-72 max-w-full mt-1" />
+            <Skeleton className="h-8 w-32 sm:h-9" />
+            <Skeleton className="h-4 w-48 max-w-full mt-1.5" />
           </div>
-          <Skeleton className="h-8 w-40" />
+          <Skeleton className="h-9 w-40" />
         </div>
 
-        <StatCardsSkeleton />
-
-        <div className="flex items-center justify-between">
-          <Skeleton className="h-6 w-28" />
-          <Skeleton className="h-4 w-24" />
+        <div className="mt-8 flex flex-wrap items-center justify-between gap-3">
+          <Skeleton className="h-7 w-44" />
+          <Skeleton className="h-8 w-full sm:w-64" />
         </div>
 
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {[0, 1, 2, 3, 4, 5].map((i) => (
-            <Card key={i} className="flex flex-col justify-between p-5 bg-card border">
-              <div>
-                <Skeleton className="h-5 w-16 mb-2" />
-                <Skeleton className="h-6 w-3/4" />
-                <Skeleton className="h-4 w-full mt-1" />
+        <div className="mt-4 overflow-hidden rounded-md border">
+          <div className="flex h-9 items-center border-b px-4">
+            <Skeleton className="h-3.5 w-16" />
+          </div>
+          {[0, 1, 2, 3, 4].map((i) => (
+            <div
+              key={i}
+              className="flex h-16 items-center justify-between gap-6 border-b px-4 last:border-b-0"
+            >
+              <div className="min-w-0 flex-1">
+                <Skeleton className="h-4 w-48 max-w-full" />
+                <Skeleton className="h-3.5 w-36 max-w-full mt-1.5" />
               </div>
-              <div className="mt-6 pt-3 border-t flex items-center justify-between">
-                <Skeleton className="h-4 w-14" />
-                <Skeleton className="h-4 w-14" />
-              </div>
-            </Card>
+              <Skeleton className="hidden h-4 w-16 sm:block" />
+              <Skeleton className="hidden h-4 w-24 md:block" />
+              <Skeleton className="h-7 w-20" />
+            </div>
           ))}
         </div>
       </div>
@@ -92,7 +74,7 @@ export function DashboardSkeleton() {
 
 function QuestionCardSkeleton() {
   return (
-    <Card className="p-6 shadow-sm border bg-card">
+    <Card className="gap-0 px-4 pt-7 pb-4 sm:px-6 sm:pb-5 pointer-coarse:pt-9">
       <div className="flex items-center justify-between gap-3 mb-4">
         <Skeleton className="h-9 flex-1" />
         <Skeleton className="h-8 w-44 shrink-0" />
@@ -116,16 +98,16 @@ export function BuilderSkeleton() {
           <Skeleton className="hidden md:block h-8 w-16" />
           <Skeleton className="h-8 w-20 md:w-64" />
         </div>
-        <div className="flex h-10 items-center gap-6 border-t px-4 sm:px-6 bg-muted/20">
+        <div className="flex h-10 items-center gap-6 border-t px-4 sm:px-6">
           <Skeleton className="h-4 w-14" />
           <Skeleton className="h-4 w-16" />
           <Skeleton className="h-4 w-14" />
         </div>
       </div>
 
-      <div className="flex-1 overflow-hidden bg-muted/30 p-4 md:p-8">
+      <div className="flex-1 overflow-hidden bg-background p-4 md:p-8">
         <div className="mx-auto w-full max-w-3xl space-y-4">
-          <Card className="rounded-xl border bg-card shadow-sm p-6 space-y-4">
+          <Card className="p-6 space-y-4">
             <Skeleton className="h-10 w-full" />
             <Skeleton className="h-14 w-full" />
           </Card>
@@ -139,23 +121,29 @@ export function BuilderSkeleton() {
 
 export function PublicFormSkeleton() {
   return (
-    <div className="skeleton-reveal min-h-screen bg-muted/20 px-4 py-8 sm:px-6">
+    <div className="skeleton-reveal min-h-screen bg-background px-4 py-6 sm:px-6 sm:py-8">
       <LoadingStatus />
-      <div className="mx-auto max-w-2xl flex items-center justify-between mb-4">
+      <div className="mx-auto max-w-xl flex items-center justify-between mb-8">
         <Skeleton className="h-4 w-28" />
         <Skeleton className="size-8" />
       </div>
-      <div className="mx-auto max-w-2xl space-y-4">
-        <Card className="rounded-xl border bg-card shadow-sm p-6 sm:p-8">
+      <div className="mx-auto max-w-xl">
+        <div className="pb-8">
           <Skeleton className="h-9 w-2/3" />
           <Skeleton className="h-4 w-full mt-3" />
-          <Skeleton className="h-4 w-40 mt-9" />
-        </Card>
+          <Skeleton className="h-4 w-40 mt-4" />
+        </div>
         {[0, 1, 2].map((i) => (
-          <Card key={i} className="p-6 bg-card shadow-sm border">
-            <Skeleton className="h-6 w-1/2 mb-4" />
-            <Skeleton className="h-9 w-full" />
-          </Card>
+          <div
+            key={i}
+            className="grid grid-cols-[2rem_minmax(0,1fr)] border-t py-6 sm:grid-cols-[2.5rem_minmax(0,1fr)] sm:py-8"
+          >
+            <Skeleton className="h-4 w-4" />
+            <div>
+              <Skeleton className="h-6 w-1/2 mb-3" />
+              <Skeleton className="h-11 w-full sm:h-10" />
+            </div>
+          </div>
         ))}
       </div>
     </div>
@@ -166,8 +154,8 @@ export function ResponsesTableSkeleton() {
   return (
     <div className="skeleton-reveal space-y-4">
       <LoadingStatus />
-      <div className="rounded-lg border bg-card overflow-hidden shadow-sm">
-        <div className="h-10 border-b bg-muted/40 flex items-center px-3">
+      <div className="rounded-md border overflow-hidden">
+        <div className="h-10 border-b flex items-center px-3">
           <Skeleton className="h-4 w-1/3" />
         </div>
         {[0, 1, 2, 3, 4].map((i) => (

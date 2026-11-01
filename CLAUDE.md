@@ -104,6 +104,10 @@ src/stores/use-builder-store.ts  builder UI state and undo/redo history
 
 - Read the relevant guide in `node_modules/next/dist/docs/` before using a Next API. For example, `error.tsx` receives `retry` rather than `reset`, and middleware is `proxy.ts`.
 - Every route has a `loading.tsx` built from `components/skeletons/`, and none sits directly above other routes. A skeleton's root takes `skeleton-reveal` (a skeleton alone inside real content uses `InlineSkeleton`), and its colors come from `--skeleton-from` / `--skeleton-to`.
+- The look is "Konsol": neutral tokens in `globals.css`, Geist with Geist Mono for numbers and links, thin lines instead of shadows, one accent only for status. Prefer tables and dividers over stacks of cards.
+- Hover is instant and leaving fades: a rule in `globals.css` zeroes the transition duration on hovered interactive elements, so give the resting element a `transition-*` and nothing else. A child that reacts to its parent's hover needs `group-hover:duration-0`. Buttons with text are the exception and fade both ways (`hover-fade`, set by the `Button` sizes); icon buttons stay instant.
+- Toasts are for errors and for information the user can't see otherwise. Don't announce a result that's already visible; a button with an icon confirms itself (tick, `useTimedFlag`, and `StableLabel` if its text changes).
+- Tooltips use `Hint` from `@/components/hint`, not the native `title`. It doesn't name an icon button, so keep its `aria-label`. Skip it where the icon is self-explanatory (arrows, close, drag handle).
 - Confirmations use `Dialog`, not `window.confirm`. Menu items use the base text size, and color comes from `variant`, not `className`.
 - Icon-only buttons need `aria-label`. On the public form, every control is linked to its label, description and error, and focus moves to the first error on submit.
 - Language: the UI is Turkish only. Client text is either in `dict` from `@/lib/dictionary` or inline in Turkish. Server actions return hardcoded Turkish errors.

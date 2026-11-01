@@ -506,7 +506,6 @@ export function HeaderImageCropModal({
                 }
               }}
               className="cursor-pointer gap-1.5 text-xs text-muted-foreground hover:text-foreground"
-              title="Kırpma alanını ortala ve sıfırla"
             >
               <RotateCcw className="size-3" />
               Sıfırla

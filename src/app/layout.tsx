@@ -1,14 +1,14 @@
 import type { Metadata } from 'next';
-import { Geist_Mono, Inter } from 'next/font/google';
+import { Geist, Geist_Mono } from 'next/font/google';
 import './globals.css';
 import { cn } from '@/lib/utils';
 import { ThemeProvider } from '@/components/theme-provider';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import { Toaster } from '@/components/ui/sonner';
 
-const inter = Inter({
+const geist = Geist({
+  variable: '--font-geist',
   subsets: ['latin', 'latin-ext'],
-  variable: '--font-inter',
 });
 
 const geistMono = Geist_Mono({
@@ -47,8 +47,8 @@ export default function RootLayout({
       suppressHydrationWarning
       className={cn(
         'h-full antialiased',
+        geist.variable,
         geistMono.variable,
-        inter.variable,
         'font-sans',
       )}
     >

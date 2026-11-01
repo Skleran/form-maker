@@ -15,6 +15,7 @@ import {
 } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
+import { Hint } from '@/components/hint';
 import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -132,10 +133,7 @@ const QuestionCardIcon = React.memo(function QuestionCardIcon({
   if (!icon) return null;
 
   return (
-    <div
-      className="p-1.5 rounded-md bg-primary/10 text-primary shrink-0"
-      title={`İkon: ${icon}`}
-    >
+    <div className="p-1.5 rounded-md bg-primary/10 text-primary shrink-0">
       <QuestionIcon name={icon} className="size-4" />
     </div>
   );
@@ -274,7 +272,7 @@ const QuestionChoiceOptionsList = React.memo(
                   });
                 }}
                 className="text-muted-foreground hover:text-destructive cursor-pointer"
-                title={dict.builder.canvas.removeOption}
+                aria-label={dict.builder.canvas.removeOption}
               >
                 <X className="size-3.5" />
               </Button>
@@ -496,8 +494,8 @@ export const QuestionCard = React.memo(function QuestionCard({
     <>
       {/* Dynamic Drop Slot indicator (When moving UP: shows ABOVE the target card) */}
       {showDropSlotBefore && activeDragIndex !== null && (
-        <div className="h-12 rounded-xl border-2 border-dashed border-primary bg-primary/10 flex items-center justify-center gap-2 text-xs font-semibold text-primary animate-pulse transition-all shadow-xs my-1 select-none">
-          <ArrowUp className="size-4 animate-bounce" />
+        <div className="h-12 rounded-xl border border-dashed border-foreground/50 flex items-center justify-center gap-2 text-xs text-muted-foreground my-1 select-none">
+          <ArrowUp aria-hidden="true" className="size-3.5" />
           <span>
             {`Buraya Taşı (#${activeDragIndex + 1} → #${index + 1})`}
           </span>
@@ -508,29 +506,30 @@ export const QuestionCard = React.memo(function QuestionCard({
         ref={handleCardRef}
         onClick={handleCardClick}
         className={cn(
-          'relative p-6 shadow-sm transition-all duration-150 cursor-pointer border bg-card overflow-visible',
-          isHeld &&
-            'opacity-25 border-dashed border-primary/60 scale-[0.99] bg-muted/30',
+          'relative cursor-pointer gap-0 overflow-visible px-4 pt-7 pb-4 transition-[box-shadow,opacity] duration-150 sm:px-6 sm:pb-5 pointer-coarse:pt-9',
+          isHeld && 'opacity-25',
           !isHeld && isActive
-            ? 'sm:ring-2 sm:ring-primary/30 shadow-md'
-            : !isHeld && 'hover:border-border/80 hover:shadow',
+            ? 'ring-foreground/60'
+            : !isHeld && 'hover:ring-foreground/25',
         )}
       >
-        {/* Top Center Drag Grip Handle */}
+        {/* Drag handle, built into the card's top edge. Hover shows it; touch has no hover, so it stays visible there */}
         <div
           data-card-quick-action
           onPointerDown={(e) => onGripPointerDown(e, index)}
-          className="absolute -top-3 left-1/2 -translate-x-1/2 z-20 flex h-6 w-12 cursor-grab active:cursor-grabbing items-center justify-center rounded-md border bg-card text-muted-foreground shadow-xs hover:bg-muted hover:text-foreground hover:scale-105 active:scale-95 transition-all select-none touch-none group"
-          title="Soruyu taşımak için basılı tutun ve sürükleyin"
+          className={cn(
+            'absolute left-1/2 top-0 z-20 flex h-7 w-24 -translate-x-1/2 cursor-grab select-none touch-none items-start justify-center pt-1 text-muted-foreground opacity-0 transition-opacity hover:text-foreground active:cursor-grabbing group-hover/card:opacity-100 group-hover/card:duration-0 pointer-coarse:h-9 pointer-coarse:pt-2 pointer-coarse:opacity-70',
+            isActive && 'opacity-100',
+          )}
         >
-          <GripHorizontal className="size-4 text-muted-foreground/70 group-hover:text-foreground transition-colors" />
+          <GripHorizontal aria-hidden="true" className="size-4" />
         </div>
 
         {/* Question Header & Type Selector */}
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 mb-4">
           <div className="flex items-center gap-2 w-full sm:w-auto min-w-0 flex-1">
-            <span className="text-xs font-semibold text-muted-foreground rounded-full size-6 flex items-center justify-center bg-muted shrink-0">
-              {index + 1}
+            <span className="w-5 shrink-0 font-mono text-xs tabular-nums text-muted-foreground">
+              {String(index + 1).padStart(2, '0')}
             </span>
             <QuestionCardIcon index={index} />
             <Input
@@ -551,7 +550,6 @@ export const QuestionCard = React.memo(function QuestionCard({
                   ? 'text-primary bg-primary/10 hover:bg-primary/15 hover:text-primary'
                   : 'text-muted-foreground hover:text-foreground',
               )}
-              title="Soru ayarları"
               aria-label="Soru ayarları"
             >
               <Settings2 className="size-4" />
@@ -565,22 +563,23 @@ export const QuestionCard = React.memo(function QuestionCard({
             />
 
             {/* Desktop / Tablet (>= sm): opens the question settings drawer */}
-            <Button
-              type="button"
-              variant="ghost"
-              size="icon-sm"
-              onClick={handleOpenSettings}
-              className={cn(
-                'hidden sm:inline-flex shrink-0 cursor-pointer',
-                isActive
-                  ? 'text-primary bg-primary/10 hover:bg-primary/15 hover:text-primary'
-                  : 'text-muted-foreground hover:text-foreground',
-              )}
-              title="Soru ayarları"
-              aria-label="Soru ayarları"
-            >
-              <Settings2 className="size-4" />
-            </Button>
+            <Hint label="Soru ayarları">
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon-sm"
+                onClick={handleOpenSettings}
+                className={cn(
+                  'hidden sm:inline-flex shrink-0 cursor-pointer',
+                  isActive
+                    ? 'text-primary bg-primary/10 hover:bg-primary/15 hover:text-primary'
+                    : 'text-muted-foreground hover:text-foreground',
+                )}
+                aria-label="Soru ayarları"
+              >
+                <Settings2 className="size-4" />
+              </Button>
+            </Hint>
           </div>
         </div>
 
@@ -604,7 +603,7 @@ export const QuestionCard = React.memo(function QuestionCard({
                 onMoveQuestion(index, index - 1);
               }}
               className="cursor-pointer text-muted-foreground hover:text-foreground"
-              title={dict.builder.canvas.moveUp}
+              aria-label={dict.builder.canvas.moveUp}
             >
               <ArrowUp className="size-3.5" />
             </Button>
@@ -617,13 +616,10 @@ export const QuestionCard = React.memo(function QuestionCard({
                 onMoveQuestion(index, index + 1);
               }}
               className="cursor-pointer text-muted-foreground hover:text-foreground"
-              title={dict.builder.canvas.moveDown}
+              aria-label={dict.builder.canvas.moveDown}
             >
               <ArrowDown className="size-3.5" />
             </Button>
-            <span className="text-[11px] text-muted-foreground font-mono ml-1">
-              #{index + 1}
-            </span>
           </div>
 
           {/* Clickable middle area between move buttons and required switch */}
@@ -635,46 +631,50 @@ export const QuestionCard = React.memo(function QuestionCard({
           <div className="flex items-center gap-3">
             <QuestionCardRequiredSwitch index={index} />
 
-            <Button
-              variant="ghost"
-              size="icon-xs"
-              onClick={(e) => {
-                e.stopPropagation();
-                onDuplicateQuestion(index);
-              }}
-              className="cursor-pointer text-muted-foreground hover:text-foreground"
-              title={dict.builder.canvas.duplicateQuestion}
-            >
-              <Copy className="size-3.5" />
-            </Button>
+            <Hint label={dict.builder.canvas.duplicateQuestion}>
+              <Button
+                variant="ghost"
+                size="icon-xs"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onDuplicateQuestion(index);
+                }}
+                className="cursor-pointer text-muted-foreground hover:text-foreground"
+                aria-label={dict.builder.canvas.duplicateQuestion}
+              >
+                <Copy className="size-3.5" />
+              </Button>
+            </Hint>
 
-            <Button
-              variant="ghost"
-              size="icon-xs"
-              onClick={(e) => {
-                e.stopPropagation();
-                onDeleteQuestion(index);
-                const state = useBuilderStore.getState();
-                if (
-                  state.activeQuestionId === questionId ||
-                  state.activeQuestionId === fieldId
-                ) {
-                  state.deselectQuestion();
-                }
-              }}
-              className="cursor-pointer text-muted-foreground hover:text-destructive"
-              title={dict.builder.canvas.deleteQuestion}
-            >
-              <Trash2 className="size-3.5" />
-            </Button>
+            <Hint label={dict.builder.canvas.deleteQuestion}>
+              <Button
+                variant="ghost"
+                size="icon-xs"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onDeleteQuestion(index);
+                  const state = useBuilderStore.getState();
+                  if (
+                    state.activeQuestionId === questionId ||
+                    state.activeQuestionId === fieldId
+                  ) {
+                    state.deselectQuestion();
+                  }
+                }}
+                className="cursor-pointer text-muted-foreground hover:text-destructive"
+                aria-label={dict.builder.canvas.deleteQuestion}
+              >
+                <Trash2 className="size-3.5" />
+              </Button>
+            </Hint>
           </div>
         </div>
       </Card>
 
       {/* Dynamic Drop Slot indicator (When moving DOWN: shows BELOW the target card) */}
       {showDropSlotAfter && activeDragIndex !== null && (
-        <div className="h-12 rounded-xl border-2 border-dashed border-primary bg-primary/10 flex items-center justify-center gap-2 text-xs font-semibold text-primary animate-pulse transition-all shadow-xs my-1 select-none">
-          <ArrowDown className="size-4 animate-bounce" />
+        <div className="h-12 rounded-xl border border-dashed border-foreground/50 flex items-center justify-center gap-2 text-xs text-muted-foreground my-1 select-none">
+          <ArrowDown aria-hidden="true" className="size-3.5" />
           <span>
             {`Buraya Taşı (#${activeDragIndex + 1} → #${index + 1})`}
           </span>

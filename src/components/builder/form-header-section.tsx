@@ -6,6 +6,7 @@ import { AlignLeft, Crop, ImagePlus, Trash2, Type } from 'lucide-react';
 import { toast } from 'sonner';
 
 import { Button } from '@/components/ui/button';
+import { Hint } from '@/components/hint';
 import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -72,7 +73,7 @@ export const FormHeaderSection = React.memo(function FormHeaderSection() {
       />
 
       {headerImage ? (
-        <div className="relative group overflow-hidden rounded-xl border bg-card shadow-sm">
+        <div className="relative group overflow-hidden rounded-xl border bg-card">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
             src={headerImage}
@@ -84,7 +85,7 @@ export const FormHeaderSection = React.memo(function FormHeaderSection() {
             alt="Form Kapak Görseli"
             className="w-full aspect-[4/1] object-cover block"
           />
-          <div className="absolute top-3 right-3 flex items-center gap-2 opacity-90 group-hover:opacity-100 transition-opacity">
+          <div className="absolute top-3 right-3 flex items-center gap-2 opacity-90 group-hover:opacity-100 group-hover:duration-0 transition-opacity">
             <Button
               type="button"
               variant="secondary"
@@ -101,7 +102,7 @@ export const FormHeaderSection = React.memo(function FormHeaderSection() {
               }}
               className="cursor-pointer gap-1.5 shadow-sm bg-background/85 hover:bg-background backdrop-blur-xs text-xs font-medium"
             >
-              <Crop className="size-3.5 text-primary" />
+              <Crop className="size-3.5" />
               <span className="hidden sm:inline">
                 Pozisyonu Ayarla
               </span>
@@ -116,7 +117,7 @@ export const FormHeaderSection = React.memo(function FormHeaderSection() {
               onClick={() => headerImageInputRef.current?.click()}
               className="cursor-pointer gap-1.5 shadow-sm bg-background/85 hover:bg-background backdrop-blur-xs text-xs font-medium"
             >
-              <ImagePlus className="size-3.5 text-primary" />
+              <ImagePlus className="size-3.5" />
               <span className="hidden sm:inline">
                 Görseli Değiştir
               </span>
@@ -124,24 +125,26 @@ export const FormHeaderSection = React.memo(function FormHeaderSection() {
                 Değiştir
               </span>
             </Button>
-            <Button
-              type="button"
-              variant="destructive"
-              size="icon-xs"
-              onClick={() => {
-                useBuilderStore.getState().pushHistory(getValues());
-                setValue('headerImage', null, { shouldDirty: true });
-                setValue('headerImageRaw', null, { shouldDirty: true });
-                setValue('headerImageCrop', null, { shouldDirty: true });
-                setSelectedRawFile(null);
-                setRawImageForCrop(null);
-                setActiveCropForModal(null);
-              }}
-              className="cursor-pointer shadow-sm bg-destructive/20 hover:bg-destructive/30 dark:bg-destructive/30 dark:hover:bg-destructive/40"
-              title="Kapak Görselini Kaldır"
-            >
-              <Trash2 className="size-3.5" />
-            </Button>
+            <Hint label="Kapak Görselini Kaldır">
+              <Button
+                type="button"
+                variant="destructive"
+                size="icon-xs"
+                onClick={() => {
+                  useBuilderStore.getState().pushHistory(getValues());
+                  setValue('headerImage', null, { shouldDirty: true });
+                  setValue('headerImageRaw', null, { shouldDirty: true });
+                  setValue('headerImageCrop', null, { shouldDirty: true });
+                  setSelectedRawFile(null);
+                  setRawImageForCrop(null);
+                  setActiveCropForModal(null);
+                }}
+                className="cursor-pointer shadow-sm bg-destructive/20 hover:bg-destructive/30 dark:bg-destructive/30 dark:hover:bg-destructive/40"
+                aria-label="Kapak Görselini Kaldır"
+              >
+                <Trash2 className="size-3.5" />
+              </Button>
+            </Hint>
           </div>
         </div>
       ) : (
@@ -151,15 +154,15 @@ export const FormHeaderSection = React.memo(function FormHeaderSection() {
             variant="outline"
             size="xs"
             onClick={() => headerImageInputRef.current?.click()}
-            className="cursor-pointer gap-1.5 text-xs shadow-xs bg-card hover:bg-muted/50"
+            className="cursor-pointer gap-1.5 text-xs"
           >
-            <ImagePlus className="size-3.5 text-primary" />
+            <ImagePlus className="size-3.5" />
             Kapak Görseli Ekle
           </Button>
         </div>
       )}
 
-      <Card className="relative overflow-hidden rounded-xl border bg-card shadow-sm transition-all py-0">
+      <Card className="relative overflow-hidden py-0">
         <div className="p-6 space-y-4">
           {/* Form Title */}
           <div className="space-y-1.5">
@@ -168,7 +171,7 @@ export const FormHeaderSection = React.memo(function FormHeaderSection() {
                 htmlFor="form-builder-title"
                 className="text-xs font-semibold text-muted-foreground flex items-center gap-1.5 select-none"
               >
-                <Type className="size-3.5 text-primary" />
+                <Type className="size-3.5" />
                 <span>Form Başlığı</span>
               </label>
               <span className="text-[11px] text-muted-foreground/60 select-none">
@@ -190,7 +193,7 @@ export const FormHeaderSection = React.memo(function FormHeaderSection() {
                 htmlFor="form-builder-description"
                 className="text-xs font-semibold text-muted-foreground flex items-center gap-1.5 select-none"
               >
-                <AlignLeft className="size-3.5 text-primary" />
+                <AlignLeft className="size-3.5" />
                 <span>
                   Form Açıklaması
                 </span>
@@ -254,10 +257,6 @@ export const FormHeaderSection = React.memo(function FormHeaderSection() {
             if (rawImageForCrop.startsWith('blob:')) {
               URL.revokeObjectURL(rawImageForCrop);
             }
-
-            toast.success(
-              'Kapak görseli başarıyla ayarlandı.',
-            );
           }}
         />
       )}
