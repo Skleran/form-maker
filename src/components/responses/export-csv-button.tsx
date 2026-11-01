@@ -1,10 +1,12 @@
 "use client"
 
 import * as React from "react"
-import { Download, Loader2 } from "lucide-react"
+import { Check, Download, Loader2 } from "lucide-react"
 import { toast } from "sonner"
 import { Button } from "@/components/ui/button"
+import { StableLabel } from "@/components/stable-label"
 import { exportFormResponsesCSV } from "@/actions/response-actions"
+import { useTimedFlag } from "@/hooks/use-timed-flag"
 import { dict } from "@/lib/dictionary"
 
 interface ExportCsvButtonProps {
@@ -14,6 +16,7 @@ interface ExportCsvButtonProps {
 
 export function ExportCsvButton({ formId, disabled }: ExportCsvButtonProps) {
   const [isExporting, startTransition] = React.useTransition()
+  const [exported, showExported] = useTimedFlag()
 
   const handleExport = () => {
     startTransition(async () => {
@@ -30,7 +33,7 @@ export function ExportCsvButton({ formId, disabled }: ExportCsvButtonProps) {
           link.click()
           document.body.removeChild(link)
           URL.revokeObjectURL(url)
-          toast.success(dict.responses.exportSuccess)
+          showExported()
         } else {
           toast.error(res.error || dict.responses.exportFailed)
         }
@@ -50,10 +53,21 @@ export function ExportCsvButton({ formId, disabled }: ExportCsvButtonProps) {
     >
       {isExporting ? (
         <Loader2 className="size-3.5 animate-spin" />
+      ) : exported ? (
+        <Check className="size-3.5 text-emerald-600 dark:text-emerald-400" />
       ) : (
         <Download className="size-3.5 text-muted-foreground" />
       )}
-      <span>{isExporting ? dict.responses.exporting : dict.responses.exportCsv}</span>
+      <StableLabel
+        labels={[dict.responses.exportCsv, dict.responses.exporting, dict.responses.exported]}
+        active={
+          isExporting
+            ? dict.responses.exporting
+            : exported
+              ? dict.responses.exported
+              : dict.responses.exportCsv
+        }
+      />
     </Button>
   )
 }

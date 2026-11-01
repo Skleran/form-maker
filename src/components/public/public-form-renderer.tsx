@@ -1,6 +1,7 @@
 'use client';
 
 import * as React from 'react';
+import { useRouter } from 'next/navigation';
 import { useForm, Controller, type FieldErrors } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { toast } from 'sonner';
@@ -9,13 +10,11 @@ import {
   FileText,
   Loader2,
   RotateCcw,
-  Send,
   Upload,
   X,
 } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
-import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import {
@@ -33,6 +32,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
+import { Hint } from '@/components/hint';
 import { ThemeToggle } from '@/components/theme-toggle';
 import { buildDynamicFormSchema } from '@/lib/validations/dynamic-schema';
 import { submitFormResponse } from '@/actions/submission-actions';
@@ -47,6 +47,10 @@ import {
   isFileTypeAllowed,
 } from '@/lib/file-types';
 import { FormMakerLogo } from '../formmaker-logo';
+
+const optionRowClass =
+  'flex min-h-11 cursor-pointer select-none items-center gap-3 rounded-md border border-input px-3 py-2 text-base text-foreground transition-colors hover:bg-muted/50 has-checked:border-foreground/25 has-checked:bg-muted sm:min-h-10 sm:text-sm';
+const fieldSizeClass = 'h-11 text-base sm:h-10 md:text-sm';
 
 interface FileUploadValue {
   name: string;
@@ -163,9 +167,6 @@ function PublicFileInput({
             if (/^image\/(png|jpeg|webp|gif)$/.test(file.type)) {
               setPreviewUrl(URL.createObjectURL(file));
             }
-            toast.success(
-              dict.publicForm.attachedSuccess.replace('{name}', file.name),
-            );
           } else {
             toast.error(res.error || dict.publicForm.uploadFailed);
           }
@@ -225,11 +226,11 @@ function PublicFileInput({
     return (
       <div
         role="status"
-        className="flex flex-col items-center justify-center rounded-lg border-2 border-dashed border-primary/40 bg-primary/5 p-6 text-center space-y-3"
+        className="flex flex-col items-center justify-center rounded-md border border-dashed border-muted-foreground/50 p-6 text-center space-y-3"
       >
-        <Loader2 className="size-8 text-primary animate-spin" />
+        <Loader2 className="size-5 text-muted-foreground animate-spin" />
         <div className="space-y-1.5 w-full max-w-xs">
-          <span className="text-xs font-semibold text-foreground">
+          <span className="text-sm tabular-nums text-foreground">
             {dict.publicForm.uploadProgress.replace(
               '{percent}',
               String(uploadProgress ?? 0),
@@ -249,31 +250,32 @@ function PublicFileInput({
   if (value) {
     return (
       <div className="space-y-3">
-        <div className="flex items-center justify-between rounded-lg border p-3 bg-muted/30">
-          <div className="flex items-center gap-2 truncate">
-            <FileText className="size-4 text-primary shrink-0" />
-            <span className="text-xs font-medium text-foreground truncate">
+        <div className="flex min-h-11 items-center justify-between gap-2 rounded-md border border-input px-3 py-2">
+          <div className="flex min-w-0 items-center gap-2">
+            <FileText className="size-4 text-muted-foreground shrink-0" />
+            <span className="text-sm text-foreground truncate">
               {value.name}
             </span>
-            <span className="text-[11px] text-muted-foreground shrink-0">
+            <span className="text-xs tabular-nums text-muted-foreground shrink-0">
               ({(value.size / (1024 * 1024)).toFixed(2)} MB)
             </span>
           </div>
-          <Button
-            type="button"
-            variant="ghost"
-            size="icon-xs"
-            onClick={() => {
-              deleteUploadedFile(value);
-              setPreviewUrl(null);
-              onChange(null);
-            }}
-            className="cursor-pointer text-muted-foreground hover:text-destructive"
-            title={dict.publicForm.removeAttachment}
-            aria-label={dict.publicForm.removeAttachment}
-          >
-            <X className="size-3.5" />
-          </Button>
+          <Hint label={dict.publicForm.removeAttachment}>
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon-xs"
+              onClick={() => {
+                deleteUploadedFile(value);
+                setPreviewUrl(null);
+                onChange(null);
+              }}
+              className="cursor-pointer text-muted-foreground hover:text-destructive"
+              aria-label={dict.publicForm.removeAttachment}
+            >
+              <X className="size-3.5" />
+            </Button>
+          </Hint>
         </div>
 
         {previewUrl && (
@@ -303,23 +305,19 @@ function PublicFileInput({
       onClick={() => inputRef.current?.click()}
       aria-labelledby={`${labelledBy} ${dropzoneTextId}`}
       aria-describedby={describedBy}
-      className={`flex w-full flex-col items-center justify-center rounded-lg border-2 border-dashed p-6 text-center cursor-pointer transition-all outline-none focus-visible:ring-2 focus-visible:ring-ring ${
+      className={`flex w-full flex-col items-center justify-center rounded-md border border-dashed p-6 text-center cursor-pointer transition-colors outline-none focus-visible:ring-2 focus-visible:ring-ring ${
         isDragging
-          ? 'border-primary bg-primary/10 ring-2 ring-primary/20 scale-[1.01]'
-          : 'border-muted-foreground/30 bg-muted/10 hover:bg-muted/20 hover:border-primary/50'
+          ? 'border-foreground bg-muted'
+          : 'border-muted-foreground/50 hover:border-foreground/60 hover:bg-muted/50'
       }`}
     >
-      <Upload
-        className={`size-8 mb-2 transition-transform ${
-          isDragging ? 'text-primary scale-110' : 'text-muted-foreground'
-        }`}
-      />
-      <span id={dropzoneTextId} className="text-xs font-medium text-foreground">
+      <Upload aria-hidden="true" className="size-5 mb-2 text-muted-foreground" />
+      <span id={dropzoneTextId} className="text-sm text-foreground">
         {isDragging
           ? 'Dosyayı eklemek için bırakın'
           : dict.publicForm.clickOrDrop}
       </span>
-      <span className="text-[11px] text-muted-foreground mt-0.5">
+      <span className="text-xs text-muted-foreground mt-1">
         {formatFileLimitsDescription(
           config?.maxFileSizeMb,
           config?.allowedMimeTypes,
@@ -339,6 +337,50 @@ function PublicFileInput({
         aria-hidden="true"
       />
     </button>
+  );
+}
+
+function PreviewBanner({
+  formId,
+  isPublished,
+  notice,
+}: {
+  formId: string;
+  isPublished: boolean;
+  notice: string;
+}) {
+  const router = useRouter();
+  const builderUrl = `/admin/forms/${formId}/edit`;
+
+  return (
+    <div className="sticky top-0 z-50 border-b border-amber-500/30 bg-amber-50 text-amber-950 dark:bg-amber-950 dark:text-amber-50">
+      <div className="flex min-h-11 items-center justify-between gap-4 px-4 py-2 text-sm sm:px-6">
+        <p className="min-w-0">
+          <span className="font-medium">{dict.publicForm.previewBanner}</span>
+          <span className="ml-2 text-amber-800 dark:text-amber-200">
+            {isPublished
+              ? dict.publicForm.statusLive
+              : dict.publicForm.statusDraft}
+          </span>
+          <span className="mt-0.5 block text-xs text-amber-800 sm:ml-3 sm:mt-0 sm:inline dark:text-amber-200">
+            {notice}
+          </span>
+        </p>
+        <a
+          href={builderUrl}
+          onClick={(e) => {
+            e.preventDefault();
+            // The builder opens previews in their own tab, so closing returns to it.
+            // Browsers refuse this for a tab with history, so fall back to going there.
+            window.close();
+            window.setTimeout(() => router.push(builderUrl), 150);
+          }}
+          className="shrink-0 rounded-sm font-medium underline underline-offset-4 outline-none transition-opacity hover:opacity-70 focus-visible:ring-2 focus-visible:ring-amber-600"
+        >
+          {dict.publicForm.backToBuilder}
+        </a>
+      </div>
+    </div>
   );
 }
 
@@ -422,7 +464,6 @@ export function PublicFormRenderer({
       if (isPreview) {
         await new Promise((r) => setTimeout(r, 600));
         setIsSubmitted(true);
-        toast.info(dict.publicForm.simulationToast);
         window.scrollTo({ top: 0, behavior: 'smooth' });
         return;
       }
@@ -476,52 +517,37 @@ export function PublicFormRenderer({
 
   if (isSubmitted) {
     return (
-      <div className="min-h-screen bg-muted/20">
+      <div className="min-h-screen bg-background">
         {isPreview && (
-          <div className="sticky top-0 z-50 flex items-center justify-between border-b bg-amber-500/15 backdrop-blur-md px-4 py-2.5 text-xs text-amber-900 dark:text-amber-200">
-            <div className="flex items-center gap-2 font-medium">
-              <span className="flex size-2 rounded-full bg-amber-500 animate-pulse" />
-              <span className="font-semibold uppercase tracking-wider text-[10px] bg-amber-500/25 px-1.5 py-0.5 rounded text-amber-700 dark:text-amber-300">
-                {dict.publicForm.previewBanner}
-              </span>
-              <span>{dict.publicForm.previewSuccessNotice}</span>
-            </div>
-            <button
-              type="button"
-              onClick={() => window.close()}
-              className="text-muted-foreground hover:text-foreground underline text-[11px] cursor-pointer"
-            >
-              {dict.publicForm.closeTab}
-            </button>
-          </div>
+          <PreviewBanner
+            formId={form.id}
+            isPublished={form.isPublished}
+            notice={dict.publicForm.previewSuccessNotice}
+          />
         )}
-        <div className="px-4 py-12 sm:px-6">
-          <div className="mx-auto max-w-xl space-y-4">
-            <Card className="border-t-4 border-t-emerald-500 p-8 text-center bg-card shadow-sm space-y-4">
-              <CheckCircle2 className="size-14 text-emerald-500 mx-auto" />
-              <div className="space-y-1">
-                <h1 className="text-2xl font-bold tracking-tight text-foreground">
-                  {form.title}
-                </h1>
-                <p className="text-muted-foreground text-sm">
-                  {dict.publicForm.successTitle}
-                </p>
-              </div>
+        <div className="px-4 py-16 sm:px-6 sm:py-24">
+          <div className="mx-auto max-w-xl">
+            <CheckCircle2
+              aria-hidden="true"
+              className="size-6 text-emerald-700 dark:text-emerald-400"
+            />
+            <h1 className="mt-4 text-2xl font-semibold tracking-tight text-balance text-foreground sm:text-3xl">
+              {form.title}
+            </h1>
+            <p className="mt-2 text-muted-foreground">
+              {dict.publicForm.successTitle}
+            </p>
 
-              <div className="pt-4 flex flex-col sm:flex-row items-center justify-center gap-3">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={handleReset}
-                  className="cursor-pointer gap-2"
-                >
-                  <RotateCcw className="size-3.5" />
-                  {dict.publicForm.submitAnother}
-                </Button>
-              </div>
-            </Card>
+            <Button
+              variant="outline"
+              onClick={handleReset}
+              className="mt-8 h-11 cursor-pointer gap-2 sm:h-9"
+            >
+              <RotateCcw aria-hidden="true" className="size-3.5" />
+              {dict.publicForm.submitAnother}
+            </Button>
 
-            <footer className="text-center text-xs text-muted-foreground pt-4">
+            <footer className="mt-12 border-t pt-6 text-xs text-muted-foreground">
               <p>{dict.publicForm.footer}</p>
             </footer>
           </div>
@@ -534,41 +560,21 @@ export function PublicFormRenderer({
     <div
       onDragOver={(e) => e.preventDefault()}
       onDrop={(e) => e.preventDefault()}
-      className="min-h-screen bg-muted/20"
+      className="min-h-screen bg-background"
     >
       {/* Sticky Top Preview Banner */}
       {isPreview && (
-        <div className="sticky top-0 z-50 flex items-center justify-between border-b bg-amber-500/15 backdrop-blur-md px-4 py-2.5 text-xs text-amber-900 dark:text-amber-200">
-          <div className="flex items-center gap-2 font-medium">
-            <span className="flex size-2 rounded-full bg-amber-500 animate-pulse" />
-            <span className="font-semibold uppercase tracking-wider text-[10px] bg-amber-500/25 px-1.5 py-0.5 rounded text-amber-700 dark:text-amber-300">
-              {dict.publicForm.previewBanner}
-            </span>
-            <span className="hidden sm:inline">
-              {dict.publicForm.previewDesc}
-            </span>
-          </div>
-          <div className="flex items-center gap-2">
-            <span className="rounded-full bg-background/60 border px-2 py-0.5 text-[10px] text-muted-foreground font-mono">
-              {form.isPublished
-                ? dict.publicForm.statusLive
-                : dict.publicForm.statusDraft}
-            </span>
-            <button
-              type="button"
-              onClick={() => window.close()}
-              className="text-muted-foreground hover:text-foreground underline text-[11px] cursor-pointer ml-1"
-            >
-              {dict.publicForm.closeTab}
-            </button>
-          </div>
-        </div>
+        <PreviewBanner
+          formId={form.id}
+          isPublished={form.isPublished}
+          notice={dict.publicForm.previewDesc}
+        />
       )}
 
-      <div className="px-4 py-8 sm:px-6">
+      <div className="px-4 py-6 sm:px-6 sm:py-8">
         {/* Top Header Floating Controls */}
-        <div className="mx-auto max-w-2xl flex items-center justify-between mb-4">
-          <div className="flex items-center gap-2 text-xs font-medium text-muted-foreground">
+        <div className="mx-auto max-w-xl flex items-center justify-between mb-8">
+          <div className="flex items-center gap-2 text-xs text-muted-foreground">
             <FormMakerLogo className="size-4" />
             <span>{dict.publicForm.brand}</span>
           </div>
@@ -580,7 +586,7 @@ export function PublicFormRenderer({
         <form
           onSubmit={handleSubmit(onSubmit, onInvalid)}
           noValidate
-          className="mx-auto max-w-2xl space-y-4"
+          className="mx-auto max-w-xl"
         >
           {/* Honeypot: invisible to people, tempting to bots */}
           <input
@@ -592,37 +598,35 @@ export function PublicFormRenderer({
             className="absolute -left-[9999px] size-px opacity-0"
           />
 
-          {/* Form Header Banner & Title Card */}
-          <div className="space-y-4">
+          {/* Form Header Banner & Title */}
+          <div className="pb-8">
             {form.headerImage && (
-              <div className="overflow-hidden rounded-xl border shadow-sm bg-card">
+              <div className="mb-8 overflow-hidden rounded-md border">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
                   src={form.headerImage}
                   alt={form.title}
+                  width={1200}
+                  height={300}
                   className="w-full aspect-[4/1] object-cover block"
                 />
               </div>
             )}
-            <Card className="relative overflow-hidden rounded-xl border bg-card shadow-sm transition-all py-0">
-              <div className="p-6 sm:p-8">
-                <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-foreground">
-                  {form.title}
-                </h1>
-                {form.description && (
-                  <p className="mt-2 text-sm text-muted-foreground whitespace-pre-wrap leading-relaxed">
-                    {form.description}
-                  </p>
-                )}
-                <div className="mt-6 pt-3 border-t text-xs text-destructive font-medium">
-                  {dict.publicForm.requiredIndicator}
-                </div>
-              </div>
-            </Card>
+            <h1 className="text-2xl sm:text-3xl font-semibold tracking-tight text-balance break-words text-foreground">
+              {form.title}
+            </h1>
+            {form.description && (
+              <p className="mt-2 text-muted-foreground whitespace-pre-wrap break-words leading-relaxed">
+                {form.description}
+              </p>
+            )}
+            <p className="mt-4 text-xs text-muted-foreground">
+              {dict.publicForm.requiredIndicator}
+            </p>
           </div>
 
-          {/* Dynamic Question Cards */}
-          {form.questions.map((q) => {
+          {/* Dynamic Questions */}
+          {form.questions.map((q, index) => {
             const fieldError = errors[q.id]?.message as string | undefined;
             const labelId = `question-${q.id}-label`;
             const inputId = `question-${q.id}-input`;
@@ -644,19 +648,25 @@ export function PublicFormRenderer({
             };
 
             return (
-              <Card
+              <div
                 key={q.id}
                 id={`question-${q.id}`}
-                className={`p-6 bg-card shadow-sm border transition-all ${
-                  fieldError
-                    ? 'border-destructive ring-1 ring-destructive/40'
-                    : ''
-                }`}
+                className="grid grid-cols-[2rem_minmax(0,1fr)] border-t py-6 sm:grid-cols-[2.5rem_minmax(0,1fr)] sm:py-8"
               >
+                {/* Decorative: screen readers already announce the question order */}
+                <span
+                  aria-hidden="true"
+                  className={`pt-1 font-mono text-xs tabular-nums ${
+                    fieldError ? 'text-destructive' : 'text-muted-foreground'
+                  }`}
+                >
+                  {String(index + 1).padStart(2, '0')}
+                </span>
+
                 {/* Question Label & Description */}
-                <div className="flex items-start gap-2.5 mb-4">
+                <div className="flex items-start gap-2.5 mb-3">
                   {q.config?.icon && (
-                    <div className="p-1.5 rounded-md bg-primary/10 text-primary shrink-0 mt-0.5">
+                    <div className="text-muted-foreground shrink-0 mt-1">
                       <QuestionIcon name={q.config.icon} className="size-4" />
                     </div>
                   )}
@@ -664,7 +674,7 @@ export function PublicFormRenderer({
                     <LabelTag
                       id={labelId}
                       htmlFor={isText ? inputId : undefined}
-                      className="block text-base font-semibold text-foreground"
+                      className="block text-base font-medium break-words text-foreground"
                     >
                       <span>{q.label}</span>
                       {q.required && (
@@ -679,7 +689,7 @@ export function PublicFormRenderer({
                     {q.config?.description && (
                       <p
                         id={descriptionId}
-                        className="text-xs text-muted-foreground"
+                        className="text-sm text-muted-foreground"
                       >
                         {q.config.description}
                       </p>
@@ -688,7 +698,7 @@ export function PublicFormRenderer({
                 </div>
 
                 {/* Question Controls based on type */}
-                <div>
+                <div className="col-start-2">
                   {/* 1. Short Text */}
                   {q.type === 'SHORT_TEXT' && (
                     <Input
@@ -696,10 +706,10 @@ export function PublicFormRenderer({
                       {...fieldAria}
                       placeholder={
                         q.config?.placeholder ||
-                        'Yanıtınız'
+                        'Yanıtınız…'
                       }
                       {...register(q.id)}
-                      className="text-sm"
+                      className={fieldSizeClass}
                     />
                   )}
 
@@ -711,10 +721,10 @@ export function PublicFormRenderer({
                       rows={4}
                       placeholder={
                         q.config?.placeholder ||
-                        'Yanıtınız'
+                        'Yanıtınız…'
                       }
                       {...register(q.id)}
-                      className="text-sm resize-none"
+                      className="text-base md:text-sm resize-y"
                     />
                   )}
 
@@ -724,20 +734,17 @@ export function PublicFormRenderer({
                       role="radiogroup"
                       aria-labelledby={labelId}
                       {...fieldAria}
-                      className="space-y-2.5"
+                      className="space-y-1.5"
                     >
                       {q.options.map((opt) => (
-                        <label
-                          key={opt.id}
-                          className="flex items-center gap-3 text-sm text-foreground cursor-pointer select-none group"
-                        >
+                        <label key={opt.id} className={optionRowClass}>
                           <input
                             type="radio"
                             value={opt.id}
                             {...register(q.id)}
-                            className="size-4 accent-primary cursor-pointer"
+                            className="size-4 shrink-0 accent-primary cursor-pointer"
                           />
-                          <span className="group-hover:text-primary transition-colors">
+                          <span className="min-w-0 break-words">
                             {opt.label}
                           </span>
                         </label>
@@ -769,22 +776,19 @@ export function PublicFormRenderer({
                             role="group"
                             aria-labelledby={labelId}
                             aria-describedby={describedBy}
-                            className="space-y-2.5"
+                            className="space-y-1.5"
                           >
                             {q.options.map((opt) => {
                               const isChecked = currentValues.includes(opt.id);
                               return (
-                                <label
-                                  key={opt.id}
-                                  className="flex items-center gap-3 text-sm text-foreground cursor-pointer select-none group"
-                                >
+                                <label key={opt.id} className={optionRowClass}>
                                   <input
                                     type="checkbox"
                                     checked={isChecked}
                                     onChange={() => toggleOption(opt.id)}
-                                    className="size-4 accent-primary rounded cursor-pointer"
+                                    className="size-4 shrink-0 accent-primary rounded cursor-pointer"
                                   />
-                                  <span className="group-hover:text-primary transition-colors">
+                                  <span className="min-w-0 break-words">
                                     {opt.label}
                                   </span>
                                 </label>
@@ -813,7 +817,7 @@ export function PublicFormRenderer({
                           <SelectTrigger
                             aria-labelledby={labelId}
                             {...fieldAria}
-                            className="w-full text-sm"
+                            className="w-full text-base data-[size=default]:h-11 sm:data-[size=default]:h-10 md:text-sm"
                           >
                             <SelectValue
                               placeholder={
@@ -872,27 +876,25 @@ export function PublicFormRenderer({
                 {fieldError && (
                   <p
                     id={errorId}
-                    className="mt-2 text-xs text-destructive font-medium"
+                    className="col-start-2 mt-2 text-sm text-destructive"
                   >
                     {fieldError}
                   </p>
                 )}
-              </Card>
+              </div>
             );
           })}
 
           {/* Form Actions */}
-          <div className="flex items-center justify-between pt-2">
+          <div className="flex flex-col gap-1 border-t pt-6 sm:flex-row sm:items-center sm:justify-between">
             <Button
               type="submit"
               // Before hydration the browser would submit natively, putting the answers in the URL
               disabled={!isHydrated || isSubmitting || uploadingCount > 0}
-              className="cursor-pointer gap-2 shadow-sm font-medium px-6"
+              className="h-11 cursor-pointer gap-2 font-medium px-6 sm:h-9"
             >
-              {isSubmitting || uploadingCount > 0 ? (
+              {(isSubmitting || uploadingCount > 0) && (
                 <Loader2 className="size-4 animate-spin" />
-              ) : (
-                <Send className="size-4" />
               )}
               <span>
                 {uploadingCount > 0
@@ -906,16 +908,15 @@ export function PublicFormRenderer({
             <Button
               type="button"
               variant="ghost"
-              size="sm"
               disabled={uploadingCount > 0}
               onClick={() => setIsClearDialogOpen(true)}
-              className="cursor-pointer text-muted-foreground hover:text-foreground text-xs"
+              className="h-11 cursor-pointer text-muted-foreground hover:text-foreground sm:h-9"
             >
               Formu temizle
             </Button>
           </div>
 
-          <footer className="text-center text-xs text-muted-foreground pt-8 pb-4">
+          <footer className="text-xs text-muted-foreground pt-8 pb-4">
             <p>
               Formlar aracılığıyla asla şifre veya hassas finansal bilgi göndermeyin.
             </p>

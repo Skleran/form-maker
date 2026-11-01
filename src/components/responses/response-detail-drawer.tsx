@@ -13,6 +13,7 @@ import {
 import { Badge } from '@/components/ui/badge';
 import type { FormSubmissionRow } from '@/actions/response-actions';
 import { Button } from '@/components/ui/button';
+import { Hint } from '@/components/hint';
 import {
   Drawer,
   DrawerContent,
@@ -79,7 +80,7 @@ export function ResponseDetailDrawer({
               <DrawerHeader>
                 <div className="flex items-center justify-between">
                   <Badge variant="outline" className="text-xs font-mono">
-                    ID: {activeSubmission.id.substring(0, 10)}...
+                    ID: {activeSubmission.id.substring(0, 10)}…
                   </Badge>
                   <Button
                     variant="ghost"
@@ -92,13 +93,13 @@ export function ResponseDetailDrawer({
                   </Button>
                 </div>
 
-                <DrawerTitle className="text-lg font-bold text-foreground">
+                <DrawerTitle className="text-lg font-semibold tracking-tight text-foreground">
                   {dict.responses.detailTitle}
                 </DrawerTitle>
 
                 <div className="flex flex-col gap-1 text-xs text-muted-foreground pt-1">
                   <span className="flex items-center gap-1.5">
-                    <Calendar className="size-3.5 text-primary" />
+                    <Calendar className="size-3.5" />
                     {new Date(activeSubmission.submittedAt).toLocaleString(
                       locale,
                       {
@@ -127,8 +128,8 @@ export function ResponseDetailDrawer({
               </DrawerHeader>
 
               <div className="flex-1 scroll-fade overflow-y-auto p-4">
-                <div className="space-y-4">
-                  <h4 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                <div>
+                  <h4 className="pb-3 text-xs text-muted-foreground">
                     {dict.responses.recordedAnswers.replace(
                       '{count}',
                       String(activeSubmission.answers.length),
@@ -154,31 +155,34 @@ export function ResponseDetailDrawer({
                       return (
                         <div
                           key={answer.id || index}
-                          className="rounded-lg border p-4 bg-card space-y-2"
+                          className="grid grid-cols-[2rem_minmax(0,1fr)] border-t py-4"
                         >
-                          <div className="flex items-start justify-between gap-2">
-                            <span className="text-xs font-semibold text-foreground">
-                              {index + 1}. {answer.questionLabel}
+                          <span
+                            aria-hidden="true"
+                            className="pt-0.5 font-mono text-xs tabular-nums text-muted-foreground"
+                          >
+                            {String(index + 1).padStart(2, '0')}
+                          </span>
+                          <div className="flex items-start justify-between gap-3">
+                            <span className="min-w-0 break-words text-sm font-medium text-foreground">
+                              {answer.questionLabel}
                             </span>
-                            <Badge
-                              variant="secondary"
-                              className="text-[10px] shrink-0 font-normal"
-                            >
+                            <span className="shrink-0 text-xs text-muted-foreground">
                               {
                                 dict.builder.canvas.questionTypes[
                                   answer.questionType as keyof typeof dict.builder.canvas.questionTypes
                                 ]
                               }
-                            </Badge>
+                            </span>
                           </div>
 
                           {/* Formatted Answer Output */}
-                          <div className="pt-1 text-sm">
+                          <div className="col-start-2 pt-2 text-sm">
                             {isFileUpload ? (
                               <div className="space-y-2.5">
-                                <div className="flex items-center justify-between rounded-md border p-2.5 bg-muted/30">
-                                  <div className="flex items-center gap-2 truncate">
-                                    <FileText className="size-4 text-primary shrink-0" />
+                                <div className="flex items-center justify-between gap-2 rounded-md border p-2.5">
+                                  <div className="flex min-w-0 items-center gap-2">
+                                    <FileText className="size-4 text-muted-foreground shrink-0" />
                                     <span className="text-xs font-medium text-foreground truncate">
                                       {answer.valueText ||
                                         dict.responses.attachedFile}
@@ -195,7 +199,6 @@ export function ResponseDetailDrawer({
                                           handleViewFile(answer.fileUrl!)
                                         }
                                         className="cursor-pointer gap-1 text-[11px]"
-                                        title={dict.responses.openNewTab}
                                       >
                                         <ExternalLink className="size-3" />
                                         <span>{dict.responses.openNewTab}</span>
@@ -208,7 +211,6 @@ export function ResponseDetailDrawer({
                                           handleDownloadFile(answer.fileUrl!)
                                         }
                                         className="cursor-pointer gap-1 text-[11px]"
-                                        title={dict.responses.downloadFile}
                                       >
                                         <Download className="size-3" />
                                         <span>
@@ -222,16 +224,17 @@ export function ResponseDetailDrawer({
                                 {/* Inline Image Preview */}
                                 {isImage && (
                                   <div className="overflow-hidden rounded-md border bg-muted/10 p-2 flex items-center justify-center max-h-48">
-                                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                                    <img
-                                      src={answer.fileUrl!}
-                                      alt={answer.valueText || 'Eklenen görsel'}
-                                      className="max-h-44 w-auto rounded object-contain shadow-sm cursor-pointer hover:opacity-95"
-                                      onClick={() =>
-                                        handleViewFile(answer.fileUrl!)
-                                      }
-                                      title="Görseli yeni sekmede aç"
-                                    />
+                                    <Hint label="Görseli yeni sekmede aç">
+                                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                                      <img
+                                        src={answer.fileUrl!}
+                                        alt={answer.valueText || 'Eklenen görsel'}
+                                        className="max-h-44 w-auto rounded object-contain shadow-sm cursor-pointer hover:opacity-95"
+                                        onClick={() =>
+                                          handleViewFile(answer.fileUrl!)
+                                        }
+                                      />
+                                    </Hint>
                                   </div>
                                 )}
                               </div>
@@ -251,7 +254,7 @@ export function ResponseDetailDrawer({
                                 )}
                               </div>
                             ) : (
-                              <p className="text-xs text-foreground whitespace-pre-wrap leading-relaxed">
+                              <p className="text-sm text-foreground whitespace-pre-wrap break-words leading-relaxed">
                                 {answer.valueText || (
                                   <span className="text-muted-foreground italic">
                                     {dict.responses.noResponseGiven}
@@ -270,7 +273,7 @@ export function ResponseDetailDrawer({
                 <Button
                   variant="destructive"
                   onClick={handleDelete}
-                  className="cursor-pointer gap-2 text-xs"
+                  className="cursor-pointer gap-2"
                 >
                   <Trash2 className="size-3.5" />
                   <span>{dict.responses.deleteSubmission}</span>
@@ -278,7 +281,7 @@ export function ResponseDetailDrawer({
                 <Button
                   variant="outline"
                   onClick={onClose}
-                  className="cursor-pointer text-xs"
+                  className="cursor-pointer"
                 >
                   {dict.responses.close}
                 </Button>

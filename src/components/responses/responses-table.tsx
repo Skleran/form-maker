@@ -2,7 +2,6 @@
 
 import * as React from "react"
 import {
-  Calendar,
   ChevronLeft,
   ChevronRight,
   Eye,
@@ -22,6 +21,7 @@ import {
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Card } from "@/components/ui/card"
+import { Hint } from "@/components/hint"
 import type { FormSubmissionRow } from "@/actions/response-actions"
 import { dict } from "@/lib/dictionary"
 
@@ -47,7 +47,12 @@ export function ResponsesTable({
   onDelete,
 }: ResponsesTableProps) {
   // Show first 3 questions as table preview columns
-  const previewQuestions = questions.slice(0, 3)
+  // Forms can repeat a question's label, so repeats get a number to tell the columns apart
+  const previewQuestions = questions.slice(0, 3).map((q, index, list) => {
+    const sameLabel = list.filter((other) => other.label === q.label)
+    const position = list.slice(0, index + 1).filter((other) => other.label === q.label).length
+    return { ...q, heading: sameLabel.length > 1 ? `${q.label} (${position})` : q.label }
+  })
 
   if (submissions.length === 0) {
     return (
@@ -70,19 +75,19 @@ export function ResponsesTable({
   return (
     <div className="space-y-4">
       {/* Table Container */}
-      <div className="rounded-lg border bg-card overflow-hidden shadow-sm">
+      <div className="rounded-md border overflow-hidden">
         <Table>
-          <TableHeader className="bg-muted/40">
+          <TableHeader>
             <TableRow>
-              <TableHead className="w-16 font-semibold">#</TableHead>
-              <TableHead className="w-44 font-semibold">{dict.responses.colSubmittedAt}</TableHead>
+              <TableHead className="w-16 text-xs font-normal text-muted-foreground">#</TableHead>
+              <TableHead className="w-44 text-xs font-normal text-muted-foreground">{dict.responses.colSubmittedAt}</TableHead>
               {previewQuestions.map((q) => (
-                <TableHead key={q.id} className="max-w-[200px] truncate font-semibold">
-                  {q.label}
+                <TableHead key={q.id} title={q.label} className="max-w-[200px] truncate text-xs font-normal text-muted-foreground">
+                  {q.heading}
                 </TableHead>
               ))}
-              <TableHead className="w-24 text-center font-semibold">{dict.responses.colFiles}</TableHead>
-              <TableHead className="w-28 text-right font-semibold">{dict.responses.colActions}</TableHead>
+              <TableHead className="w-24 text-center text-xs font-normal text-muted-foreground">{dict.responses.colFiles}</TableHead>
+              <TableHead className="w-28 text-right text-xs font-normal text-muted-foreground">{dict.responses.colActions}</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -94,22 +99,19 @@ export function ResponsesTable({
                 <TableRow
                   key={sub.id}
                   onClick={() => onInspect(sub)}
-                  className="cursor-pointer hover:bg-muted/30 transition-colors"
+                  className="cursor-pointer hover:bg-muted/60 transition-colors"
                 >
-                  <TableCell className="font-mono text-xs text-muted-foreground">
-                    #{rowIndex}
+                  <TableCell className="font-mono text-xs tabular-nums text-muted-foreground">
+                    {String(rowIndex).padStart(2, "0")}
                   </TableCell>
 
-                  <TableCell className="text-xs text-muted-foreground whitespace-nowrap">
-                    <span className="flex items-center gap-1.5">
-                      <Calendar className="size-3 text-primary shrink-0" />
-                      {new Date(sub.submittedAt).toLocaleString(locale, {
-                        month: "short",
-                        day: "numeric",
-                        hour: "2-digit",
-                        minute: "2-digit",
-                      })}
-                    </span>
+                  <TableCell className="text-sm tabular-nums text-muted-foreground whitespace-nowrap">
+                    {new Date(sub.submittedAt).toLocaleString(locale, {
+                      month: "short",
+                      day: "numeric",
+                      hour: "2-digit",
+                      minute: "2-digit",
+                    })}
                   </TableCell>
 
                   {/* Dynamic Question Answers preview */}
@@ -118,7 +120,7 @@ export function ResponsesTable({
                     const displayText = ans?.text || (Array.isArray(ans?.json) ? (ans.json as string[]).join(", ") : "-")
 
                     return (
-                      <TableCell key={q.id} className="text-xs text-foreground max-w-[200px] truncate">
+                      <TableCell key={q.id} className="text-sm text-foreground max-w-[200px] truncate">
                         {displayText}
                       </TableCell>
                     )
@@ -139,24 +141,28 @@ export function ResponsesTable({
                   {/* Actions */}
                   <TableCell className="text-right" onClick={(e) => e.stopPropagation()}>
                     <div className="flex items-center justify-end gap-1">
-                      <Button
-                        variant="ghost"
-                        size="icon-xs"
-                        onClick={() => onInspect(sub)}
-                        className="cursor-pointer text-muted-foreground hover:text-foreground"
-                        title={dict.responses.inspectTooltip}
-                      >
-                        <Eye className="size-3.5" />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="icon-xs"
-                        onClick={() => onDelete(sub.id)}
-                        className="cursor-pointer text-muted-foreground hover:text-destructive"
-                        title={dict.responses.deleteTooltip}
-                      >
-                        <Trash2 className="size-3.5" />
-                      </Button>
+                      <Hint label={dict.responses.inspectTooltip}>
+                        <Button
+                          variant="ghost"
+                          size="icon-xs"
+                          onClick={() => onInspect(sub)}
+                          className="cursor-pointer text-muted-foreground hover:text-foreground"
+                          aria-label={dict.responses.inspectTooltip}
+                        >
+                          <Eye className="size-3.5" />
+                        </Button>
+                      </Hint>
+                      <Hint label={dict.responses.deleteTooltip}>
+                        <Button
+                          variant="ghost"
+                          size="icon-xs"
+                          onClick={() => onDelete(sub.id)}
+                          className="cursor-pointer text-muted-foreground hover:text-destructive"
+                          aria-label={dict.responses.deleteTooltip}
+                        >
+                          <Trash2 className="size-3.5" />
+                        </Button>
+                      </Hint>
                     </div>
                   </TableCell>
                 </TableRow>

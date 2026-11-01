@@ -144,7 +144,7 @@ const SlugField = React.memo(function SlugField({ formId }: { formId: string }) 
 
   return (
     <div className="space-y-1.5">
-      <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground flex items-center gap-1">
+      <label className="text-sm font-medium text-foreground flex items-center gap-1">
         <Link2 className="size-3.5" />
         {dict.builder.settings.customSlug}
       </label>
@@ -231,7 +231,6 @@ export function BuilderSettings({ formId }: BuilderSettingsProps) {
     try {
       const res = await deleteForm(formId);
       if (res.success) {
-        toast.success(dict.builder.settings.deleteSuccess);
         router.push('/admin/forms');
       } else {
         toast.error(res.error || dict.builder.settings.deleteFailed);
@@ -245,10 +244,10 @@ export function BuilderSettings({ formId }: BuilderSettingsProps) {
   };
 
   return (
-    <div className="flex-1 overflow-y-auto px-4 py-8 sm:px-8 bg-muted/15 min-h-[calc(100vh-3.5rem)]">
+    <div className="flex-1 overflow-y-auto px-4 py-8 sm:px-8 bg-background min-h-[calc(100vh-3.5rem)]">
       <div className="mx-auto max-w-2xl space-y-6 pb-6">
         {/* General Form Settings */}
-        <Card className="p-6 bg-card border shadow-sm space-y-5">
+        <Card className="p-6 space-y-5">
           <div>
             <h3 className="text-base font-semibold text-foreground">
               {dict.builder.settings.generalTitle}
@@ -260,7 +259,7 @@ export function BuilderSettings({ formId }: BuilderSettingsProps) {
 
           <div className="space-y-4">
             <div className="space-y-1.5">
-              <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+              <label className="text-sm font-medium text-foreground">
                 {dict.builder.settings.formTitle}
               </label>
               <Input {...register('title')} className="text-sm" />
@@ -268,7 +267,7 @@ export function BuilderSettings({ formId }: BuilderSettingsProps) {
             </div>
 
             <div className="space-y-1.5">
-              <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+              <label className="text-sm font-medium text-foreground">
                 {dict.builder.settings.description}
               </label>
               <Textarea
@@ -281,9 +280,9 @@ export function BuilderSettings({ formId }: BuilderSettingsProps) {
         </Card>
 
         {/* Distribution & URL Slug */}
-        <Card className="p-6 bg-card border shadow-sm space-y-5">
+        <Card className="p-6 space-y-5">
           <div className="flex items-center gap-2">
-            <Globe className="size-4 text-primary" />
+            <Globe className="size-4 text-muted-foreground" />
             <h3 className="text-base font-semibold text-foreground">
               {dict.builder.settings.distributionTitle}
             </h3>
@@ -292,7 +291,7 @@ export function BuilderSettings({ formId }: BuilderSettingsProps) {
           <div className="space-y-4">
             <SlugField formId={formId} />
 
-            <div className="flex items-center justify-between rounded-lg border p-3.5 bg-muted/20">
+            <div className="flex items-center justify-between gap-4 rounded-lg border p-3.5">
               <div className="space-y-0.5">
                 <span className="text-sm font-medium text-foreground">
                   {dict.builder.settings.publishedStatus}
@@ -312,7 +311,7 @@ export function BuilderSettings({ formId }: BuilderSettingsProps) {
         </Card>
 
         {/* Danger Zone */}
-        <Card className="p-6 bg-card border-destructive/30 border shadow-sm space-y-4">
+        <Card className="p-6 ring-destructive/40 space-y-4">
           <div className="flex items-center gap-2 text-destructive">
             <AlertTriangle className="size-4" />
             <h3 className="text-base font-semibold">

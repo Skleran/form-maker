@@ -2,13 +2,13 @@
 
 import * as React from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { Eye, EyeOff, Lock, User, Loader2, AlertCircle } from 'lucide-react';
-import { Card } from '@/components/ui/card';
+import { Eye, EyeOff, Loader2, AlertCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { ThemeToggle } from '@/components/theme-toggle';
 import { loginAdmin } from '@/actions/auth-actions';
 import { FormMakerLogo } from '@/components/formmaker-logo';
+import { Hint } from '@/components/hint';
 import { getSafeRedirectPath } from '@/lib/safe-redirect';
 
 function LoginForm() {
@@ -45,36 +45,29 @@ function LoginForm() {
   };
 
   return (
-    <div className="min-h-screen flex flex-col justify-center items-center bg-muted/20 px-4 py-12 relative selection:bg-primary selection:text-primary-foreground">
+    <div className="min-h-screen flex flex-col justify-center items-center bg-background px-4 py-12 relative">
       {/* Top right theme toggle */}
       <div className="absolute top-4 right-4 sm:top-6 sm:right-6">
         <ThemeToggle />
       </div>
 
-      <div className="w-full max-w-sm space-y-6">
+      <div className="w-full max-w-sm">
         {/* Branding header */}
-        <div className="flex flex-col items-center text-center space-y-2">
-          <div className="flex size-12 items-center justify-center rounded-2xl bg-primary text-primary-foreground shadow-lg shadow-primary/25">
-            <FormMakerLogo className="size-7" />
-          </div>
-          <h1 className="text-xl font-bold tracking-tight text-foreground">
-            FormMaker Yönetim Paneli
-          </h1>
-          <p className="text-xs text-muted-foreground max-w-xs">
-            Formları yönetmek ve yanıtları incelemek için yönetici hesabınızla
-            giriş yapın
-          </p>
-        </div>
+        <FormMakerLogo className="size-6 text-foreground" />
+        <h1 className="mt-4 text-2xl font-semibold tracking-tight text-foreground">
+          Yönetim Paneli
+        </h1>
+        <p className="mt-1.5 text-sm text-muted-foreground">
+          Formları yönetmek ve yanıtları incelemek için giriş yapın.
+        </p>
 
-        {/* Login Card */}
-        <Card className="p-6 shadow-md bg-card border">
-          <form onSubmit={handleSubmit} className="space-y-4">
+        <form onSubmit={handleSubmit} className="mt-8 space-y-4">
             {error && (
               <div
                 role="alert"
-                className="flex items-center gap-2 p-3 text-xs rounded-lg border border-destructive/20 bg-destructive/10 text-destructive font-medium animate-in fade-in"
+                className="flex items-center gap-2 text-sm text-destructive"
               >
-                <AlertCircle className="size-4 shrink-0" />
+                <AlertCircle aria-hidden="true" className="size-4 shrink-0" />
                 <span>{error}</span>
               </div>
             )}
@@ -82,10 +75,9 @@ function LoginForm() {
             <div className="space-y-1.5">
               <label
                 htmlFor="login-username"
-                className="text-xs font-semibold text-foreground flex items-center gap-1.5"
+                className="block text-sm font-medium text-foreground"
               >
-                <User className="size-3.5 text-muted-foreground" />
-                <span>Kullanıcı Adı</span>
+                Kullanıcı Adı
               </label>
               <Input
                 id="login-username"
@@ -95,18 +87,17 @@ function LoginForm() {
                 autoFocus
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
-                placeholder="admin"
-                className="text-sm h-10"
+                spellCheck={false}
+                className="h-11 text-base sm:h-10 md:text-sm"
               />
             </div>
 
             <div className="space-y-1.5">
               <label
                 htmlFor="login-password"
-                className="text-xs font-semibold text-foreground flex items-center gap-1.5"
+                className="block text-sm font-medium text-foreground"
               >
-                <Lock className="size-3.5 text-muted-foreground" />
-                <span>Şifre</span>
+                Şifre
               </label>
               <div className="relative">
                 <Input
@@ -116,44 +107,34 @@ function LoginForm() {
                   required
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  placeholder="••••••••"
-                  className="text-sm h-10 pr-10"
+                  className="h-11 pr-11 text-base sm:h-10 md:text-sm"
                 />
-                <button
-                  type="button"
-                  onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground cursor-pointer transition-colors"
-                  title={showPassword ? 'Şifreyi Gizle' : 'Şifreyi Göster'}
-                  aria-label={showPassword ? 'Şifreyi Gizle' : 'Şifreyi Göster'}
-                >
-                  {showPassword ? (
-                    <EyeOff className="size-4" />
-                  ) : (
-                    <Eye className="size-4" />
-                  )}
-                </button>
+                <Hint label={showPassword ? 'Şifreyi Gizle' : 'Şifreyi Göster'}>
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute inset-y-0 right-0 flex w-11 items-center justify-center rounded-md text-muted-foreground outline-none hover:text-foreground cursor-pointer transition-colors focus-visible:ring-2 focus-visible:ring-ring"
+                    aria-label={showPassword ? 'Şifreyi Gizle' : 'Şifreyi Göster'}
+                  >
+                    {showPassword ? (
+                      <EyeOff className="size-4" />
+                    ) : (
+                      <Eye className="size-4" />
+                    )}
+                  </button>
+                </Hint>
               </div>
             </div>
 
             <Button
               type="submit"
               disabled={isLoading}
-              className="w-full h-10 font-semibold cursor-pointer shadow-sm gap-2 mt-2"
+              className="w-full h-11 sm:h-10 font-medium cursor-pointer gap-2 mt-2"
             >
-              {isLoading ? (
-                <Loader2 className="size-4 animate-spin" />
-              ) : (
-                <Lock className="size-4" />
-              )}
-              <span>{isLoading ? 'Giriş yapılıyor...' : 'Giriş Yap'}</span>
+              {isLoading && <Loader2 className="size-4 animate-spin" />}
+              <span>{isLoading ? 'Giriş yapılıyor…' : 'Giriş Yap'}</span>
             </Button>
-          </form>
-        </Card>
-
-        {/* Footer info */}
-        <p className="text-center text-[11px] text-muted-foreground">
-          Şirket içi güvenli form yönetim platformu
-        </p>
+        </form>
       </div>
     </div>
   );
@@ -163,8 +144,8 @@ export default function LoginPage() {
   return (
     <React.Suspense
       fallback={
-        <div className="min-h-screen flex items-center justify-center bg-muted/20">
-          <Loader2 className="size-6 animate-spin text-primary" />
+        <div className="min-h-screen flex items-center justify-center bg-background">
+          <Loader2 className="size-5 animate-spin text-muted-foreground" />
         </div>
       }
     >

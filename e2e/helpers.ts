@@ -35,7 +35,7 @@ export async function saveForm(page: Page, { publish }: { publish: boolean }) {
     await page.getByRole("switch", { name: dict.builder.header.draft }).click()
   }
   await page.getByRole("button", { name: dict.builder.header.save, exact: true }).click()
-  await expect(page.getByText("Form başarıyla kaydedildi!")).toBeVisible()
+  await expect(page.getByRole("button", { name: dict.builder.header.saved, exact: true })).toBeVisible()
   return slug
 }
 

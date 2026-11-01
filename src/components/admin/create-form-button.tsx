@@ -16,7 +16,6 @@ export function CreateFormButton() {
     startTransition(async () => {
       const res = await createForm()
       if (res.success && res.data) {
-        toast.success(dict.dashboard.formCreated)
         router.push(`/admin/forms/${res.data.id}/edit`)
       } else {
         toast.error(res.error || dict.dashboard.formCreateFailed)
@@ -28,7 +27,7 @@ export function CreateFormButton() {
     <Button
       onClick={handleCreate}
       disabled={isPending}
-      className="cursor-pointer gap-2 shadow-sm font-medium"
+      className="h-9 cursor-pointer gap-2 px-3.5 font-medium"
     >
       {isPending ? <Loader2 className="size-4 animate-spin" /> : <Plus className="size-4" />}
       <span>{dict.dashboard.createForm}</span>

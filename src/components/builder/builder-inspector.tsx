@@ -12,6 +12,7 @@ import {
 } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
+import { Hint } from '@/components/hint';
 import { Input } from '@/components/ui/input';
 import { Switch } from '@/components/ui/switch';
 import { Textarea } from '@/components/ui/textarea';
@@ -55,7 +56,7 @@ const ICON_SELECT_ITEMS = QUESTION_ICON_OPTIONS.map((opt) => {
   return (
     <SelectItem key={opt.value} value={opt.value} className="text-xs">
       <div className="flex items-center gap-2">
-        <Icon className="size-3.5 text-primary shrink-0" />
+        <Icon className="size-3.5 text-muted-foreground shrink-0" />
         <span>{opt.label}</span>
       </div>
     </SelectItem>
@@ -109,7 +110,7 @@ const InspectorTypeSelect = React.memo(function InspectorTypeSelect({
 
   return (
     <div className="space-y-1">
-      <label className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+      <label className="text-xs font-medium text-muted-foreground">
         {dict.builder.inspector.fieldType}
       </label>
       <Select
@@ -165,7 +166,7 @@ const InspectorIconSelect = React.memo(function InspectorIconSelect({
       const Icon = iconOpt.icon;
       return (
         <span className="flex items-center gap-1.5 truncate">
-          <Icon className="size-3.5 text-primary shrink-0" />
+          <Icon className="size-3.5 text-muted-foreground shrink-0" />
           <span className="truncate">{iconOpt.label}</span>
         </span>
       );
@@ -176,7 +177,7 @@ const InspectorIconSelect = React.memo(function InspectorIconSelect({
   return (
     <div className="space-y-1">
       <div className="flex items-center justify-between">
-        <label className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+        <label className="text-xs font-medium text-muted-foreground">
           Soru İkonu
         </label>
         {currentIcon && (
@@ -268,7 +269,7 @@ const InspectorDescriptionField = React.memo(
 
     return (
       <div className="space-y-1">
-        <label className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+        <label className="text-xs font-medium text-muted-foreground">
           {dict.builder.inspector.descriptionHelp}
         </label>
         <Textarea
@@ -302,7 +303,7 @@ const InspectorTextLimitsFields = React.memo(
 
     return (
       <div className="space-y-1">
-        <label className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+        <label className="text-xs font-medium text-muted-foreground">
           Metin Sınırları
         </label>
         <div className="grid grid-cols-2 gap-2">
@@ -373,7 +374,7 @@ const InspectorFileUploadFields = React.memo(
 
     return (
       <div className="space-y-2.5">
-        <label className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+        <label className="text-xs font-medium text-muted-foreground">
           {dict.builder.inspector.fileLimitsTitle}
         </label>
         <div className="space-y-1">
@@ -478,7 +479,7 @@ const InspectorTypeDependentFields = React.memo(
           questionType === 'LONG_TEXT' ||
           questionType === 'DROPDOWN') && (
           <div className="space-y-1">
-            <label className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+            <label className="text-xs font-medium text-muted-foreground">
               {dict.builder.inspector.placeholder}
             </label>
             <Input
@@ -666,7 +667,7 @@ export const BuilderInspector = React.memo(function BuilderInspector({
 
         {/* Quick Actions */}
         <div className="space-y-1.5 pt-0.5">
-          <label className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+          <label className="text-xs font-medium text-muted-foreground">
             Kart İşlemleri
           </label>
           <div className="grid grid-cols-2 gap-2">
@@ -727,7 +728,7 @@ export const BuilderInspector = React.memo(function BuilderInspector({
       >
         <DrawerHeader className="border-b px-4 py-3 shrink-0 flex flex-row items-center justify-between">
           <div className="flex items-center gap-2 min-w-0">
-            <SlidersHorizontal className="size-4 text-primary shrink-0" />
+            <SlidersHorizontal className="size-4 text-muted-foreground shrink-0" />
             <DrawerTitle className="text-sm font-semibold truncate">
               {dict.builder.inspector.title}
             </DrawerTitle>
@@ -741,26 +742,30 @@ export const BuilderInspector = React.memo(function BuilderInspector({
           <div className="flex items-center gap-1">
             {totalQuestions > 1 && (
               <div className="flex items-center gap-0.5 mr-1">
-                <Button
-                  variant="ghost"
-                  size="icon-xs"
-                  disabled={activeIndex <= 0}
-                  onClick={handlePrevQuestion}
-                  className="cursor-pointer text-muted-foreground hover:text-foreground h-7 w-7"
-                  title="Önceki soru"
-                >
-                  <ChevronUp className="size-4" />
-                </Button>
-                <Button
-                  variant="ghost"
-                  size="icon-xs"
-                  disabled={activeIndex >= totalQuestions - 1}
-                  onClick={handleNextQuestion}
-                  className="cursor-pointer text-muted-foreground hover:text-foreground h-7 w-7"
-                  title="Sonraki soru"
-                >
-                  <ChevronDown className="size-4" />
-                </Button>
+                <Hint label="Önceki soru" side="bottom">
+                  <Button
+                    variant="ghost"
+                    size="icon-xs"
+                    disabled={activeIndex <= 0}
+                    onClick={handlePrevQuestion}
+                    className="cursor-pointer text-muted-foreground hover:text-foreground h-7 w-7"
+                    aria-label="Önceki soru"
+                  >
+                    <ChevronUp className="size-4" />
+                  </Button>
+                </Hint>
+                <Hint label="Sonraki soru" side="bottom">
+                  <Button
+                    variant="ghost"
+                    size="icon-xs"
+                    disabled={activeIndex >= totalQuestions - 1}
+                    onClick={handleNextQuestion}
+                    className="cursor-pointer text-muted-foreground hover:text-foreground h-7 w-7"
+                    aria-label="Sonraki soru"
+                  >
+                    <ChevronDown className="size-4" />
+                  </Button>
+                </Hint>
               </div>
             )}
 
@@ -770,7 +775,6 @@ export const BuilderInspector = React.memo(function BuilderInspector({
                   variant="ghost"
                   size="icon-xs"
                   className="h-7 w-7 cursor-pointer text-muted-foreground hover:text-foreground"
-                  title={dict.builder.inspector.closeInspector}
                 />
               }
             >

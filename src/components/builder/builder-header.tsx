@@ -12,8 +12,10 @@ import {
   ExternalLink,
   Eye,
   Loader2,
+  LogOut,
   Menu,
   Moon,
+  MoreHorizontal,
   PanelRight,
   Redo2,
   Save,
@@ -47,8 +49,11 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { useBuilderStore } from '@/stores/use-builder-store';
 import type { FormBuilderValues } from '@/lib/validations/form';
-import { ThemeToggle } from '@/components/theme-toggle';
 import { LogoutButton } from '@/components/admin/logout-button';
+import { Hint } from '@/components/hint';
+import { StableLabel } from '@/components/stable-label';
+import { logoutAdmin } from '@/actions/auth-actions';
+import { useTimedFlag } from '@/hooks/use-timed-flag';
 import { dict } from '@/lib/dictionary';
 import { useTheme } from 'next-themes';
 import { cn } from '@/lib/utils';
@@ -176,7 +181,7 @@ const UndoRedoControls = React.memo(function UndoRedoControls({
   const canRedo = useBuilderStore((s) => s.canRedo);
 
   return (
-    <div className="flex items-center rounded-lg border bg-muted/40 p-0.5 shrink-0">
+    <div className="flex items-center rounded-lg border p-0.5 shrink-0">
       <Tooltip>
         <TooltipTrigger
           render={
@@ -220,17 +225,28 @@ const UndoRedoControls = React.memo(function UndoRedoControls({
   );
 });
 
-function SaveButtonContent({ isSaving }: { isSaving: boolean }) {
+function SaveButtonContent({
+  isSaving,
+  justSaved,
+}: {
+  isSaving: boolean;
+  justSaved: boolean;
+}) {
+  const { save, saved } = dict.builder.header;
+
   return (
     <>
       {isSaving ? (
         <Loader2 className="size-3.5 animate-spin" />
+      ) : justSaved ? (
+        <Check className="size-3.5" />
       ) : (
         <Save className="size-3.5" />
       )}
-      <span>
-        {isSaving ? dict.builder.header.saving : dict.builder.header.save}
-      </span>
+      <StableLabel
+        labels={[save, saved]}
+        active={justSaved && !isSaving ? saved : save}
+      />
     </>
   );
 }
@@ -257,6 +273,18 @@ export const BuilderHeader = React.memo(function BuilderHeader({
   const isDirty = useBuilderStore((s) => s.isDirty);
   const isBackPromptOpen = useBuilderStore((s) => s.isBackPromptOpen);
   const currentTab = searchParams.get('tab') || 'questions';
+
+  // Saves also come from Ctrl+S, so the button follows the save time rather than its own clicks
+  const [settledSaveAt, setSettledSaveAt] = React.useState<Date | null>(null);
+  React.useEffect(() => {
+    if (!lastSavedAt) return;
+    const timeout = window.setTimeout(() => setSettledSaveAt(lastSavedAt), 2000);
+    return () => window.clearTimeout(timeout);
+  }, [lastSavedAt]);
+  const justSaved =
+    Boolean(lastSavedAt) && lastSavedAt !== settledSaveAt && !isDirty;
+
+  const [linkCopied, showLinkCopied] = useTimedFlag();
 
   // Unsaved changes navigation interception dialog state
   const [showUnsavedDialog, setShowUnsavedDialog] = React.useState(false);
@@ -321,16 +349,22 @@ export const BuilderHeader = React.memo(function BuilderHeader({
 
   const handlePublishChange = (checked: boolean) => {
     setValue('isPublished', checked, { shouldDirty: true });
-    toast.info(
-      checked
-        ? dict.builder.header.publishedToast
-        : dict.builder.header.draftToast,
-    );
   };
 
+  const copyPublicLink = () =>
+    copyText(`${window.location.origin}/forms/${getValues('slug')}`);
+
   const handleCopyLink = async () => {
-    const publicUrl = `${window.location.origin}/forms/${getValues('slug')}`;
-    if (await copyText(publicUrl)) {
+    if (await copyPublicLink()) {
+      showLinkCopied();
+    } else {
+      toast.error(dict.common.copyFailed);
+    }
+  };
+
+  // The mobile menu closes on tap, so there's no button left to show a tick on
+  const handleCopyLinkFromMenu = async () => {
+    if (await copyPublicLink()) {
       toast.success(dict.builder.header.shareToast);
     } else {
       toast.error(dict.common.copyFailed);
@@ -351,11 +385,11 @@ export const BuilderHeader = React.memo(function BuilderHeader({
         });
       } catch (err: unknown) {
         if ((err as Error)?.name !== 'AbortError') {
-          await handleCopyLink();
+          await handleCopyLinkFromMenu();
         }
       }
     } else {
-      await handleCopyLink();
+      await handleCopyLinkFromMenu();
     }
   };
 
@@ -374,7 +408,7 @@ export const BuilderHeader = React.memo(function BuilderHeader({
               className:
                 'cursor-pointer text-muted-foreground hover:text-foreground h-8 w-8 shrink-0',
             })}
-            title={dict.builder.header.backToForms}
+            aria-label={dict.builder.header.backToForms}
           >
             <ArrowLeft className="size-4" />
           </button>
@@ -382,13 +416,13 @@ export const BuilderHeader = React.memo(function BuilderHeader({
           {/* Status Indicator */}
           <div className="flex items-center shrink min-w-25.5">
             {isDirty ? (
-              <span className="inline-flex items-center gap-1.5 rounded-full bg-amber-500/10 px-2 py-0.5 text-[11px] font-medium text-amber-600 dark:text-amber-400 border border-amber-500/25 shrink-0 whitespace-nowrap">
-                <span className="size-1.5 rounded-full bg-amber-500 animate-pulse" />
+              <span className="inline-flex items-center gap-1.5 text-xs text-amber-700 dark:text-amber-400 shrink-0 whitespace-nowrap">
+                <span className="size-1.5 rounded-full bg-amber-500" />
                 <span>Kaydedilmedi</span>
               </span>
             ) : (
-              <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/10 px-2 py-0.5 text-[11px] font-medium text-emerald-600 dark:text-emerald-400 border border-emerald-500/25 shrink-0 whitespace-nowrap">
-                <Check className="size-3 text-emerald-500" />
+              <span className="inline-flex items-center gap-1 text-xs text-muted-foreground shrink-0 whitespace-nowrap">
+                <Check className="size-3" />
                 <span>{dict.builder.header.saved}</span>
               </span>
             )}
@@ -402,9 +436,9 @@ export const BuilderHeader = React.memo(function BuilderHeader({
             size="sm"
             onClick={onSave}
             disabled={isSaving}
-            className="cursor-pointer items-center gap-1 shadow-sm h-8 px-2.5 text-xs shrink-0"
+            className="cursor-pointer items-center gap-1 h-8 px-2.5 text-xs shrink-0"
           >
-            <SaveButtonContent isSaving={isSaving} />
+            <SaveButtonContent isSaving={isSaving} justSaved={justSaved} />
           </Button>
 
           {/* Dropdown Menu Trigger & Content */}
@@ -514,32 +548,34 @@ export const BuilderHeader = React.memo(function BuilderHeader({
         <div className="hidden md:flex h-14 items-center justify-between px-4 sm:px-6">
           {/* Left: Back & Title & Unsaved Indicator */}
           <div className="flex items-center gap-3 min-w-0">
-            <button
-              type="button"
-              onClick={handleBackClick}
-              className={buttonVariants({
-                variant: 'ghost',
-                size: 'icon-sm',
-                className:
-                  'cursor-pointer text-muted-foreground hover:text-foreground',
-              })}
-              title={dict.builder.header.backToForms}
-            >
-              <ArrowLeft className="size-4" />
-            </button>
+            <Hint label={dict.builder.header.backToForms} side="bottom">
+              <button
+                type="button"
+                onClick={handleBackClick}
+                className={buttonVariants({
+                  variant: 'ghost',
+                  size: 'icon-sm',
+                  className:
+                    'cursor-pointer text-muted-foreground hover:text-foreground',
+                })}
+                aria-label={dict.builder.header.backToForms}
+              >
+                <ArrowLeft className="size-4" />
+              </button>
+            </Hint>
 
             <div className="flex items-center gap-2.5 truncate">
               <HeaderTitleDisplay />
 
               {/* Status Indicator */}
               {isDirty ? (
-                <span className="inline-flex items-center gap-1.5 rounded-full bg-amber-500/10 px-2.5 py-0.5 text-[11px] font-medium text-amber-600 dark:text-amber-400 border border-amber-500/25 shrink-0">
-                  <span className="size-1.5 rounded-full bg-amber-500 animate-pulse" />
+                <span className="inline-flex items-center gap-1.5 text-xs text-amber-700 dark:text-amber-400 shrink-0">
+                  <span className="size-1.5 rounded-full bg-amber-500" />
                   {dict.builder.header.unsavedChanges}
                 </span>
               ) : lastSavedAt ? (
                 <span className="hidden md:inline-flex items-center gap-1 text-xs text-muted-foreground shrink-0">
-                  <Check className="size-3 text-emerald-500" />
+                  <Check className="size-3" />
                   {dict.builder.header.saved}{' '}
                   {lastSavedAt.toLocaleTimeString(
                     'tr-TR',
@@ -550,8 +586,8 @@ export const BuilderHeader = React.memo(function BuilderHeader({
                   )}
                 </span>
               ) : (
-                <span className="hidden md:inline-flex items-center gap-1 text-xs text-muted-foreground/70 shrink-0">
-                  <Check className="size-3 text-muted-foreground/50" />
+                <span className="hidden md:inline-flex items-center gap-1 text-xs text-muted-foreground shrink-0">
+                  <Check className="size-3" />
                   {dict.builder.header.saved}
                 </span>
               )}
@@ -585,11 +621,6 @@ export const BuilderHeader = React.memo(function BuilderHeader({
                 checked={isPublished}
                 id="desktop-publish-toggle"
                 onCheckedChange={handlePublishChange}
-                title={
-                  isPublished
-                    ? dict.builder.header.publishedToast
-                    : dict.builder.header.draftToast
-                }
               />
             </div>
 
@@ -606,8 +637,19 @@ export const BuilderHeader = React.memo(function BuilderHeader({
                     onClick={handleCopyLink}
                     className="cursor-pointer hidden md:inline-flex items-center gap-1.5"
                   >
-                    <Copy className="size-3.5 text-muted-foreground" />
-                    <span>{dict.builder.header.share}</span>
+                    {linkCopied ? (
+                      <Check className="size-3.5 text-emerald-600 dark:text-emerald-400" />
+                    ) : (
+                      <Copy className="size-3.5 text-muted-foreground" />
+                    )}
+                    <StableLabel
+                      labels={[dict.builder.header.share, dict.common.copied]}
+                      active={
+                        linkCopied
+                          ? dict.common.copied
+                          : dict.builder.header.share
+                      }
+                    />
                   </Button>
                 }
               />
@@ -624,9 +666,9 @@ export const BuilderHeader = React.memo(function BuilderHeader({
                     size="sm"
                     onClick={onSave}
                     disabled={isSaving}
-                    className="cursor-pointer items-center gap-1.5 shadow-sm"
+                    className="cursor-pointer items-center gap-1.5"
                   >
-                    <SaveButtonContent isSaving={isSaving} />
+                    <SaveButtonContent isSaving={isSaving} justSaved={justSaved} />
                   </Button>
                 }
               />
@@ -643,13 +685,48 @@ export const BuilderHeader = React.memo(function BuilderHeader({
             {/* Inspector Toggle */}
             <InspectorToggleButton />
 
-            <ThemeToggle />
-            <LogoutButton size="icon-sm" />
+            {/* Theme and logout aren't about this form, so they stay out of the toolbar */}
+            <DropdownMenu>
+              <DropdownMenuTrigger
+                render={
+                  <Button
+                    variant="ghost"
+                    size="icon-sm"
+                    className="cursor-pointer text-muted-foreground hover:text-foreground"
+                    aria-label="Menü"
+                  >
+                    <MoreHorizontal className="size-4" />
+                  </Button>
+                }
+              />
+              <DropdownMenuContent align="end" sideOffset={6} className="w-44">
+                <DropdownMenuItem
+                  onClick={() => setTheme(isDark ? 'light' : 'dark')}
+                  className="cursor-pointer gap-2"
+                >
+                  {isDark ? (
+                    <Sun className="size-3.5 text-muted-foreground" />
+                  ) : (
+                    <Moon className="size-3.5 text-muted-foreground" />
+                  )}
+                  {`${isDark ? 'Açık' : 'Koyu'} temaya geç`}
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem
+                  variant="destructive"
+                  onClick={() => logoutAdmin()}
+                  className="cursor-pointer gap-2"
+                >
+                  <LogOut className="size-3.5" />
+                  Çıkış Yap
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
         </div>
 
         {/* Tabs Navigation (URL Search Param Synced) */}
-        <div className="flex items-center justify-between border-t px-4 sm:px-6 bg-muted/20">
+        <div className="flex items-center justify-between border-t px-4 sm:px-6">
           <Tabs
             value={currentTab}
             onValueChange={handleTabChange}

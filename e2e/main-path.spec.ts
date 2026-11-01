@@ -32,9 +32,7 @@ test("a form can be built, published, answered and reviewed", async ({ page, bro
     mimeType: "text/plain",
     buffer: Buffer.from(FILE_CONTENT),
   })
-  await expect(
-    visitor.getByText(dict.publicForm.attachedSuccess.replace("{name}", FILE_NAME)),
-  ).toBeVisible()
+  await expect(visitor.getByText(FILE_NAME)).toBeVisible()
   await visitor.getByRole("button", { name: dict.publicForm.submit, exact: true }).click()
   await expect(visitor.getByText(dict.publicForm.successTitle)).toBeVisible()
 
@@ -43,7 +41,7 @@ test("a form can be built, published, answered and reviewed", async ({ page, bro
   await expect(page.getByRole("cell", { name: NAME_ANSWER })).toBeVisible()
 
   // The uploaded file comes back unchanged
-  await page.getByTitle(dict.responses.inspectTooltip).click()
+  await page.getByRole("button", { name: dict.responses.inspectTooltip }).click()
   const fileDownload = page.waitForEvent("download")
   await page.getByRole("button", { name: dict.responses.downloadFile }).click()
   const file = await fileDownload

@@ -1,155 +1,75 @@
 import Link from 'next/link';
+import { ArrowRight } from 'lucide-react';
 import { ThemeToggle } from '@/components/theme-toggle';
 import { buttonVariants } from '@/components/ui/button';
-import { Card } from '@/components/ui/card';
-import {
-  ArrowRight,
-  Eye,
-  FileSpreadsheet,
-  LayoutList,
-  ListChecks,
-  Smartphone,
-  Upload,
-} from 'lucide-react';
 import { dict } from '@/lib/dictionary';
 import { FormMakerLogo } from '@/components/formmaker-logo';
 
+const { features } = dict.home;
+const featureList = [
+  { title: features.builderTitle, description: features.builderDesc },
+  { title: features.fieldsTitle, description: features.fieldsDesc },
+  { title: features.filesTitle, description: features.filesDesc },
+  { title: features.responsesTitle, description: features.responsesDesc },
+  { title: features.mobileTitle, description: features.mobileDesc },
+  { title: features.themesTitle, description: features.themesDesc },
+];
+
 export default function Home() {
   return (
-    <div className="flex min-h-screen flex-col bg-background selection:bg-primary selection:text-primary-foreground">
-      {/* Top Header */}
-      <header className="sticky top-0 z-40 w-full border-b bg-background/80 backdrop-blur-md">
-        <div className="container mx-auto flex h-14 max-w-6xl items-center justify-between px-4 sm:px-6">
-          <div className="flex items-center gap-2.5">
-            <div className="flex size-8 items-center justify-center rounded-lg bg-primary text-primary-foreground shadow-sm">
-              <FormMakerLogo className="size-5" />
-            </div>
-            <span className="font-semibold tracking-tight text-foreground">
-              FormMaker
-            </span>
-          </div>
-
-          <div className="flex items-center gap-2 sm:gap-3">
-            <ThemeToggle />
-            <Link
-              href="/admin/forms"
-              className={buttonVariants({
-                size: 'sm',
-                className: 'font-medium',
-              })}
-            >
-              {dict.nav.goToAdmin}
-              <ArrowRight className="ml-1 size-3.5" />
-            </Link>
-          </div>
+    <div className="flex min-h-screen flex-col bg-background">
+      <header className="flex h-14 items-center justify-between border-b px-4 sm:px-6">
+        <div className="flex items-center gap-2 text-sm font-semibold text-foreground">
+          <FormMakerLogo className="size-5" />
+          <span translate="no">FormMaker</span>
         </div>
+        <ThemeToggle />
       </header>
 
-      {/* Hero Section */}
-      <main className="flex-1">
-        <section className="container mx-auto max-w-6xl px-4 py-16 sm:px-6 sm:py-24 text-center">
-          <h1 className="text-4xl font-extrabold tracking-tight sm:text-5xl lg:text-6xl text-foreground max-w-3xl mx-auto">
+      <main className="mx-auto w-full max-w-5xl flex-1 px-4 sm:px-6">
+        <section className="py-16 sm:py-24">
+          <h1 className="max-w-2xl text-4xl font-semibold tracking-tight text-balance text-foreground sm:text-5xl">
             {dict.home.title}
           </h1>
-          <p className="mt-4 text-lg text-muted-foreground max-w-2xl mx-auto leading-relaxed">
+          <p className="mt-4 max-w-xl text-lg leading-relaxed text-pretty text-muted-foreground">
             {dict.home.description}
           </p>
-
-          <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
-            <Link
-              href="/admin/forms"
-              className={buttonVariants({
-                size: 'lg',
-                className: 'h-10 px-6 font-medium',
-              })}
-            >
-              {dict.home.openDashboard}
-              <ArrowRight className="ml-2 size-4" />
-            </Link>
-          </div>
+          <Link
+            href="/admin/forms"
+            className={buttonVariants({
+              className: 'mt-8 h-10 gap-2 px-4 font-medium',
+            })}
+          >
+            {dict.home.openDashboard}
+            <ArrowRight aria-hidden="true" className="size-4" />
+          </Link>
         </section>
 
-        {/* Features */}
-        <section className="container mx-auto max-w-6xl px-4 pb-20 sm:px-6">
-          <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-            <Card className="p-6 transition-all hover:border-primary/50">
-              <div className="flex size-10 items-center justify-center rounded-lg bg-primary/10 text-primary mb-4">
-                <LayoutList className="size-5" />
+        <section className="grid border-t pb-16 sm:grid-cols-2 sm:gap-x-12">
+          {featureList.map((feature, index) => (
+            <div
+              key={feature.title}
+              className="grid grid-cols-[2rem_minmax(0,1fr)] border-b py-6 sm:grid-cols-[2.5rem_minmax(0,1fr)]"
+            >
+              <span
+                aria-hidden="true"
+                className="pt-1 font-mono text-xs tabular-nums text-muted-foreground"
+              >
+                {String(index + 1).padStart(2, '0')}
+              </span>
+              <div>
+                <h2 className="font-medium text-foreground">{feature.title}</h2>
+                <p className="mt-1 text-sm leading-relaxed text-muted-foreground">
+                  {feature.description}
+                </p>
               </div>
-              <h3 className="text-base font-semibold text-foreground mb-1">
-                {dict.home.features.builderTitle}
-              </h3>
-              <p className="text-sm text-muted-foreground leading-relaxed">
-                {dict.home.features.builderDesc}
-              </p>
-            </Card>
-
-            <Card className="p-6 transition-all hover:border-primary/50">
-              <div className="flex size-10 items-center justify-center rounded-lg bg-primary/10 text-primary mb-4">
-                <ListChecks className="size-5" />
-              </div>
-              <h3 className="text-base font-semibold text-foreground mb-1">
-                {dict.home.features.fieldsTitle}
-              </h3>
-              <p className="text-sm text-muted-foreground leading-relaxed">
-                {dict.home.features.fieldsDesc}
-              </p>
-            </Card>
-
-            <Card className="p-6 transition-all hover:border-primary/50">
-              <div className="flex size-10 items-center justify-center rounded-lg bg-primary/10 text-primary mb-4">
-                <Upload className="size-5" />
-              </div>
-              <h3 className="text-base font-semibold text-foreground mb-1">
-                {dict.home.features.filesTitle}
-              </h3>
-              <p className="text-sm text-muted-foreground leading-relaxed">
-                {dict.home.features.filesDesc}
-              </p>
-            </Card>
-
-            <Card className="p-6 transition-all hover:border-primary/50">
-              <div className="flex size-10 items-center justify-center rounded-lg bg-primary/10 text-primary mb-4">
-                <FileSpreadsheet className="size-5" />
-              </div>
-              <h3 className="text-base font-semibold text-foreground mb-1">
-                {dict.home.features.responsesTitle}
-              </h3>
-              <p className="text-sm text-muted-foreground leading-relaxed">
-                {dict.home.features.responsesDesc}
-              </p>
-            </Card>
-
-            <Card className="p-6 transition-all hover:border-primary/50">
-              <div className="flex size-10 items-center justify-center rounded-lg bg-primary/10 text-primary mb-4">
-                <Smartphone className="size-5" />
-              </div>
-              <h3 className="text-base font-semibold text-foreground mb-1">
-                {dict.home.features.mobileTitle}
-              </h3>
-              <p className="text-sm text-muted-foreground leading-relaxed">
-                {dict.home.features.mobileDesc}
-              </p>
-            </Card>
-
-            <Card className="p-6 transition-all hover:border-primary/50">
-              <div className="flex size-10 items-center justify-center rounded-lg bg-primary/10 text-primary mb-4">
-                <Eye className="size-5" />
-              </div>
-              <h3 className="text-base font-semibold text-foreground mb-1">
-                {dict.home.features.themesTitle}
-              </h3>
-              <p className="text-sm text-muted-foreground leading-relaxed">
-                {dict.home.features.themesDesc}
-              </p>
-            </Card>
-          </div>
+            </div>
+          ))}
         </section>
       </main>
 
-      {/* Footer */}
-      <footer className="border-t py-6 text-center text-xs text-muted-foreground">
-        <p>{dict.home.footer}</p>
+      <footer className="border-t px-4 py-6 text-xs text-muted-foreground sm:px-6">
+        <p className="mx-auto max-w-5xl">{dict.home.footer}</p>
       </footer>
     </div>
   );
