@@ -5,12 +5,13 @@ on:
     branches: [main]
   pull_request:
 
+env:
+  DATABASE_URL: postgresql://placeholder:placeholder@localhost:5432/placeholder
+  DIRECT_URL: postgresql://placeholder:placeholder@localhost:5432/placeholder
+
 jobs:
   check:
     runs-on: ubuntu-latest
-    env:
-      DATABASE_URL: postgresql://placeholder:placeholder@localhost:5432/placeholder
-      DIRECT_URL: postgresql://placeholder:placeholder@localhost:5432/placeholder
     steps:
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v4
@@ -23,3 +24,26 @@ jobs:
       - run: pnpm typecheck
       - run: pnpm test
       - run: pnpm build
+
+  e2e:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm exec playwright install --with-deps chromium
+      # e2e/env.mjs replaces the placeholder URLs above with the throwaway database
+      - run: pnpm test:e2e
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: playwright-results
+          path: |
+            test-results/
+            playwright-report/
+          retention-days: 7

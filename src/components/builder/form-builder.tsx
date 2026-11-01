@@ -286,7 +286,9 @@ export function FormBuilder({ initialForm }: FormBuilderProps) {
     (snapshot: FormBuilderValues, message: string) => {
       const store = useBuilderStore.getState();
       const restored = cloneFormSnapshot(snapshot);
-      methods.reset(restored, { keepDefaultValues: true });
+      // Memoized inputs don't register again after a reset, so they must keep their registrations:
+      // otherwise they'd show the old text and what's typed next wouldn't reach the form
+      methods.reset(restored, { keepDefaultValues: true, keepFieldsRef: true });
       previousSnapshotRef.current = cloneFormSnapshot(restored);
       store.setIsDirty(!isFormValuesEqual(restored, savedSnapshotRef.current));
       if (restored.questions.length > 0) {
