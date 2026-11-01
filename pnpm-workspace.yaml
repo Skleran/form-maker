@@ -4,3 +4,6 @@ allowBuilds:
   prisma: true
   sharp: false
   unrs-resolver: false
+overrides:
+  # prisma 6 pins 7.1.5; the fix is only in 8. Drop this when moving to prisma 7
+  deepmerge-ts: ^8.0.2

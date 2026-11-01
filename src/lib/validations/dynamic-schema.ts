@@ -61,9 +61,12 @@ export function buildDynamicFormSchema(questions: QuestionFormItem[]) {
       }
 
       case "MULTIPLE_CHOICE": {
-        const choices = z.array(
-          z.string().refine((value) => optionIds.has(value), `Lütfen "${label}" için geçerli bir seçenek belirleyin`)
-        )
+        // The cap comes first so Zod rejects an oversized array before parsing its elements
+        const choices = z
+          .array(
+            z.string().refine((value) => optionIds.has(value), `Lütfen "${label}" için geçerli bir seçenek belirleyin`)
+          )
+          .max(q.options.length, `Lütfen "${label}" için geçerli seçenekler belirleyin`)
 
         if (q.required) {
           shape[key] = choices.min(1, `Lütfen "${label}" için en az bir seçenek seçin`)
